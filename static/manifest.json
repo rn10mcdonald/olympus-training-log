@@ -1,0 +1,12 @@
+{
+  "name": "Olympus Training Log",
+  "short_name": "Olympus",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#111111",
+  "theme_color": "#111111",
+  "icons": [
+    { "src": "coin.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "coin.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Olympus Training Log</title>
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <img id="coin" src="coin.png" alt="coin">
+  <span id="drachma">0.00</span>
+  <button onclick="refresh()">Refresh</button>
+</header>
+
+<pre id="log">(loading…)</pre>
+
+<footer>
+  <input id="miles" type="number" placeholder="Miles" step="0.1">
+  <input id="lbs"   type="number" placeholder="Lbs"   step="1">
+  <button onclick="logRuck()">Log Ruck</button>
+</footer>
+
+<script src="main.js"></script>
+<script>
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("service-worker.js");
+}
+</script>
+</body>
+</html>
