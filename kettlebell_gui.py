@@ -99,67 +99,130 @@ mk = lambda d, desc, struct: {"day": d, "description": desc, "structure": struct
 #  TEMPLATE LIBRARY
 #  (each entry is a 2-week / 6-session micro-cycle)
 # ──────────────────────────────────────────────────────────────
-TEMPLATES: dict[str, dict[str, Any]] = {}          # << new empty dict
+# ──────────────────────────────────────────────────────────────
+#  TEMPLATE LIBRARY (each entry is a 2-week / 6-session cycle)
+# ──────────────────────────────────────────────────────────────
+TEMPLATES: dict[str, dict[str, Any]] = {
 
-# ── Hermes’ Power Forge ───────────────────────────────────────
-TEMPLATES["Hermes' Power Forge"] = {
-    "name": "Hermes' Power Forge",
-    "sessions": [
-        {   # Wk-1 Day-1 Lower Push
-            "main": "Double-KB Front Squat 5×5 @ RPE 7",
-            "accessory": [
-                "Bulgarian Split Squat 3×8 /leg",
-                "TRX Row 3×10",
-                "20-lb-vest Glute-Bridge March 3×40 s",
-            ],
-            "finisher": "30 s Goblet-Squat Pulse / 30 s rest ×4",
-        },
-        {   # Wk-1 Day-2 Upper
-            "main": "Single-Arm Clean + Press 5×5 /side",
-            "accessory": [ 
-                "Single-KB Floor Press 3×10 /side",
-                "Bent-Over Row 3×8 /side",
-                "TRX Face-Pull + Y-Raise superset 3×12 each",
-            ],
-            "finisher": "KB Hollow-Body OH Hold 20 s on /10 s off ×4",
-        },
-        {   # Wk-1 Day-3 Lower Hinge
-            "main": "Double-KB Deadlift 6×6 @ RPE 7",
-            "accessory": [
-                "Alternating KB Swing EMOM 8 (12 reps)",
-                "TRX Hamstring Curl 3×15",
-                "Suitcase Carry 4×20 m /side",
-            ],
-            "finisher": "20-lb-vest Step-Ups 30 s /15 s ×5",
-        },
-        {   # Wk-2 Day-1 Lower Push Prog
-            "main": "Double-KB Front Squat 6×4 (↑ load)",
-            "accessory": [
-                "Goblet Box-Squat Pulse 3×12",
-                "TRX Single-Leg Hip Thrust 3×10 /leg",
-                "Front-Rack Squat-Hold 3×30 s",
-            ],
-            "finisher": "Tabata Alternating Swings (4 min)",
-        },
-        {   # Wk-2 Day-2 Upper Prog
-            "main": "Clean + Push-Press Ladder (1-2-3-2-1) ×3",
-            "accessory": [
-                "Renegade Row 3×8 /side",
-                "TRX Atomic Push-Up 3×10",
-                "KB Windmill 3×6 /side",
-            ],
-            "finisher": "Farmer-Carry March 45 s /15 s ×4",
-        },
-        {   # Wk-2 Day-3 Lower Hinge Prog
-            "main": "Tempo KB RDL (3-s eccentric) 4×8",
-            "accessory": [
-                "High Pull EMOM 10 (6 /side)",
-                "Weighted Step-Up 3×12 /leg",
-                "Plank Pull-Through 3×30 s",
-            ],
-            "finisher": "Swing-Sprint: 10 Swings + 50 m run ×5",
-        },
-    ],
+    # ── Hermes’ Power Forge ──────────────────────────────────
+    "Hermes' Power Forge": {
+        "name": "Hermes' Power Forge",
+        "sessions": [
+            {   # Wk-1 D-1 – Lower Push
+                "main": "Double-KB Front Squat 5×5 @ RPE 7",
+                "accessory": [
+                    "Bulgarian Split Squat 3×8 /leg",
+                    "TRX Row 3×10",
+                    "20-lb-vest Glute-Bridge March 3×40 s",
+                ],
+                "finisher": "30 s Goblet-Squat Pulse / 30 s rest ×4",
+            },
+            {   # Wk-1 D-2 – Upper
+                "main": "Single-Arm Clean + Press 5×5 /side",
+                "accessory": [
+                    "Single-KB Floor Press 3×10 /side",
+                    "Bent-Over Row 3×8 /side",
+                    "TRX Face-Pull + Y-Raise superset 3×12 each",
+                ],
+                "finisher": "KB Hollow-Body OH Hold 20 s on /10 s off ×4",
+            },
+            {   # Wk-1 D-3 – Lower Hinge
+                "main": "Double-KB Deadlift 6×6 @ RPE 7",
+                "accessory": [
+                    "Alternating KB Swing EMOM 8 (12 reps)",
+                    "TRX Hamstring Curl 3×15",
+                    "Suitcase Carry 4×20 m /side",
+                ],
+                "finisher": "20-lb-vest Step-Ups 30 s /15 s ×5",
+            },
+            {   # Wk-2 D-1 – Lower Push Prog
+                "main": "Double-KB Front Squat 6×4 (↑ load)",
+                "accessory": [
+                    "Goblet Box-Squat Pulse 3×12",
+                    "TRX Single-Leg Hip Thrust 3×10 /leg",
+                    "Front-Rack Squat-Hold 3×30 s",
+                ],
+                "finisher": "Tabata Alternating Swings (4 min)",
+            },
+            {   # Wk-2 D-2 – Upper Prog
+                "main": "Clean + Push-Press Ladder (1-2-3-2-1) ×3",
+                "accessory": [
+                    "Renegade Row 3×8 /side",
+                    "TRX Atomic Push-Up 3×10",
+                    "KB Windmill 3×6 /side",
+                ],
+                "finisher": "Farmer-Carry March 45 s /15 s ×4",
+            },
+            {   # Wk-2 D-3 – Lower Hinge Prog
+                "main": "Tempo KB RDL (3-s eccentric) 4×8",
+                "accessory": [
+                    "High Pull EMOM 10 (6 /side)",
+                    "Weighted Step-Up 3×12 /leg",
+                    "Plank Pull-Through 3×30 s",
+                ],
+                "finisher": "Swing-Sprint: 10 Swings + 50 m run ×5",
+            },
+        ],
+    },
+
+    # ── Artemis Rites ────────────────────────────────────────
+    "Artemis Rites": {
+        "name": "Artemis Rites",
+        "sessions": [
+            {   # W-3 D-1 – Reverse-Lunge Power
+                "main": "Double-KB Front-Rack Reverse Lunge 5×5 /leg",
+                "accessory": [
+                    "KB Swing 3×15",
+                    "TRX Hamstring Curl 3×12",
+                    "20-lb-vest Glute-Bridge March 3×40 s",
+                ],
+                "finisher": "Goblet-Squat Iso-Pulse 30 s / 15 s rest ×4",
+            },
+            {   # W-3 D-2 – Chest & Back
+                "main": "Single-KB Floor-Press Cluster (2-2-2, 10 s intra-rest) ×4 /side",
+                "accessory": [
+                    "Single-Arm Bent Row 3×10 /side",
+                    "TRX Face-Pull 3×15",
+                ],
+                "finisher": "Plank Pull-Through 20 s on / 10 s off ×6",
+            },
+            {   # W-3 D-3 – Sumo & Carries
+                "main": "Double-KB Sumo Deadlift 6×6 (3-s eccentric)",
+                "accessory": [
+                    "Jumping Goblet Squat 3×12",
+                    "Suitcase Carry 3×20 m /side",
+                    "TRX Pistol-Assist 3×6 /leg",
+                ],
+                "finisher": "Tabata Alternating Swings 4 min",
+            },
+            {   # W-4 D-1 – Front-Squat Ladder
+                "main": "Double-KB Clean + Front-Squat Ladder 1-2-3-4-3-2-1",
+                "accessory": [
+                    "Walking Lunges (racked) 3×12 /leg",
+                    "TRX Single-Leg Hip Thrust 3×10 /leg",
+                    "KB Swing 3×20",
+                ],
+                "finisher": "20-lb-vest Step-Up Sprint 30 s on / 15 s off ×5",
+            },
+            {   # W-4 D-2 – Overhead & Core
+                "main": "Half-Kneeling Push-Press 5×6 /side",
+                "accessory": [
+                    "EMOM 10 — Odd: 8 Renegade Rows /side",
+                    "EMOM 10 — Even: 6 TRX Atomic Push-Ups",
+                ],
+                "finisher": "Farmer-Carry March 45 s / 15 s ×4",
+            },
+            {   # W-4 D-3 – Single-Leg Hinge
+                "main": "KB Bulgarian Single-Leg RDL 4×8 /leg",
+                "accessory": [
+                    "High Pull 3×10 /side",
+                    "Weighted Step-Up 3×12 /leg",
+                    "Plank Reach-Out 3×15 /side",
+                ],
+                "finisher": "Swing-Sprint — 10 Swings + 50 m dash ×5",
+            },
+        ],
+    },
 }
 
 
@@ -623,6 +686,25 @@ class KBApp(tk.Tk):
         self.menu_tree = tree
 
 
+    def _toggle_track(self):
+        if self._cycle_active():          # ⇢ STOP
+            d = _load()
+            d["microcycle"] = {           # reset cycle
+                "id": d["microcycle"]["id"] + 1,
+                "sessions_completed": 0,
+                "start_date": str(_today()),
+                "badge_given": False,
+            }
+            _save(d)
+            self._write("⏹  Track stopped; progress reset.")
+        else:                             # ⇢ START
+            msg = init_track(self.track_var.get())
+            self._write(msg)
+
+        # update label and any dependent UI
+        self.track_btn_text.set("Stop Track" if self._cycle_active() else "Start Track")
+        self._refresh_badges()
+        self._update_cycle_progress()     # if you have this helper
 
 
     # ── UI builder ────────────────────────────────────────────
@@ -634,9 +716,14 @@ class KBApp(tk.Tk):
         ttk.Label(bar, text="Track:").pack(side="left")
         self.track_var = tk.StringVar(value=TRACK_KEYS[0])
         ttk.OptionMenu(bar, self.track_var, TRACK_KEYS[0], *TRACK_KEYS).pack(side="left")
-        ttk.Button(bar, text="Start",
-                   command=lambda: self._write(init_track(self.track_var.get()))
-                   ).pack(side="left", padx=6)
+        # text variable so we can change label at runtime
+        self.track_btn_text = tk.StringVar()
+        self.track_btn = ttk.Button(
+            bar, textvariable=self.track_btn_text, command=self._toggle_track
+        )
+        self.track_btn.pack(side="left", padx=6)
+        # initial label
+        self.track_btn_text.set("Stop Track" if self._cycle_active() else "Start Track")
 
         # after you create the Track selector bar
         self.treasury_var = tk.StringVar(value="0 Drachma")
@@ -877,6 +964,12 @@ class KBApp(tk.Tk):
 
 
         self.streak_var.set(f"Streak {blocks}  ({done}/{TARGET_WK_WORKOUTS}) – {badge_msg}")
+    # place near the other helpers
+    def _cycle_active(self) -> bool:
+        d = _load()
+        mc = d["microcycle"]
+        return mc["sessions_completed"] > 0 and not mc["badge_given"]
+
 
     def _refresh_history(self):
         """Rebuild the History tree; never crash if a key is missing."""
