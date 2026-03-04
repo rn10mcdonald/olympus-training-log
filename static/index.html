@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Olympus Training Log</title>
 <link rel="manifest" href="static/manifest.json">
-<link rel="stylesheet" href="static/style.css?v=5">
+<link rel="stylesheet" href="static/style.css?v=6">
 </head>
 <body>
 
@@ -40,20 +40,8 @@
           <h2>Today's Workout</h2>
           <button class="btn-icon" id="refresh-btn" title="Refresh">↺</button>
         </div>
+        <!-- Per-movement weight inputs are injected here by renderWorkout() -->
         <div id="workout-display"><p class="dim-msg">Loading…</p></div>
-
-        <!-- Optional bell-weight entry (shown only when a session is active) -->
-        <div class="weight-log-row" id="weight-log-row" hidden>
-          <div class="weight-log-label">
-            <span>Bell weight</span>
-            <span class="weight-std-hint" id="weight-std-hint"></span>
-          </div>
-          <div class="weight-log-controls">
-            <input id="bell-weight-lbs" type="number" placeholder="optional" step="1" min="0" max="999">
-            <span class="weight-log-unit">lbs</span>
-            <span class="weight-coins-preview" id="weight-coins-preview">🪙 5.00</span>
-          </div>
-        </div>
 
         <div class="action-row" id="workout-actions">
           <button class="btn-primary" id="log-rec-btn">✓ Log Recommended</button>
@@ -287,7 +275,7 @@
   </div>
 </div>
 
-<script src="static/main.js?v=5"></script>
+<script src="static/main.js?v=6"></script>
 <script>
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("service-worker.js");

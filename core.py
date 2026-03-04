@@ -558,13 +558,17 @@ def init_track(state: dict, key: str) -> str:
     return f"Started {TEMPLATES[key]['name']}"
 
 
-def log_rec(state: dict, weight_kg: float | None = None) -> str:
+def log_rec(state: dict, weights_lbs: dict | None = None) -> str:
     """Log the next recommended session.
 
-    weight_kg – the bell weight used (kg). If None the user skipped weight entry
-                and earns the BASE_WORKOUT_COINS flat amount.  Otherwise coins
-                scale linearly with weight vs the session's std_kg, clamped to
-                0.5×–2.0× the base (so 2.50–10.00 Drachma per session).
+    weights_lbs – dict of per-movement bell weights in lbs, e.g.:
+        {"main": 35, "acc_0": 26, "acc_1": None, "finisher": 25}
+    Keys: "main", "acc_0", "acc_1", "acc_2", "finisher".
+    Only non-zero values are stored.
+
+    Drachma scales on the MAIN lift weight vs the session's std_kg
+    (clamped 0.5×–2.0×, so 2.50–10.00 per session).
+    Skipping weight entry awards the flat BASE_WORKOUT_COINS.
     """
     track = state.get("track")
     if not track or track not in TEMPLATES:
@@ -577,11 +581,24 @@ def log_rec(state: dict, weight_kg: float | None = None) -> str:
     tpl    = TEMPLATES[track]["sessions"][idx]
     std_kg = tpl.get("std_kg", 16)
 
-    if weight_kg and weight_kg > 0:
-        ratio = min(max(weight_kg / std_kg, 0.5), 2.0)
-        coins = round(BASE_WORKOUT_COINS * ratio, 2)
+    main_lbs = float((weights_lbs or {}).get("main") or 0)
+    if main_lbs > 0:
+        main_kg = main_lbs * 0.453592
+        ratio   = min(max(main_kg / std_kg, 0.5), 2.0)
+        coins   = round(BASE_WORKOUT_COINS * ratio, 2)
     else:
         coins = BASE_WORKOUT_COINS
+
+    # Store only movements that had a weight entered
+    stored_weights: dict = {}
+    if weights_lbs:
+        for k, v in weights_lbs.items():
+            try:
+                f = float(v or 0)
+                if f > 0:
+                    stored_weights[k] = f
+            except (TypeError, ValueError):
+                pass
 
     entry: dict = {
         "date":    str(dt.date.today()),
@@ -590,8 +607,8 @@ def log_rec(state: dict, weight_kg: float | None = None) -> str:
         "std_kg":  std_kg,
         "coins":   coins,
     }
-    if weight_kg and weight_kg > 0:
-        entry["weight_kg"] = round(weight_kg, 2)
+    if stored_weights:
+        entry["weights_lbs"] = stored_weights
 
     state["workouts"].append(entry)
     state["treasury"] = round(state.get("treasury", 0.0) + coins, 2)
@@ -599,9 +616,8 @@ def log_rec(state: dict, weight_kg: float | None = None) -> str:
     _increment_weekly_streak(state)
     _maybe_award_cycle_badge(state)
 
-    if weight_kg and weight_kg > 0:
-        lbs = round(weight_kg * 2.20462)
-        return f"⚔️ Logged: {tpl['main']} @ {lbs} lbs — earned 🪙 {coins:.2f} Drachma"
+    if main_lbs > 0:
+        return f"⚔️ Logged: {tpl['main']} @ {int(main_lbs)} lbs — earned 🪙 {coins:.2f} Drachma"
     return f"⚔️ Logged: {tpl['main']} — earned 🪙 {coins:.2f} Drachma"
 
 

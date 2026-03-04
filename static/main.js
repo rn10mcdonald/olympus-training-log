@@ -223,55 +223,71 @@ function renderCycleGrid(state) {
     </div>`;
 }
 
+/** Compact weight input HTML for a given movement key. */
+function weightInputHtml(key) {
+  return `<input type="number" class="movement-weight-input"
+                 data-key="${key}" placeholder="lbs"
+                 step="1" min="0" max="999" inputmode="decimal">`;
+}
+
 function renderWorkout(w) {
-  const el         = document.getElementById("workout-display");
-  const weightRow  = document.getElementById("weight-log-row");
-  const stdHint    = document.getElementById("weight-std-hint");
-  const coinPreview = document.getElementById("weight-coins-preview");
+  const el = document.getElementById("workout-display");
 
   if (!w || w.status === "no_track") {
     el.innerHTML = `<p class="dim-msg">No active track. Choose a track below and press <strong>Start</strong>.</p>`;
-    weightRow.setAttribute("hidden", "");
     return;
   }
   if (w.status === "cycle_complete") {
     el.innerHTML = `<p class="dim-msg">🏅 Cycle complete! Log a custom workout or start a new track below.</p>`;
-    weightRow.setAttribute("hidden", "");
     return;
   }
 
-  // Store current std_kg for live coin preview calculations
+  // Store current std_kg so updateCoinPreview can use it
   currentStdKg = w.std_kg || 16;
   const stdLbs = Math.round(currentStdKg * 2.20462);
-  stdHint.textContent = `· std: ${stdLbs} lbs (${currentStdKg} kg)`;
-  coinPreview.textContent = `🪙 ${BASE_WORKOUT_COINS.toFixed(2)}`;
-  weightRow.removeAttribute("hidden");
 
-  // Reset weight field on new workout display
-  const weightInput = document.getElementById("bell-weight-lbs");
-  if (weightInput) weightInput.value = "";
+  const accessories = (w.accessory || []).map((a, i) => `
+    <li>
+      <span class="acc-text">${escHtml(a)}</span>
+      ${weightInputHtml(`acc_${i}`)}
+    </li>`).join("");
 
-  const accessories = (w.accessory || []).map(a => `<li>${escHtml(a)}</li>`).join("");
   el.innerHTML = `
     <div class="workout-track-name">${escHtml(w.track_name || "")}</div>
     <div class="workout-session-label">Session ${w.session_num} of ${w.total_sessions}</div>
-    <div class="workout-main">${escHtml(w.main)}</div>
+
+    <div class="workout-main">
+      <span class="workout-main-text">${escHtml(w.main)}</span>
+      ${weightInputHtml("main")}
+    </div>
+
     <div class="workout-accessories">
       <h4>Accessories</h4>
       <ul>${accessories}</ul>
     </div>
+
     <div class="workout-finisher">
-      <span class="finisher-label">Finisher</span>
-      ${escHtml(w.finisher)}
+      <div class="finisher-content">
+        <span class="finisher-label">Finisher</span>
+        ${escHtml(w.finisher)}
+      </div>
+      ${weightInputHtml("finisher")}
+    </div>
+
+    <div class="workout-coins-row">
+      <span class="weight-std-hint">· std: ${stdLbs} lbs (${currentStdKg} kg)</span>
+      <span class="weight-coins-preview" id="weight-coins-preview">🪙 ${BASE_WORKOUT_COINS.toFixed(2)}</span>
     </div>`;
 }
 
-// Live Drachma preview as user adjusts weight
+/** Live Drachma preview — driven by the main-lift weight input. */
 function updateCoinPreview() {
-  const el  = document.getElementById("weight-coins-preview");
-  if (!el) return;
-  const lbs = parseFloat(document.getElementById("bell-weight-lbs").value || 0);
-  el.textContent = `🪙 ${estimateWorkoutCoins(lbs, currentStdKg).toFixed(2)}`;
+  const preview = document.getElementById("weight-coins-preview");
+  if (!preview) return;
+  const mainInput = document.querySelector(
+    "#workout-display .movement-weight-input[data-key='main']");
+  const lbs = mainInput ? parseFloat(mainInput.value || 0) : 0;
+  preview.textContent = `🪙 ${estimateWorkoutCoins(lbs, currentStdKg).toFixed(2)}`;
 }
 
 async function populateTracks(state) {
@@ -403,10 +419,17 @@ function renderHistory(state, filter) {
     for (const w of state.workouts || []) {
       if (!w.date) continue;
       let detail = w.details || "";
-      if (w.weight_kg) {
-        const lbs = Math.round(w.weight_kg * 2.20462);
-        detail += ` · ${lbs} lbs`;
+
+      // Per-movement weights (new format)
+      if (w.weights_lbs && Object.keys(w.weights_lbs).length > 0) {
+        const order = ["main", "acc_0", "acc_1", "acc_2", "finisher"];
+        const parts = order.map(k => w.weights_lbs[k]).filter(v => v && v > 0);
+        if (parts.length) detail += ` · ${parts.join("/")} lbs`;
+      } else if (w.weight_kg) {
+        // Backward compat: single weight stored as kg
+        detail += ` · ${Math.round(w.weight_kg * 2.20462)} lbs`;
       }
+
       if (w.coins != null) {
         detail += ` · 🪙 ${Number(w.coins).toFixed(2)}`;
       }
@@ -508,15 +531,20 @@ async function startPreviewedTrack() {
 
 // ── Actions ───────────────────────────────────────────────────────────────────
 async function logRecommended() {
-  const lbs     = parseFloat(document.getElementById("bell-weight-lbs").value || 0);
-  const payload = lbs > 0 ? { weight_lbs: lbs } : {};
+  // Collect all per-movement weights entered by the user
+  const weights = {};
+  document.querySelectorAll("#workout-display .movement-weight-input").forEach(inp => {
+    const v = parseFloat(inp.value || 0);
+    if (v > 0) weights[inp.dataset.key] = v;
+  });
+  const payload = Object.keys(weights).length > 0 ? { weights_lbs: weights } : {};
+
   try {
     const r = await api("/api/workout/recommended", payload);
     toast(r.msg || "⚔️ Workout logged!");
-    document.getElementById("bell-weight-lbs").value = "";
     appState = r.state;
     const workout = await api("/api/workout/today");
-    renderAll(appState, workout);
+    renderAll(appState, workout);   // renderWorkout resets all inputs as part of re-render
     checkNewBadges(appState);
   } catch (e) { toast("⚠ " + e.message); }
 }
@@ -625,8 +653,13 @@ document.getElementById("log-custom-btn").addEventListener("click", openCustomDi
 document.getElementById("preview-track-btn").addEventListener("click", showTrackPreview);
 document.getElementById("start-track-btn").addEventListener("click", () => startTrack());
 
-// Bell weight live preview
-document.getElementById("bell-weight-lbs").addEventListener("input", updateCoinPreview);
+// Live coin preview — delegate from workout-display so it works after re-renders
+document.getElementById("workout-display").addEventListener("input", e => {
+  if (e.target.classList.contains("movement-weight-input") &&
+      e.target.dataset.key === "main") {
+    updateCoinPreview();
+  }
+});
 
 // Ruck section
 document.getElementById("log-ruck-btn").addEventListener("click", logRuck);
