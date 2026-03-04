@@ -7,7 +7,6 @@ import datetime as dt
 import random
 
 # ── Monster table (weighted probabilities) ────────────────────────────────────
-# Folder names match actual directories on disk (some have typos — intentional)
 MONSTERS = [
     # (display_name,                 folder_name,           probability %)
     ("Satyrs & Woodland Imps",       "Saytr",               10.00),
@@ -44,7 +43,8 @@ OLYMPIANS = [
     ("Poseidon", "🌊"), ("Hades", "🖤"),
 ]
 
-# ── Ruck milestone stops (Pheidippides round-trip Athens → Sparta → Athens) ──
+# ── Pheidippides Journey milestones (shared by rucking AND running) ────────────
+# Ruck miles + run miles combine into a single journey total.
 RUCK_STOPS = [
     (0,   "Acropolis",
      "\"Welcome to leg-day on hard mode!\" Athena's owl hoots, 'Hoot luck, buddy.'"),
@@ -438,7 +438,7 @@ TEMPLATES = {
 
 TRACK_KEYS      = list(TEMPLATES.keys())
 SESSIONS_NEEDED = 6      # workouts per 2-week cycle
-WK_TARGET       = 3      # workouts per calendar week for a laurel
+WK_TARGET       = 3      # any activities per calendar week for a laurel
 
 # ── Default state ─────────────────────────────────────────────────────────────
 def default_state() -> dict:
@@ -450,13 +450,16 @@ def default_state() -> dict:
             "start_date": str(dt.date.today()),
             "badge_given": False,
         },
-        "workouts":         [],    # list[{date, type, details}]
-        "ruck_log":         [],    # list[{date, distance_miles, weight_lbs, coins}]
-        "badges":           [],    # list of badge records
-        "treasury":         0.0,   # drachma accumulated
-        "total_ruck_miles": 0.0,   # lifetime ruck distance
-        "week_log":         {},    # {"(year, week)": count}
-        "templates":        {k: v["name"] for k, v in TEMPLATES.items()},
+        "workouts":          [],   # list[{date, type, details}]
+        "ruck_log":          [],   # list[{date, distance_miles, weight_lbs, coins}]
+        "run_log":           [],   # list[{date, distance_miles, coins, pace_min_per_mile?}]
+        "badges":            [],   # list of badge records
+        "treasury":          0.0,  # drachma accumulated (ruck + run)
+        "total_ruck_miles":  0.0,  # lifetime ruck distance
+        "total_run_miles":   0.0,  # lifetime run distance
+        "journey_miles":     0.0,  # combined ruck + run (used for milestone checks)
+        "week_log":          {},   # {"(year, week)": count} — any activity
+        "templates":         {k: v["name"] for k, v in TEMPLATES.items()},
     }
 
 # ── Public API ────────────────────────────────────────────────────────────────
@@ -473,13 +476,25 @@ def get_today_workout(state: dict) -> dict:
                 "message": "Cycle complete! Log a custom workout or start a new track."}
     sess = TEMPLATES[track]["sessions"][idx]
     return {
-        "status":        "active",
-        "session_num":   idx + 1,
+        "status":         "active",
+        "session_num":    idx + 1,
         "total_sessions": SESSIONS_NEEDED,
-        "main":          sess["main"],
-        "accessory":     sess["accessory"],
-        "finisher":      sess["finisher"],
-        "track_name":    TEMPLATES[track]["name"],
+        "main":           sess["main"],
+        "accessory":      sess["accessory"],
+        "finisher":       sess["finisher"],
+        "track_name":     TEMPLATES[track]["name"],
+    }
+
+
+def get_track_detail(key: str) -> dict | None:
+    """Return full track template with all sessions for preview (no mutation)."""
+    if key not in TEMPLATES:
+        return None
+    t = TEMPLATES[key]
+    return {
+        "key":      key,
+        "name":     t["name"],
+        "sessions": t["sessions"],
     }
 
 
@@ -533,10 +548,11 @@ def log_custom(state: dict, text: str) -> str:
 
 
 def log_ruck(state: dict, miles: float, pounds: float) -> str:
-    """Log a ruck session, award drachma, and check for milestone postcards."""
-    prev      = state.get("total_ruck_miles", 0.0)
-    new_total = prev + miles
-    coins     = round(miles * (1 + 0.01 * pounds), 2)
+    """Log a ruck session, award drachma, check journey milestones."""
+    coins         = round(miles * (1 + 0.01 * pounds), 2)
+    prev_journey  = state.get("journey_miles",
+                              state.get("total_ruck_miles", 0.0))
+    new_journey   = prev_journey + miles
 
     state["ruck_log"].append({
         "date":           str(dt.date.today()),
@@ -544,31 +560,57 @@ def log_ruck(state: dict, miles: float, pounds: float) -> str:
         "weight_lbs":     pounds,
         "coins":          coins,
     })
-    state["treasury"]         = round(state.get("treasury", 0.0) + coins, 2)
-    state["total_ruck_miles"] = new_total
+    state["treasury"]        = round(state.get("treasury", 0.0) + coins, 2)
+    state["total_ruck_miles"] = state.get("total_ruck_miles", 0.0) + miles
+    state["journey_miles"]    = new_journey
 
-    _check_ruck_milestone(state, prev, new_total)
+    _check_journey_milestone(state, prev_journey, new_journey)
+    _increment_weekly_streak(state)   # rucks count toward weekly laurels
     return (f"🪙 Earned {coins:.2f} Drachma.  "
-            f"Total: {new_total:.1f} mi rucked.")
+            f"Journey: {new_journey:.1f} mi.")
+
+
+def log_run(state: dict, miles: float, pace: float | None = None) -> str:
+    """Log a run, award base-rate drachma (no weight bonus), check journey milestones."""
+    coins        = round(miles * 1.0, 2)   # base rate; ruck earns more with weight
+    prev_journey = state.get("journey_miles",
+                             state.get("total_ruck_miles", 0.0))
+    new_journey  = prev_journey + miles
+
+    entry: dict = {
+        "date":           str(dt.date.today()),
+        "distance_miles": miles,
+        "coins":          coins,
+    }
+    if pace is not None:
+        entry["pace_min_per_mile"] = pace
+
+    state.setdefault("run_log", []).append(entry)
+    state["treasury"]       = round(state.get("treasury", 0.0) + coins, 2)
+    state["total_run_miles"] = state.get("total_run_miles", 0.0) + miles
+    state["journey_miles"]   = new_journey
+
+    _check_journey_milestone(state, prev_journey, new_journey)
+    _increment_weekly_streak(state)   # runs count toward weekly laurels
+    return (f"🏃 Ran {miles:.1f} mi — earned {coins:.2f} Drachma.  "
+            f"Journey: {new_journey:.1f} mi.")
 
 # ── Internal helpers ──────────────────────────────────────────────────────────
 
 def _maybe_award_cycle_badge(state: dict) -> None:
-    """Award monster trophy when 6 sessions are done within a 2-week window."""
+    """Award monster trophy when 6 sessions are completed."""
     mc = state["microcycle"]
     if mc["badge_given"]:
         return
     if mc["sessions_completed"] < SESSIONS_NEEDED:
-        return
-    start = dt.date.fromisoformat(mc["start_date"])
-    if (dt.date.today() - start).days < 13:
         return
     _award_monster_badge(state)
     mc["badge_given"] = True
 
 
 def _increment_weekly_streak(state: dict) -> None:
-    """Award an Olympian Laurel after WK_TARGET workouts in a calendar week."""
+    """Award an Olympian Laurel after WK_TARGET activities in a calendar week.
+    Any activity type (lift, ruck, run) counts."""
     today    = dt.date.today().isocalendar()[:2]   # (year, week_number)
     week_key = str(today)
     state.setdefault("week_log", {})
@@ -584,17 +626,18 @@ def _increment_weekly_streak(state: dict) -> None:
         })
 
 
-def _check_ruck_milestone(state: dict,
-                           prev_miles: float,
-                           new_miles:  float) -> None:
-    """Award ruck-quest postcards for every waypoint crossed (loop-aware)."""
+def _check_journey_milestone(state: dict,
+                              prev_miles: float,
+                              new_miles:  float) -> None:
+    """Award Pheidippides way-point postcards for every waypoint crossed.
+    Journey miles = ruck + run combined. Loop-aware."""
     if TRIP_MILES <= 0:
         return
 
     prev_loop = int(prev_miles // TRIP_MILES)
     new_loop  = int(new_miles  // TRIP_MILES)
 
-    # build set of already-earned (loop, city) pairs to prevent duplicates
+    # Build set of already-earned (loop, city) pairs to prevent duplicates
     earned: set = set()
     for b in state["badges"]:
         if b.get("type") == "ruck_quest":

@@ -4,9 +4,14 @@
 
 "use strict";
 
+// ── Constants ─────────────────────────────────────────────────────────────────
+const TRIP_MILES  = 306;
+const SESSIONS_NEEDED = 6;
+const WEEK_TARGET = 3;
+
 // ── API helper ────────────────────────────────────────────────────────────────
 async function api(url, data) {
-  const opts = data
+  const opts = data !== undefined
     ? { method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data) }
     : {};
@@ -30,94 +35,126 @@ function toast(msg, ms = 3500) {
   _toastTimer = setTimeout(() => toastEl.classList.remove("show"), ms);
 }
 
-// ── State ─────────────────────────────────────────────────────────────────────
-let appState      = null;
-let prevBadgeCount = 0;
+// ── Utility ───────────────────────────────────────────────────────────────────
+function escHtml(s) {
+  return String(s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
 
-// ── Refresh all UI ────────────────────────────────────────────────────────────
+function encodeURIPath(path) {
+  return String(path).split("/").map(encodeURIComponent).join("/");
+}
+
+function isoWeek(date) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const day = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - day);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return [d.getUTCFullYear(), Math.ceil((((d - yearStart) / 86_400_000) + 1) / 7)];
+}
+
+// Pace helpers: "8:30" <-> 8.5 decimal minutes
+function parsePace(str) {
+  if (!str || !str.trim()) return null;
+  const m = str.trim().match(/^(\d+):([0-5]\d)$/);
+  if (!m) return null;
+  return parseInt(m[1], 10) + parseInt(m[2], 10) / 60;
+}
+
+function formatPace(decMin) {
+  if (decMin == null) return "";
+  const min = Math.floor(decMin);
+  const sec = Math.round((decMin - min) * 60);
+  return `${min}:${sec.toString().padStart(2, "0")}`;
+}
+
+// ── App state ─────────────────────────────────────────────────────────────────
+let appState        = null;
+let prevBadgeCount  = 0;
+let historyFilter   = "all";
+let previewedKey    = null;   // track key currently shown in preview dialog
+
+// ── Section navigation ────────────────────────────────────────────────────────
+function switchSection(name) {
+  document.querySelectorAll(".page-section").forEach(s =>
+    s.classList.toggle("active", s.id === `section-${name}`));
+  document.querySelectorAll(".nav-btn").forEach(b =>
+    b.classList.toggle("active", b.dataset.section === name));
+}
+
+// ── Full refresh ──────────────────────────────────────────────────────────────
 async function refresh() {
   try {
-    appState = await api("/api/state");
-    renderStats(appState);
-    renderBadges(appState);
-    renderHistory(appState);
+    const [state, workout] = await Promise.all([
+      api("/api/state"),
+      api("/api/workout/today"),
+    ]);
+    appState = state;
+    renderAll(state, workout);
+    await populateTracks(state);
+    prevBadgeCount = (state.badges || []).length;
   } catch (e) {
     toast("⚠ Error loading state: " + e.message);
   }
 }
 
-async function loadTodayWorkout() {
-  try {
-    const w = await api("/api/workout/today");
-    renderWorkout(w);
-  } catch (e) {
-    toast("⚠ Error loading workout: " + e.message);
-  }
+// ── Render all sections ───────────────────────────────────────────────────────
+function renderAll(state, workout) {
+  renderHeader(state);
+  renderTrainSection(state, workout);
+  renderRuckSection(state);
+  renderRunSection(state);
+  renderVaultSection(state);
+  renderHistory(state, historyFilter);
 }
 
-async function populateTracks() {
-  try {
-    const tracks = await api("/api/tracks");
-    const sel = document.getElementById("track-select");
-    sel.innerHTML = "";
-    for (const [key, name] of Object.entries(tracks)) {
-      const opt = document.createElement("option");
-      opt.value = key;
-      opt.textContent = name;
-      sel.appendChild(opt);
-    }
-    // pre-select the active track
-    if (appState && appState.track) sel.value = appState.track;
-  } catch (_) {}
-}
-
-// ── Stats bar ─────────────────────────────────────────────────────────────────
-function isoWeekNumber(date) {
-  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-  const day = d.getUTCDay() || 7;
-  d.setUTCDate(d.getUTCDate() + 4 - day);
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-  return Math.ceil((((d - yearStart) / 86_400_000) + 1) / 7);
-}
-
-function renderStats(state) {
-  // Drachma
+// ── Header ────────────────────────────────────────────────────────────────────
+function renderHeader(state) {
   document.getElementById("drachma").textContent =
     (state.treasury || 0).toFixed(2);
 
-  // Total ruck miles
-  document.getElementById("total-miles").textContent =
-    (state.total_ruck_miles || 0).toFixed(1);
-
-  // Weekly streak (ISO week)
   const today = new Date();
-  const weekKey = `(${today.getFullYear()}, ${isoWeekNumber(today)})`;
-  const wkCount = Math.min((state.week_log || {})[weekKey] || 0, 3);
-  document.getElementById("streak-display").textContent =
-    "✔".repeat(wkCount) + "▢".repeat(3 - wkCount);
-
-  // Cycle progress
-  const done = Math.min((state.microcycle || {}).sessions_completed || 0, 6);
-  document.getElementById("cycle-display").textContent =
-    "▣".repeat(done) + "▢".repeat(6 - done);
+  const [yr, wk] = isoWeek(today);
+  const weekKey = `(${yr}, ${wk})`;
+  const wkCount = Math.min((state.week_log || {})[weekKey] || 0, WEEK_TARGET);
+  document.getElementById("week-count").textContent = `${wkCount}/${WEEK_TARGET}`;
 }
 
-// ── Workout display ───────────────────────────────────────────────────────────
+// ── Train section ─────────────────────────────────────────────────────────────
+function renderTrainSection(state, workout) {
+  renderWorkout(workout);
+
+  const done = Math.min((state.microcycle || {}).sessions_completed || 0, SESSIONS_NEEDED);
+  const pct  = (done / SESSIONS_NEEDED) * 100;
+  document.getElementById("cycle-bar").style.width = pct.toFixed(1) + "%";
+  document.getElementById("cycle-fraction").textContent = `${done} / ${SESSIONS_NEEDED}`;
+
+  let note = "";
+  if (!workout || workout.status === "no_track") {
+    note = "Select a track below to begin your microcycle.";
+  } else if (workout.status === "cycle_complete") {
+    note = "Cycle complete! Start a new track or log a custom workout.";
+  } else {
+    const track = state.track ? (state.templates || {})[state.track] || "" : "";
+    note = track ? `Active: ${track}` : "";
+  }
+  document.getElementById("cycle-note").textContent = note;
+}
+
 function renderWorkout(w) {
   const el = document.getElementById("workout-display");
-
-  if (w.status === "no_track") {
-    el.innerHTML = `<p class="dim-msg">No active track. Select a track below and press <strong>Start</strong>.</p>`;
+  if (!w || w.status === "no_track") {
+    el.innerHTML = `<p class="dim-msg">No active track. Choose a track below and press <strong>Start</strong>.</p>`;
     return;
   }
   if (w.status === "cycle_complete") {
-    el.innerHTML = `<p class="dim-msg">🏅 Cycle complete!  Log a custom workout or start a new track below.</p>`;
+    el.innerHTML = `<p class="dim-msg">🏅 Cycle complete! Log a custom workout or start a new track below.</p>`;
     return;
   }
-
-  const accessories = (w.accessory || [])
-    .map(a => `<li>${escHtml(a)}</li>`).join("");
-
+  const accessories = (w.accessory || []).map(a => `<li>${escHtml(a)}</li>`).join("");
   el.innerHTML = `
     <div class="workout-track-name">${escHtml(w.track_name || "")}</div>
     <div class="workout-session-label">Session ${w.session_num} of ${w.total_sessions}</div>
@@ -132,27 +169,109 @@ function renderWorkout(w) {
     </div>`;
 }
 
-// ── Badges ────────────────────────────────────────────────────────────────────
-function renderBadges(state) {
+async function populateTracks(state) {
+  try {
+    const tracks = await api("/api/tracks");
+    const sel = document.getElementById("track-select");
+    sel.innerHTML = "";
+    for (const [key, name] of Object.entries(tracks)) {
+      const opt = document.createElement("option");
+      opt.value = key;
+      opt.textContent = name;
+      sel.appendChild(opt);
+    }
+    if (state && state.track) sel.value = state.track;
+  } catch (_) {}
+}
+
+// ── Ruck section ──────────────────────────────────────────────────────────────
+function renderRuckSection(state) {
+  const ruckMiles = state.total_ruck_miles || 0;
+  const runMiles  = state.total_run_miles  || 0;
+  const journey   = state.journey_miles    || 0;
+
+  document.getElementById("total-ruck-miles").textContent = ruckMiles.toFixed(1) + " mi";
+  document.getElementById("total-run-miles-ruck").textContent = runMiles.toFixed(1) + " mi";
+
+  const pct = Math.min((journey / TRIP_MILES) * 100, 100);
+  document.getElementById("journey-bar").style.width = pct.toFixed(1) + "%";
+  document.getElementById("journey-fraction").textContent =
+    `${journey.toFixed(1)} / ${TRIP_MILES} mi`;
+
+  const postcards = (state.badges || []).filter(b => b.type === "ruck_quest").reverse();
+  document.getElementById("ruck-postcards").innerHTML =
+    postcards.length
+      ? postcards.map(b => postcardHtml(b)).join("")
+      : `<p class="dim-msg">Ruck or run your first miles to unlock waypoints.</p>`;
+}
+
+function postcardHtml(b) {
+  const imgEl = b.image_path
+    ? `<img src="/img/${encodeURIPath(b.image_path)}" alt="${escHtml(b.stop || b.name)}"
+           onerror="this.replaceWith(Object.assign(document.createElement('div'),
+             {className:'postcard-placeholder',textContent:'📜'}))">`
+    : `<div class="postcard-placeholder">📜</div>`;
+  return `
+    <div class="postcard">
+      ${imgEl}
+      <div>
+        <div class="postcard-city">${escHtml(b.stop || b.name)}</div>
+        ${b.caption ? `<div class="postcard-caption">${escHtml(b.caption)}</div>` : ""}
+        <div class="postcard-date">${b.date || ""}</div>
+      </div>
+    </div>`;
+}
+
+// ── Run section ───────────────────────────────────────────────────────────────
+function renderRunSection(state) {
+  const runMiles = state.total_run_miles || 0;
+  const journey  = state.journey_miles   || 0;
+
+  // Drachma earned from running (coins stored per entry)
+  const runDrachma = (state.run_log || [])
+    .reduce((sum, r) => sum + (r.coins || 0), 0);
+
+  document.getElementById("total-run-miles").textContent = runMiles.toFixed(1) + " mi";
+  document.getElementById("run-drachma").textContent = "🪙 " + runDrachma.toFixed(2);
+
+  // Mini journey bar
+  const pct = Math.min((journey / TRIP_MILES) * 100, 100);
+  document.getElementById("journey-bar-run").style.width = pct.toFixed(1) + "%";
+  document.getElementById("journey-fraction-run").textContent =
+    `${journey.toFixed(1)} / ${TRIP_MILES} mi`;
+
+  // Recent runs (up to 5)
+  const runs = [...(state.run_log || [])].reverse().slice(0, 5);
+  document.getElementById("recent-runs").innerHTML = runs.length
+    ? runs.map(r => `
+        <div class="recent-run-item">
+          <span class="run-miles-text">${r.distance_miles.toFixed(2)} mi</span>
+          ${r.pace_min_per_mile
+            ? `<span class="run-pace-text">${formatPace(r.pace_min_per_mile)}/mi</span>`
+            : ""}
+          <span class="run-date-text">${r.date || ""}</span>
+        </div>`).join("")
+    : `<p class="dim-msg">No runs logged yet.</p>`;
+}
+
+// ── Vault section ─────────────────────────────────────────────────────────────
+function renderVaultSection(state) {
   const badges   = state.badges || [];
   const trophies = [...badges].filter(b => b.type === "monster").reverse();
   const laurels  = [...badges].filter(b => b.type === "laurel").reverse();
-  const journey  = [...badges].filter(b => b.type === "ruck_quest").reverse();
+  const postcards = [...badges].filter(b => b.type === "ruck_quest").reverse();
 
-  // Trophies
-  document.getElementById("trophies-list").innerHTML =
-    trophies.length
-      ? trophies.map(b => badgeCardHtml(b)).join("")
-      : `<div class="empty-msg">Complete a 2-week cycle to earn a monster trophy</div>`;
+  document.getElementById("trophies-list").innerHTML = trophies.length
+    ? trophies.map(b => badgeCardHtml(b)).join("")
+    : `<div class="empty-msg">Complete a 6-session cycle to earn your first trophy.</div>`;
 
-  // Laurels
-  document.getElementById("laurels-list").innerHTML =
-    laurels.length
-      ? laurels.map(b => badgeCardHtml(b)).join("")
-      : `<div class="empty-msg">Log 3 workouts in a week to earn an Olympian Laurel</div>`;
+  document.getElementById("laurels-list").innerHTML = laurels.length
+    ? laurels.map(b => badgeCardHtml(b)).join("")
+    : `<div class="empty-msg">Log 3 activities in a week to earn a Laurel.</div>`;
 
-  // Journey / ruck quest
-  renderJourney(journey, state.total_ruck_miles || 0);
+  document.getElementById("vault-postcards").innerHTML = postcards.length
+    ? postcards.map(b => postcardHtml(b)).join("")
+    : `<div class="empty-msg">Unlock waypoints by covering journey miles.</div>`;
 }
 
 function badgeCardHtml(b) {
@@ -161,86 +280,55 @@ function badgeCardHtml(b) {
     ? `<img class="badge-img" src="/img/${encodeURIPath(b.image_path)}"
            alt="${escHtml(b.name)}"
            onerror="this.replaceWith(Object.assign(document.createElement('div'),
-             {className:'badge-emoji', textContent:'🏆'}))">`
+             {className:'badge-emoji',textContent:'🏆'}))">`
     : `<div class="badge-emoji">${b.type === "laurel" ? "🌿" : "🏆"}</div>`;
   return `
     <div class="badge-card${isGilded ? " gilded" : ""}">
       ${imgEl}
       <div class="badge-name">${escHtml(b.name)}</div>
-      <div class="badge-date">${b.date || b.earned_on || ""}</div>
+      <div class="badge-date">${b.date || ""}</div>
     </div>`;
-}
-
-// ── Journey (ruck quest) ──────────────────────────────────────────────────────
-const TRIP_MILES = 306;
-const RUCK_STOPS = [
-  [0,   "Acropolis"],    [12,  "Eleusis"],     [26,  "Megara"],
-  [48,  "Corinth"],      [75,  "Nemea"],        [99,  "Tegea"],
-  [153, "Sparta"],       [206, "Mantinea"],     [224, "Argos"],
-  [249, "Epidaurus"],    [286, "Sounion"],      [306, "Athens_Return"],
-];
-
-function renderJourney(journeyBadges, totalMiles) {
-  const pct = Math.min((totalMiles / TRIP_MILES) * 100, 100);
-  const progressHtml = `
-    <div class="journey-progress">
-      <span class="progress-label">${totalMiles.toFixed(1)} / ${TRIP_MILES} mi</span>
-      <div class="progress-bar-wrap">
-        <div class="progress-bar-fill" style="width:${pct.toFixed(1)}%"></div>
-      </div>
-      <span class="progress-label">${pct.toFixed(0)}%</span>
-    </div>`;
-
-  if (!journeyBadges.length) {
-    document.getElementById("journey-list").innerHTML =
-      progressHtml +
-      `<div class="empty-msg">Ruck your first miles to unlock Pheidippides Way-Points</div>`;
-    return;
-  }
-
-  const cards = journeyBadges.map(b => {
-    const imgEl = b.image_path
-      ? `<img src="/img/${encodeURIPath(b.image_path)}" alt="${escHtml(b.stop || b.name)}"
-             onerror="this.replaceWith(Object.assign(document.createElement('div'),
-               {className:'postcard-placeholder', textContent:'📜'}))">`
-      : `<div class="postcard-placeholder">📜</div>`;
-    return `
-      <div class="postcard">
-        ${imgEl}
-        <div>
-          <div class="postcard-city">${escHtml(b.stop || b.name)}</div>
-          ${b.caption
-            ? `<div class="postcard-caption">${escHtml(b.caption)}</div>`
-            : ""}
-          <div class="postcard-date">${b.date || b.earned_on || ""}</div>
-        </div>
-      </div>`;
-  }).join("");
-
-  document.getElementById("journey-list").innerHTML =
-    progressHtml + `<div class="postcard-list">${cards}</div>`;
 }
 
 // ── History ───────────────────────────────────────────────────────────────────
-function renderHistory(state) {
+function renderHistory(state, filter) {
   const byDate = {};
 
-  for (const w of state.workouts || []) {
-    if (!w.date) continue;
-    (byDate[w.date] = byDate[w.date] || [])
-      .push({ kind: w.type, detail: w.details });
+  if (filter === "all" || filter === "lifting") {
+    for (const w of state.workouts || []) {
+      if (!w.date) continue;
+      (byDate[w.date] = byDate[w.date] || [])
+        .push({ kind: w.type === "recommended" ? "lifting" : "custom",
+                detail: w.details, _filter: "lifting" });
+    }
   }
-  for (const r of state.ruck_log || []) {
-    if (!r.date || typeof r.distance_miles !== "number") continue;
-    const detail = `${r.distance_miles} mi @ ${r.weight_lbs} lb`;
-    (byDate[r.date] = byDate[r.date] || []).push({ kind: "ruck", detail });
+
+  if (filter === "all" || filter === "ruck") {
+    for (const r of state.ruck_log || []) {
+      if (!r.date || typeof r.distance_miles !== "number") continue;
+      (byDate[r.date] = byDate[r.date] || [])
+        .push({ kind: "ruck",
+                detail: `${r.distance_miles} mi @ ${r.weight_lbs} lb — 🪙 ${(r.coins || 0).toFixed(2)}`,
+                _filter: "ruck" });
+    }
+  }
+
+  if (filter === "all" || filter === "run") {
+    for (const r of state.run_log || []) {
+      if (!r.date || typeof r.distance_miles !== "number") continue;
+      const pace = r.pace_min_per_mile ? ` @ ${formatPace(r.pace_min_per_mile)}/mi` : "";
+      (byDate[r.date] = byDate[r.date] || [])
+        .push({ kind: "run",
+                detail: `${r.distance_miles} mi${pace} — 🪙 ${(r.coins || 0).toFixed(2)}`,
+                _filter: "run" });
+    }
   }
 
   const dates = Object.keys(byDate).sort().reverse();
   const el    = document.getElementById("history-list");
 
   if (!dates.length) {
-    el.innerHTML = `<div class="empty-msg">No workouts logged yet — get moving!</div>`;
+    el.innerHTML = `<div class="empty-msg">No activity logged yet — get moving!</div>`;
     return;
   }
 
@@ -255,47 +343,122 @@ function renderHistory(state) {
     </div>`).join("");
 }
 
+// ── Track preview modal ───────────────────────────────────────────────────────
+async function showTrackPreview() {
+  const key = document.getElementById("track-select").value;
+  if (!key) return;
+
+  try {
+    const track = await api(`/api/tracks/${key}`);
+    previewedKey = key;
+    document.getElementById("preview-track-name").textContent = track.name;
+
+    const sessionsHtml = track.sessions.map((s, i) => `
+      <div class="preview-session">
+        <div class="preview-session-header">
+          <span class="preview-session-num">S${i + 1}</span>
+          <span class="preview-session-main">${escHtml(s.main)}</span>
+          <span class="preview-session-chevron">›</span>
+        </div>
+        <div class="preview-session-body">
+          <ul class="preview-accessories">
+            ${(s.accessory || []).map(a => `<li>${escHtml(a)}</li>`).join("")}
+          </ul>
+          <div class="preview-finisher">⚡ ${escHtml(s.finisher || "")}</div>
+        </div>
+      </div>`).join("");
+
+    document.getElementById("preview-sessions").innerHTML = sessionsHtml;
+
+    // Accordion click
+    document.querySelectorAll(".preview-session-header").forEach(h => {
+      h.addEventListener("click", () => h.closest(".preview-session").classList.toggle("open"));
+    });
+
+    document.getElementById("preview-dialog").removeAttribute("hidden");
+  } catch (e) {
+    toast("⚠ " + e.message);
+  }
+}
+
+function closePreviewDialog() {
+  document.getElementById("preview-dialog").setAttribute("hidden", "");
+  previewedKey = null;
+}
+
+async function startPreviewedTrack() {
+  if (!previewedKey) return;
+  closePreviewDialog();
+  document.getElementById("track-select").value = previewedKey;
+  await startTrack(previewedKey);
+}
+
 // ── Actions ───────────────────────────────────────────────────────────────────
 async function logRecommended() {
   try {
     const r = await api("/api/workout/recommended", {});
     toast(r.msg || "✔ Workout logged!");
     appState = r.state;
-    renderStats(appState);
-    renderBadges(appState);
-    renderHistory(appState);
-    await loadTodayWorkout();
+    const workout = await api("/api/workout/today");
+    renderAll(appState, workout);
     checkNewBadges(appState);
+  } catch (e) { toast("⚠ " + e.message); }
+}
+
+async function startTrack(key) {
+  const k = key || document.getElementById("track-select").value;
+  if (!k) return;
+  try {
+    const r = await api("/api/track/select", { key: k });
+    toast(r.msg || "Track started!");
+    appState = r.state;
+    const workout = await api("/api/workout/today");
+    renderAll(appState, workout);
   } catch (e) { toast("⚠ " + e.message); }
 }
 
 async function logRuck() {
-  const miles  = parseFloat(document.getElementById("miles").value || 0);
-  const pounds = parseFloat(document.getElementById("lbs").value  || 0);
-  if (!miles || miles <= 0) { toast("Enter a valid distance first."); return; }
+  const miles  = parseFloat(document.getElementById("ruck-miles").value || 0);
+  const pounds = parseFloat(document.getElementById("ruck-lbs").value  || 0);
+  if (!miles || miles <= 0) { toast("Enter a valid distance."); return; }
   try {
     const r = await api("/api/ruck", { miles, pounds });
     toast(r.msg || "🎒 Ruck logged!");
     appState = r.state;
-    renderStats(appState);
-    renderBadges(appState);
-    renderHistory(appState);
+    const workout = await api("/api/workout/today");
+    renderAll(appState, workout);
     checkNewBadges(appState);
-    const newJourney = appState.badges.filter(b => b.type === "ruck_quest");
-    if (newJourney.length > 0) switchTab("journey");
-    document.getElementById("miles").value = "";
+    document.getElementById("ruck-miles").value = "";
+    // If a new waypoint was unlocked, show the journey
+    const newPostcards = (appState.badges || []).filter(b => b.type === "ruck_quest");
+    if (newPostcards.length > prevBadgeCount) switchSection("ruck");
+    prevBadgeCount = (appState.badges || []).length;
   } catch (e) { toast("⚠ " + e.message); }
 }
 
-async function startTrack() {
-  const key = document.getElementById("track-select").value;
-  if (!key) return;
+async function logRun() {
+  const miles = parseFloat(document.getElementById("run-miles").value || 0);
+  if (!miles || miles <= 0) { toast("Enter a valid distance."); return; }
+
+  const paceStr = document.getElementById("run-pace").value.trim();
+  const pace    = parsePace(paceStr);
+  if (paceStr && pace === null) {
+    toast("Invalid pace format. Use MM:SS (e.g. 8:30).");
+    return;
+  }
+
   try {
-    const r = await api("/api/track/select", { key });
-    toast(r.msg || "Track started!");
+    const payload = { miles };
+    if (pace !== null) payload.pace_min_per_mile = pace;
+    const r = await api("/api/run", payload);
+    toast(r.msg || "🏃 Run logged!");
     appState = r.state;
-    renderStats(appState);
-    await loadTodayWorkout();
+    const workout = await api("/api/workout/today");
+    renderAll(appState, workout);
+    checkNewBadges(appState);
+    document.getElementById("run-miles").value = "";
+    document.getElementById("run-pace").value  = "";
+    prevBadgeCount = (appState.badges || []).length;
   } catch (e) { toast("⚠ " + e.message); }
 }
 
@@ -317,75 +480,68 @@ async function submitCustomWorkout() {
     closeCustomDialog();
     toast(r.msg || "✔ Custom workout logged!");
     appState = r.state;
-    renderStats(appState);
-    renderBadges(appState);
-    renderHistory(appState);
+    const workout = await api("/api/workout/today");
+    renderAll(appState, workout);
     checkNewBadges(appState);
   } catch (e) { toast("⚠ " + e.message); }
 }
 
-// ── Badge-earned notification ─────────────────────────────────────────────────
+// ── Badge notification ────────────────────────────────────────────────────────
 function checkNewBadges(state) {
   const count = (state.badges || []).length;
   if (count > prevBadgeCount && prevBadgeCount > 0) {
     const newest = state.badges[state.badges.length - 1];
-    if (newest) toast(`🎉 New badge unlocked: ${newest.name}!`, 5000);
+    if (newest) toast(`🎉 ${newest.name} unlocked!`, 5000);
   }
   prevBadgeCount = count;
 }
 
-// ── Tab switching ─────────────────────────────────────────────────────────────
-function switchTab(name) {
-  document.querySelectorAll(".tab-btn").forEach(b =>
-    b.classList.toggle("active", b.dataset.tab === name));
-  document.querySelectorAll(".tab-pane").forEach(p =>
-    p.classList.toggle("active", p.id === `tab-${name}`));
-}
+// ── Event wiring ──────────────────────────────────────────────────────────────
 
-// ── Utility ───────────────────────────────────────────────────────────────────
-function escHtml(s) {
-  return String(s)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
+// Bottom nav
+document.querySelectorAll(".nav-btn").forEach(btn =>
+  btn.addEventListener("click", () => switchSection(btn.dataset.section)));
 
-// Encode individual path segments while preserving slashes
-function encodeURIPath(path) {
-  return path.split("/").map(encodeURIComponent).join("/");
-}
-
-// ── Event listeners ───────────────────────────────────────────────────────────
-document.getElementById("refresh-btn").addEventListener("click", async () => {
-  await Promise.all([refresh(), loadTodayWorkout()]);
-  toast("Refreshed");
-});
-
+// Train section
+document.getElementById("refresh-btn").addEventListener("click", refresh);
 document.getElementById("log-rec-btn").addEventListener("click", logRecommended);
 document.getElementById("log-custom-btn").addEventListener("click", openCustomDialog);
-document.getElementById("log-ruck-btn").addEventListener("click", logRuck);
-document.getElementById("start-track-btn").addEventListener("click", startTrack);
+document.getElementById("preview-track-btn").addEventListener("click", showTrackPreview);
+document.getElementById("start-track-btn").addEventListener("click", () => startTrack());
 
+// Ruck section
+document.getElementById("log-ruck-btn").addEventListener("click", logRuck);
+
+// Run section
+document.getElementById("log-run-btn").addEventListener("click", logRun);
+document.getElementById("go-to-ruck-btn").addEventListener("click", () => switchSection("ruck"));
+
+// Custom workout dialog
 document.getElementById("submit-custom").addEventListener("click", submitCustomWorkout);
 document.getElementById("cancel-custom").addEventListener("click", closeCustomDialog);
-
-document.querySelectorAll(".tab-btn").forEach(btn =>
-  btn.addEventListener("click", () => switchTab(btn.dataset.tab)));
-
-// Close dialog on backdrop click
 document.getElementById("custom-dialog").addEventListener("click", e => {
   if (e.target === e.currentTarget) closeCustomDialog();
 });
-
-// Ctrl+Enter submits the custom workout textarea
 document.getElementById("custom-text").addEventListener("keydown", e => {
   if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) submitCustomWorkout();
 });
 
-// ── Init ──────────────────────────────────────────────────────────────────────
-window.addEventListener("load", async () => {
-  await Promise.all([refresh(), loadTodayWorkout()]);
-  await populateTracks();
-  if (appState) prevBadgeCount = (appState.badges || []).length;
+// Track preview dialog
+document.getElementById("close-preview-btn").addEventListener("click", closePreviewDialog);
+document.getElementById("cancel-preview-btn").addEventListener("click", closePreviewDialog);
+document.getElementById("start-previewed-btn").addEventListener("click", startPreviewedTrack);
+document.getElementById("preview-dialog").addEventListener("click", e => {
+  if (e.target === e.currentTarget) closePreviewDialog();
 });
+
+// History filters
+document.querySelectorAll(".filter-btn").forEach(btn =>
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    historyFilter = btn.dataset.filter;
+    if (appState) renderHistory(appState, historyFilter);
+  }));
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+window.addEventListener("load", refresh);
