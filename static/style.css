@@ -1,6 +1,672 @@
-body{font-family:Georgia,serif;background:#111;color:#eee;margin:0}
-header,footer{padding:10px;background:#222;display:flex;gap:8px;align-items:center}
-#coin{width:24px;height:24px}
-pre{white-space:pre-wrap;margin:10px}
-button{padding:6px 12px;background:#334d;color:#fff;border:none}
-input{width:70px;padding:4px}
+/* ──────────────────────────────────────────────────────────────────────────
+   Olympus Training Log – Greek Mythology Dark Theme
+   ────────────────────────────────────────────────────────────────────────── */
+
+:root {
+  --bg:          #0d1b2a;
+  --surface:     #14263a;
+  --surface-hi:  #1c3350;
+  --border:      #2a4a6a;
+  --gold:        #c9b037;
+  --gold-dim:    #7a6a1a;
+  --gold-glow:   rgba(201, 176, 55, 0.25);
+  --text:        #e8dfc4;
+  --text-dim:    #8a9ab0;
+  --accent:      #5ba3d0;
+  --success:     #6abf6a;
+  --radius:      10px;
+  --shadow:      0 4px 24px rgba(0, 0, 0, 0.55);
+  --font:        Georgia, 'Times New Roman', serif;
+  --mono:        'Courier New', Courier, monospace;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+/* ── Header ───────────────────────────────────────────────────────────────── */
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  box-shadow: var(--shadow);
+}
+
+.header-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.coin-spin {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  animation: spin3d 8s linear infinite;
+}
+
+@keyframes spin3d {
+  0%   { transform: rotateY(0deg); }
+  50%  { transform: rotateY(180deg); }
+  100% { transform: rotateY(360deg); }
+}
+
+.brand-title {
+  font-size: 1.15rem;
+  font-weight: bold;
+  color: var(--gold);
+  letter-spacing: 0.4px;
+}
+
+.header-stats {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.stat-pill {
+  background: var(--surface-hi);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 3px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 66px;
+}
+
+.stat-label {
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.9px;
+  color: var(--text-dim);
+}
+
+.stat-value {
+  font-size: 0.88rem;
+  color: var(--gold);
+  font-weight: bold;
+  font-family: var(--mono);
+  letter-spacing: 1px;
+}
+
+/* ── Content layout ───────────────────────────────────────────────────────── */
+.content {
+  max-width: 660px;
+  margin: 0 auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ── Cards ────────────────────────────────────────────────────────────────── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  box-shadow: var(--shadow);
+}
+
+.card-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.card-title-row h2,
+.card > h2 {
+  font-size: 0.8rem;
+  color: var(--gold);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+}
+
+.card > h2 { margin-bottom: 12px; }
+
+/* ── Workout display ──────────────────────────────────────────────────────── */
+.workout-track-name {
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 4px;
+}
+
+.workout-session-label {
+  font-size: 0.72rem;
+  color: var(--gold-dim);
+  margin-bottom: 8px;
+}
+
+.workout-main {
+  font-size: 1.05rem;
+  font-weight: bold;
+  color: var(--text);
+  padding: 10px 12px;
+  background: var(--surface-hi);
+  border-radius: 6px;
+  border-left: 3px solid var(--gold);
+  margin-bottom: 10px;
+}
+
+.workout-accessories { margin-bottom: 10px; }
+
+.workout-accessories h4 {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-dim);
+  margin-bottom: 4px;
+}
+
+.workout-accessories ul { list-style: none; }
+
+.workout-accessories li {
+  padding: 2px 0 2px 14px;
+  position: relative;
+  font-size: 0.88rem;
+}
+
+.workout-accessories li::before {
+  content: "·";
+  position: absolute;
+  left: 4px;
+  color: var(--gold-dim);
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.workout-finisher {
+  font-size: 0.88rem;
+  color: var(--accent);
+  padding: 6px 10px;
+  background: rgba(91, 163, 208, 0.08);
+  border-radius: 6px;
+  border-left: 3px solid var(--accent);
+}
+
+.workout-finisher .finisher-label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-dim);
+  display: block;
+  margin-bottom: 2px;
+}
+
+.dim-msg {
+  color: var(--text-dim);
+  font-style: italic;
+  padding: 8px 0;
+}
+
+/* ── Action row ───────────────────────────────────────────────────────────── */
+.action-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+
+/* ── Track selector ───────────────────────────────────────────────────────── */
+.track-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+.track-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-dim);
+}
+
+.track-select {
+  flex: 1;
+  min-width: 0;
+  background: var(--surface-hi);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  padding: 5px 8px;
+  font-size: 0.85rem;
+  font-family: var(--font);
+  cursor: pointer;
+}
+
+.track-select:focus {
+  outline: none;
+  border-color: var(--gold);
+}
+
+/* ── Ruck form ────────────────────────────────────────────────────────────── */
+.ruck-form {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 80px;
+}
+
+.field-group label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-dim);
+}
+
+.field-group input {
+  background: var(--surface-hi);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  padding: 8px 10px;
+  font-size: 1rem;
+  font-family: var(--mono);
+  width: 100%;
+}
+
+.field-group input:focus {
+  outline: none;
+  border-color: var(--gold);
+}
+
+.ruck-total {
+  margin-top: 8px;
+  font-size: 0.82rem;
+  color: var(--text-dim);
+}
+
+.ruck-total strong { color: var(--gold); }
+
+/* ── Buttons ──────────────────────────────────────────────────────────────── */
+.btn-primary {
+  background: var(--gold);
+  color: #111;
+  border: none;
+  border-radius: 6px;
+  padding: 9px 18px;
+  font-size: 0.88rem;
+  font-family: var(--font);
+  font-weight: bold;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s;
+  white-space: nowrap;
+}
+.btn-primary:hover  { opacity: 0.85; }
+.btn-primary:active { transform: scale(0.97); }
+
+.btn-secondary {
+  background: transparent;
+  color: var(--gold);
+  border: 1px solid var(--gold);
+  border-radius: 6px;
+  padding: 9px 18px;
+  font-size: 0.88rem;
+  font-family: var(--font);
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+.btn-secondary:hover { background: var(--gold-glow); }
+
+.btn-ghost {
+  background: none;
+  color: var(--text-dim);
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: color 0.15s;
+  line-height: 1;
+}
+.btn-ghost:hover { color: var(--gold); }
+
+.btn-ghost-sm {
+  background: none;
+  color: var(--gold);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  font-family: var(--font);
+  cursor: pointer;
+  transition: border-color 0.15s;
+  white-space: nowrap;
+}
+.btn-ghost-sm:hover { border-color: var(--gold); }
+
+/* ── Tabs ─────────────────────────────────────────────────────────────────── */
+.tabs-card { padding-top: 0; }
+
+.tab-nav {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  margin: 0 -16px 14px;
+  padding: 0 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.tab-nav::-webkit-scrollbar { display: none; }
+
+.tab-btn {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-size: 0.82rem;
+  font-family: var(--font);
+  padding: 12px 14px;
+  cursor: pointer;
+  white-space: nowrap;
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s, border-color 0.15s;
+  flex-shrink: 0;
+}
+.tab-btn.active {
+  color: var(--gold);
+  border-bottom-color: var(--gold);
+}
+.tab-btn:hover:not(.active) { color: var(--text); }
+
+.tab-pane          { display: none; }
+.tab-pane.active   { display: block; }
+
+/* ── Badge grid (trophies & laurels) ──────────────────────────────────────── */
+.badge-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 10px;
+  padding: 2px 0;
+}
+
+.badge-card {
+  background: var(--surface-hi);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 8px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.badge-card:hover { border-color: var(--gold-dim); }
+
+.badge-card.gilded {
+  border-color: var(--gold);
+  box-shadow: 0 0 10px var(--gold-glow);
+}
+
+.badge-img {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+.badge-emoji {
+  font-size: 2.2rem;
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.badge-name {
+  font-size: 0.72rem;
+  color: var(--text);
+  line-height: 1.25;
+}
+
+.badge-date {
+  font-size: 0.62rem;
+  color: var(--text-dim);
+}
+
+/* ── Ruck Quest (Journey) ─────────────────────────────────────────────────── */
+.journey-progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 8px 10px;
+  background: var(--surface-hi);
+  border-radius: 6px;
+  font-size: 0.82rem;
+}
+
+.progress-bar-wrap {
+  flex: 1;
+  height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: var(--gold);
+  border-radius: 3px;
+  transition: width 0.5s ease;
+}
+
+.progress-label { color: var(--text-dim); white-space: nowrap; }
+
+.postcard-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.postcard {
+  display: flex;
+  gap: 12px;
+  background: var(--surface-hi);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+  align-items: flex-start;
+  transition: border-color 0.2s;
+}
+.postcard:hover { border-color: var(--gold-dim); }
+
+.postcard img {
+  width: 58px;
+  height: 58px;
+  object-fit: contain;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.postcard-placeholder {
+  width: 58px;
+  height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.8rem;
+  flex-shrink: 0;
+}
+
+.postcard-city {
+  font-weight: bold;
+  font-size: 0.92rem;
+  color: var(--gold);
+  margin-bottom: 3px;
+}
+
+.postcard-caption {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  font-style: italic;
+  line-height: 1.4;
+}
+
+.postcard-date {
+  font-size: 0.62rem;
+  color: var(--text-dim);
+  margin-top: 4px;
+}
+
+/* ── History ──────────────────────────────────────────────────────────────── */
+.history-group { margin-bottom: 10px; }
+
+.history-date {
+  font-size: 0.68rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--gold-dim);
+  padding: 4px 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 5px;
+}
+
+.history-entry {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  padding: 3px 0;
+  font-size: 0.88rem;
+}
+
+.history-kind {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  background: var(--surface-hi);
+  padding: 1px 6px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  font-family: var(--mono);
+}
+
+.history-detail { flex: 1; color: var(--text); }
+
+/* ── Empty state ──────────────────────────────────────────────────────────── */
+.empty-msg {
+  color: var(--text-dim);
+  font-style: italic;
+  padding: 20px 0;
+  text-align: center;
+  font-size: 0.88rem;
+}
+
+/* ── Toast ────────────────────────────────────────────────────────────────── */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(80px);
+  background: var(--surface-hi);
+  border: 1px solid var(--gold);
+  border-radius: 8px;
+  color: var(--text);
+  padding: 10px 20px;
+  font-size: 0.9rem;
+  opacity: 0;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+  z-index: 1000;
+  max-width: 320px;
+  text-align: center;
+  pointer-events: none;
+  box-shadow: var(--shadow);
+}
+.toast.show {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+}
+
+/* ── Dialog ───────────────────────────────────────────────────────────────── */
+.dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 16px;
+}
+
+.dialog {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 22px;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: var(--shadow);
+}
+
+.dialog h3 {
+  color: var(--gold);
+  font-size: 1rem;
+  margin-bottom: 12px;
+  letter-spacing: 0.5px;
+}
+
+.dialog textarea {
+  width: 100%;
+  background: var(--surface-hi);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  padding: 10px;
+  font-family: var(--font);
+  font-size: 0.92rem;
+  resize: vertical;
+  margin-bottom: 14px;
+  line-height: 1.5;
+}
+.dialog textarea:focus {
+  outline: none;
+  border-color: var(--gold);
+}
+
+.dialog-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+/* ── Responsive tweaks ────────────────────────────────────────────────────── */
+@media (max-width: 420px) {
+  .brand-title { font-size: 1rem; }
+  .stat-pill   { min-width: 58px; padding: 3px 8px; }
+  .badge-grid  { grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); }
+  .badge-img   { width: 52px; height: 52px; }
+}

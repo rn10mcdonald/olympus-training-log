@@ -8,25 +8,113 @@
 <link rel="stylesheet" href="static/style.css">
 </head>
 <body>
-<header>
-  <img id="coin" src="coin.png" alt="coin">
-  <span id="drachma">0.00</span>
-  <button onclick="refresh()">Refresh</button>
+
+<!-- ═══ HEADER ═══════════════════════════════════════════════════════════════ -->
+<header class="site-header">
+  <div class="header-brand">
+    <img src="static/coin.png" alt="coin" class="coin-spin" id="coin">
+    <span class="brand-title">Olympus Training Log</span>
+  </div>
+  <div class="header-stats">
+    <div class="stat-pill">
+      <span class="stat-label">Drachma</span>
+      <span id="drachma" class="stat-value">0.00</span>
+    </div>
+    <div class="stat-pill">
+      <span class="stat-label">This Week</span>
+      <span id="streak-display" class="stat-value">▢▢▢</span>
+    </div>
+    <div class="stat-pill">
+      <span class="stat-label">Cycle</span>
+      <span id="cycle-display" class="stat-value">▢▢▢▢▢▢</span>
+    </div>
+  </div>
 </header>
 
-<pre id="log">(loading…)</pre>
+<!-- ═══ MAIN ════════════════════════════════════════════════════════════════ -->
+<main class="content">
 
-<footer>
-  <input id="miles" type="number" placeholder="Miles" step="0.1">
-  <input id="lbs"   type="number" placeholder="Lbs"   step="1">
-  <button onclick="logRuck()">Log Ruck</button>
-</footer>
+  <!-- Today's Workout Card -->
+  <section class="card workout-card">
+    <div class="card-title-row">
+      <h2>Today's Workout</h2>
+      <button class="btn-ghost" id="refresh-btn" title="Refresh">↺</button>
+    </div>
+    <div id="workout-display"><p class="dim-msg">Loading…</p></div>
+    <div class="action-row">
+      <button class="btn-primary" id="log-rec-btn">✓ Log Recommended</button>
+      <button class="btn-secondary" id="log-custom-btn">+ Log Custom</button>
+    </div>
+    <div class="track-row">
+      <span class="track-label">Track:</span>
+      <select id="track-select" class="track-select"></select>
+      <button class="btn-ghost-sm" id="start-track-btn">Start</button>
+    </div>
+  </section>
+
+  <!-- Ruck Card -->
+  <section class="card ruck-card">
+    <h2>🎒 Log Ruck</h2>
+    <div class="ruck-form">
+      <div class="field-group">
+        <label for="miles">Miles</label>
+        <input id="miles" type="number" placeholder="0.0" step="0.1" min="0">
+      </div>
+      <div class="field-group">
+        <label for="lbs">Weight (lbs)</label>
+        <input id="lbs" type="number" placeholder="20" step="1" min="0">
+      </div>
+      <button class="btn-primary" id="log-ruck-btn">Log Ruck</button>
+    </div>
+    <p class="ruck-total">Total rucked: <strong id="total-miles">0.0</strong> mi</p>
+  </section>
+
+  <!-- Collection / History Tabs -->
+  <section class="card tabs-card">
+    <nav class="tab-nav">
+      <button class="tab-btn active" data-tab="trophies">🏆 Trophies</button>
+      <button class="tab-btn" data-tab="laurels">🌿 Laurels</button>
+      <button class="tab-btn" data-tab="journey">🗺 Journey</button>
+      <button class="tab-btn" data-tab="history">📜 History</button>
+    </nav>
+
+    <div id="tab-trophies" class="tab-pane active">
+      <div class="badge-grid" id="trophies-list"></div>
+    </div>
+    <div id="tab-laurels" class="tab-pane">
+      <div class="badge-grid" id="laurels-list"></div>
+    </div>
+    <div id="tab-journey" class="tab-pane">
+      <div id="journey-list"></div>
+    </div>
+    <div id="tab-history" class="tab-pane">
+      <div id="history-list"></div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ═══ TOAST ════════════════════════════════════════════════════════════════ -->
+<div id="toast" class="toast" role="alert" aria-live="polite"></div>
+
+<!-- ═══ CUSTOM WORKOUT DIALOG ════════════════════════════════════════════════ -->
+<div id="custom-dialog" class="dialog-overlay" hidden>
+  <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="custom-title">
+    <h3 id="custom-title">Log Custom Workout</h3>
+    <textarea id="custom-text" rows="4"
+              placeholder="Describe your workout… (Ctrl+Enter to submit)"></textarea>
+    <div class="dialog-actions">
+      <button class="btn-ghost" id="cancel-custom">Cancel</button>
+      <button class="btn-primary" id="submit-custom">Log It</button>
+    </div>
+  </div>
+</div>
 
 <script src="static/main.js"></script>
 <script>
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("service-worker.js");
-}
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("service-worker.js");
+  }
 </script>
 </body>
 </html>
