@@ -134,6 +134,306 @@ TEMPLATES = {
             },
         ],
     },
+
+    "ares_battle_conditioning": {
+        "name": "Ares' Battle Conditioning (2-week / 6 sessions)",
+        "sessions": [
+            {   # Wk-1 Day-1  Swing Power
+                "main": "KB Swing EMOM 20 min (15 reps/min)",
+                "accessory": [
+                    "Goblet Squat 3×12",
+                    "Push-Up 3×15",
+                    "Dead Bug 3×10 /side",
+                ],
+                "finisher": "30 Swings every minute on the minute × 5",
+            },
+            {   # Wk-1 Day-2  Clean & Press Complex
+                "main": "KB Clean + Press Complex 5×(5+5) /side",
+                "accessory": [
+                    "Bent-Over Row 3×10 /side",
+                    "Lateral Lunge 3×8 /side",
+                    "Hollow-Body Rock 3×20",
+                ],
+                "finisher": "5 Cleans + 5 Presses + 5 Squats /side × 3 (no rest)",
+            },
+            {   # Wk-1 Day-3  Snatch Intervals
+                "main": "KB Snatch Intervals 8 × 1 min (max reps, switch at will)",
+                "accessory": [
+                    "Hip Hinge Drill 3×10",
+                    "TRX Row 3×12",
+                    "Pallof Press 3×10 /side",
+                ],
+                "finisher": "100 Snatches for time (any split)",
+            },
+            {   # Wk-2 Day-1  Swing Ladder
+                "main": "Double-KB Swing Ladder: 5-10-15-10-5 (rest = set time) × 3",
+                "accessory": [
+                    "Goblet Squat 4×10 (heavier)",
+                    "Single-Leg Deadlift 3×8 /side",
+                    "Plank 3×45 s",
+                ],
+                "finisher": "200 Swings for time",
+            },
+            {   # Wk-2 Day-2  Long Cycle
+                "main": "KB Long Cycle Clean & Jerk 2×5 min (switch hands each min)",
+                "accessory": [
+                    "Press 3×6 /side (strict)",
+                    "Renegade Row 3×6 /side",
+                    "Ab Wheel Rollout 3×8",
+                ],
+                "finisher": "Max C&J in 5 min (one hand, no switching)",
+            },
+            {   # Wk-2 Day-3  Snatch Test Prep
+                "main": "KB Snatch 10 min test-pace (switch every 60 s)",
+                "accessory": [
+                    "High Pull 3×8 /side",
+                    "Swing 3×20",
+                    "Wrist Mobility 2×2 min",
+                ],
+                "finisher": "Swing Tabata 8 rounds (20 s on / 10 s off)",
+            },
+        ],
+    },
+
+    "athena_tactical_strength": {
+        "name": "Athena's Tactical Strength (2-week / 6 sessions)",
+        "sessions": [
+            {   # Wk-1 Day-1  TGU Foundation
+                "main": "Turkish Get-Up 5×3 /side (light — perfect form)",
+                "accessory": [
+                    "Windmill 3×5 /side",
+                    "Arm Bar 2×60 s /side",
+                    "Hip Bridge 3×15",
+                ],
+                "finisher": "TGU + 5 Swings /side × 3 (flow circuit)",
+            },
+            {   # Wk-1 Day-2  Strict Press
+                "main": "Strict Military Press 5×5 /side @ RPE 7",
+                "accessory": [
+                    "Bent-Over Row 4×8 /side",
+                    "TRX Face-Pull 3×15",
+                    "Suitcase Carry 3×30 m /side",
+                ],
+                "finisher": "Max strict press /side in 3 min (moderate bell)",
+            },
+            {   # Wk-1 Day-3  Bent Press & Hinge
+                "main": "Bent Press 4×3 /side (technical focus)",
+                "accessory": [
+                    "Single-Leg RDL 3×8 /side",
+                    "Goblet Squat 3×10",
+                    "Bottoms-Up Press 3×5 /side",
+                ],
+                "finisher": "Get-Up Sit-Up × 10 /side + 10 Swings × 3",
+            },
+            {   # Wk-2 Day-1  TGU Ladder
+                "main": "TGU Ladder (1-2-3-2-1 /side) × 2 (add load from Wk-1)",
+                "accessory": [
+                    "Windmill 3×6 /side (heavier)",
+                    "Half-Kneeling Press 3×8 /side",
+                    "Dead Bug 3×12",
+                ],
+                "finisher": "TGU AMRAP in 8 min (alternating sides)",
+            },
+            {   # Wk-2 Day-2  Push-Press + Floor Press
+                "main": "Push-Press 5×5 /side + KB Floor Press 3×8 /side (superset)",
+                "accessory": [
+                    "Chest-Supported Row 3×10",
+                    "Overhead Carry 4×20 m /side",
+                    "Copenhagen Plank 3×20 s /side",
+                ],
+                "finisher": "5 Push-Press + 5 Floor Press /side × 4 (no rest)",
+            },
+            {   # Wk-2 Day-3  Windmill + TGU Complex
+                "main": "Windmill + TGU Complex: 5 Windmills → 1 TGU /side × 4",
+                "accessory": [
+                    "Bottoms-Up Carry 3×20 m /side",
+                    "Bent Press 3×3 /side",
+                    "Thoracic Rotation Drill 2×10 /side",
+                ],
+                "finisher": "Heavy TGU 1/side every 2 min × 6",
+            },
+        ],
+    },
+
+    "apollo_endurance_forge": {
+        "name": "Apollo's Endurance Forge (2-week / 6 sessions)",
+        "sessions": [
+            {   # Wk-1 Day-1  Volume Squat
+                "main": "Double-KB Front Squat 4×10 @ RPE 6",
+                "accessory": [
+                    "Step-Up 3×15 /leg",
+                    "TRX Squat Jump 3×12",
+                    "Lateral Band Walk 3×20 /side",
+                ],
+                "finisher": "Goblet Squat 50 reps for time (1 weight)",
+            },
+            {   # Wk-1 Day-2  Clean Volume
+                "main": "KB Clean 5×8 /side (focus: linkage, no arm-curling)",
+                "accessory": [
+                    "KB Row 4×10 /side",
+                    "Push-Up 3×20",
+                    "Plank Shoulder Tap 3×20",
+                ],
+                "finisher": "Ladder: 1-2-3-4-5 Clean /side, no rest between rungs",
+            },
+            {   # Wk-1 Day-3  Swing Intervals
+                "main": "Swing Intervals 30 s on / 30 s off × 15 rounds",
+                "accessory": [
+                    "Box Jump 3×8",
+                    "Hip Flexor Stretch 2×60 s /side",
+                    "Single-Leg Balance 2×45 s /side",
+                ],
+                "finisher": "300 Swings — every time you put it down, 10 Push-Ups",
+            },
+            {   # Wk-2 Day-1  Goblet Volume
+                "main": "Goblet Squat 5×15 (heavier than Wk-1)",
+                "accessory": [
+                    "Reverse Lunge 4×10 /leg",
+                    "TRX Row 4×15",
+                    "Side Plank 3×30 s /side",
+                ],
+                "finisher": "Goblet + Swing alternating: 10 each × 6 (no rest)",
+            },
+            {   # Wk-2 Day-2  Push-Press Ladder
+                "main": "Push-Press Ladder (1-2-3-4-5 /side) × 4",
+                "accessory": [
+                    "Single-Arm Row 4×12 /side",
+                    "Face-Pull 3×20",
+                    "Carry Medley: Rack → OH → Farmer 20 m each",
+                ],
+                "finisher": "AMRAP in 5 min: 5 Push-Press + 5 Row /side",
+            },
+            {   # Wk-2 Day-3  200 Swing Challenge
+                "main": "200 KB Swings EMOM — 10 reps at the top of every minute",
+                "accessory": [
+                    "Hip Hinge Mobility 2×10",
+                    "Glute Bridge Hold 3×30 s",
+                    "Dead Bug 3×10 /side",
+                ],
+                "finisher": "Max swings in 4 min (go until form breaks)",
+            },
+        ],
+    },
+
+    "poseidon_wave_protocol": {
+        "name": "Poseidon's Wave Protocol (2-week / 6 sessions)",
+        "sessions": [
+            {   # Wk-1 Day-1  Wave Deadlift
+                "main": "Wave-Load KB Deadlift: (3 @ heavy, 2 @ heavier, 1 @ heaviest) × 3 waves",
+                "accessory": [
+                    "Romanian Deadlift 3×8 /side",
+                    "Reverse Hyper (body weight) 3×15",
+                    "Pallof Press 3×8 /side",
+                ],
+                "finisher": "Single-Leg RDL 10 /side + 10 Swings × 3 (no rest)",
+            },
+            {   # Wk-1 Day-2  Wave Press
+                "main": "Wave-Load Strict Press: (5, 3, 2 /side) × 2 waves",
+                "accessory": [
+                    "Pull-Up or TRX Row 4×8",
+                    "Lateral Raise 3×15",
+                    "Overhead Carry 3×30 m /side",
+                ],
+                "finisher": "Push-Press max reps in 3 min (one bell, switch once)",
+            },
+            {   # Wk-1 Day-3  Wave Swing
+                "main": "Swing Wave: 10-20-30-20-10 (rest = equal work time) × 2",
+                "accessory": [
+                    "Goblet Squat 3×10",
+                    "Hip Flexor Mobilization 2×90 s /side",
+                    "Single-Leg Glute Bridge 3×12 /side",
+                ],
+                "finisher": "30 s max swings / 30 s rest × 10 rounds",
+            },
+            {   # Wk-2 Day-1  Heavy Wave Deadlift
+                "main": "Heavy Wave KB DL: (2 @ near-max, 1 @ max) × 4 waves",
+                "accessory": [
+                    "Suitcase Deadlift 3×5 /side (heavy)",
+                    "Nordic Hamstring Curl (eccentric) 3×5",
+                    "Bird Dog 3×10 /side",
+                ],
+                "finisher": "Heavy Swing 5 × 10 with 90 s rest",
+            },
+            {   # Wk-2 Day-2  Heavy Wave Press
+                "main": "Heavy Wave Press: (3, 2, 1 /side) × 3 waves (add load)",
+                "accessory": [
+                    "Weighted Pull-Up or TRX Archer Row 4×5",
+                    "KB Windmill 3×5 /side",
+                    "Farmer Carry 4×30 m (heavy)",
+                ],
+                "finisher": "5 Strict + 5 Push-Press /side × 4 (no rest between)",
+            },
+            {   # Wk-2 Day-3  Full-Body Wave Complex
+                "main": "Wave Complex /side: (Swing + Clean + Press + Squat) × 3-2-1 × 3",
+                "accessory": [
+                    "Turkish Get-Up 2×2 /side",
+                    "Mobility Flow (hip + thoracic) 2×5 min",
+                    "Dead Hang 3×30 s",
+                ],
+                "finisher": "Descending ladder: 10-8-6-4-2 of complex /side (no rest)",
+            },
+        ],
+    },
+
+    "hades_iron_temple": {
+        "name": "Hades' Iron Temple (2-week / 6 sessions)",
+        "sessions": [
+            {   # Wk-1 Day-1  Heavy Squat
+                "main": "Double-KB Front Squat 6×3 @ RPE 8–9",
+                "accessory": [
+                    "Pause Goblet Squat (3-s hold) 3×5",
+                    "Single-Leg Press (wall-sit variant) 3×30 s /leg",
+                    "Ab Wheel Rollout 3×8",
+                ],
+                "finisher": "Heavy Goblet Hold (max weight) 3×45 s",
+            },
+            {   # Wk-1 Day-2  Heavy Floor Press
+                "main": "Single-KB Floor Press 5×5 /side (heaviest possible)",
+                "accessory": [
+                    "Chest-Supported Row 4×6 (heavy)",
+                    "Triceps Extension 3×10",
+                    "Rear-Delt Fly 3×15",
+                ],
+                "finisher": "Floor Press Max Set /side (no set-down to failure)",
+            },
+            {   # Wk-1 Day-3  Heavy Hinge
+                "main": "Double-KB Deadlift 5×3 @ RPE 9 (near-maximal)",
+                "accessory": [
+                    "Banded Good Morning 3×12",
+                    "Copenhagen Plank 3×25 s /side",
+                    "GHR or Nordic Curl 3×5",
+                ],
+                "finisher": "Heavy Swing 10 × 5 EMOM (competition-pace)",
+            },
+            {   # Wk-2 Day-1  Squat + Pause
+                "main": "Double-KB Front Squat 5×2 (↑ load from Wk-1) + 3-s pause",
+                "accessory": [
+                    "Rear-Foot-Elevated Split Squat 3×5 /leg (heavy)",
+                    "Glute-Ham Walkout 3×10",
+                    "Hanging Knee Raise 3×10",
+                ],
+                "finisher": "Double-KB Front Squat × 3 reps on the minute × 8",
+            },
+            {   # Wk-2 Day-2  Strict Press Max
+                "main": "Strict Press 5×3 /side (heavier than Wk-1) — no leg drive",
+                "accessory": [
+                    "Weighted Pull-Up or TRX One-Arm Row 4×4 /side",
+                    "Bottoms-Up Press 3×3 /side",
+                    "Prone Y-T-W Raise 3×10 each",
+                ],
+                "finisher": "Strict Press 1RM attempt /side (3 warm-up singles → PR)",
+            },
+            {   # Wk-2 Day-3  Total Grind
+                "main": "Heavy Complex /side: (DL + Clean + Press + Squat) 5×3",
+                "accessory": [
+                    "Turkish Get-Up 3×1 /side (heaviest manageable)",
+                    "Farmers Carry 3×40 m (max load)",
+                    "Core Anti-Rotation Hold 3×30 s /side",
+                ],
+                "finisher": "1 rep every 30 s of the complex /side × 10 min",
+            },
+        ],
+    },
 }
 
 TRACK_KEYS      = list(TEMPLATES.keys())

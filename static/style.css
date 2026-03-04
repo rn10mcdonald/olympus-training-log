@@ -621,6 +621,7 @@ body {
   z-index: 200;
   padding: 16px;
 }
+.dialog-overlay[hidden] { display: none !important; }
 
 .dialog {
   background: var(--surface);
