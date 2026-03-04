@@ -5,28 +5,281 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Olympus Training Log</title>
 <link rel="manifest" href="static/manifest.json">
-<link rel="stylesheet" href="static/style.css">
+<link rel="stylesheet" href="static/style.css?v=6">
 </head>
 <body>
-<header>
-  <img id="coin" src="coin.png" alt="coin">
-  <span id="drachma">0.00</span>
-  <button onclick="refresh()">Refresh</button>
+
+<!-- ═══ HEADER ═══════════════════════════════════════════════════════════════ -->
+<header class="site-header">
+  <div class="header-brand">
+    <img src="static/coin.png" alt="coin" class="coin-spin">
+    <span class="brand-title">Olympus</span>
+  </div>
+  <div class="header-stats">
+    <div class="stat-pill" title="Drachma treasury">
+      <span class="stat-icon">🪙</span>
+      <span id="drachma" class="stat-value">0.00</span>
+    </div>
+    <div class="stat-pill" title="Activities this week / goal">
+      <span class="stat-icon">🗓</span>
+      <span id="week-count" class="stat-value">0/3</span>
+    </div>
+  </div>
 </header>
 
-<pre id="log">(loading…)</pre>
+<!-- ═══ PAGE CONTENT ═════════════════════════════════════════════════════════ -->
+<main class="page-content">
 
-<footer>
-  <input id="miles" type="number" placeholder="Miles" step="0.1">
-  <input id="lbs"   type="number" placeholder="Lbs"   step="1">
-  <button onclick="logRuck()">Log Ruck</button>
-</footer>
+  <!-- ── TRAIN ─────────────────────────────────────────────────────────────── -->
+  <section class="page-section active" id="section-train">
+    <div class="section-scroll">
 
-<script src="static/main.js"></script>
+      <!-- Today's Workout -->
+      <div class="card">
+        <div class="card-header">
+          <h2>Today's Workout</h2>
+          <button class="btn-icon" id="refresh-btn" title="Refresh">↺</button>
+        </div>
+        <!-- Per-movement weight inputs are injected here by renderWorkout() -->
+        <div id="workout-display"><p class="dim-msg">Loading…</p></div>
+
+        <div class="action-row" id="workout-actions">
+          <button class="btn-primary" id="log-rec-btn">✓ Log Recommended</button>
+          <button class="btn-outline" id="log-custom-btn">+ Custom</button>
+        </div>
+      </div>
+
+      <!-- Cycle Progress -->
+      <div class="card">
+        <div class="card-header">
+          <h2>Microcycle</h2>
+          <span id="cycle-fraction" class="stat-chip">0 / 6</span>
+        </div>
+        <div id="cycle-grid"><p class="dim-msg">Select a track below to begin.</p></div>
+      </div>
+
+      <!-- Track Picker -->
+      <div class="card">
+        <div class="card-header">
+          <h2>Training Track</h2>
+        </div>
+        <div class="track-picker-row">
+          <select id="track-select" class="track-select"></select>
+          <button class="btn-icon-sm" id="preview-track-btn" title="Preview all sessions">👁</button>
+          <button class="btn-outline-sm" id="start-track-btn">Start</button>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ── RUCK ──────────────────────────────────────────────────────────────── -->
+  <section class="page-section" id="section-ruck">
+    <div class="section-scroll">
+
+      <!-- Log Ruck -->
+      <div class="card">
+        <h2 class="card-h2">🎒 Log Ruck</h2>
+        <div class="input-row">
+          <div class="field-group">
+            <label for="ruck-miles">Miles</label>
+            <input id="ruck-miles" type="number" placeholder="0.0" step="0.1" min="0">
+          </div>
+          <div class="field-group">
+            <label for="ruck-lbs">Weight (lbs)</label>
+            <input id="ruck-lbs" type="number" placeholder="20" step="1" min="0">
+          </div>
+          <button class="btn-primary" id="log-ruck-btn">Log</button>
+        </div>
+        <div class="stat-row">
+          <span class="dim-text">Rucked</span>
+          <strong id="total-ruck-miles" class="gold-text">0.0 mi</strong>
+          <span class="divider">·</span>
+          <span class="dim-text">Run</span>
+          <strong id="total-run-miles-ruck" class="gold-text">0.0 mi</strong>
+        </div>
+      </div>
+
+      <!-- Pheidippides Journey -->
+      <div class="card">
+        <div class="card-header">
+          <h2>📜 Pheidippides Journey</h2>
+          <span id="journey-fraction" class="stat-chip">0 / 306 mi</span>
+        </div>
+        <p class="sub-text" style="margin-bottom:8px">Ruck <em>and</em> run miles both count toward this route.</p>
+        <div class="progress-bar-wrap">
+          <div id="journey-bar" class="progress-bar-fill" style="width:0%"></div>
+        </div>
+        <div id="ruck-postcards" class="postcard-list" style="margin-top:14px">
+          <p class="dim-msg">Ruck or run your first miles to unlock waypoints.</p>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ── RUN ───────────────────────────────────────────────────────────────── -->
+  <section class="page-section" id="section-run">
+    <div class="section-scroll">
+
+      <!-- Log Run -->
+      <div class="card">
+        <h2 class="card-h2">🏃 Log Run</h2>
+        <div class="input-row">
+          <div class="field-group">
+            <label for="run-miles">Miles</label>
+            <input id="run-miles" type="number" placeholder="0.0" step="0.01" min="0">
+          </div>
+          <div class="field-group">
+            <label for="run-pace">Pace (MM:SS/mi)</label>
+            <input id="run-pace" type="text" placeholder="8:30" inputmode="numeric">
+          </div>
+          <button class="btn-primary" id="log-run-btn">Log</button>
+        </div>
+        <div class="stat-row">
+          <span class="dim-text">Run total</span>
+          <strong id="total-run-miles" class="gold-text">0.0 mi</strong>
+          <span class="divider">·</span>
+          <span class="dim-text">Earned</span>
+          <strong id="run-drachma" class="gold-text">🪙 0.00</strong>
+        </div>
+      </div>
+
+      <!-- Journey tie-in -->
+      <div class="card">
+        <div class="card-header">
+          <h2>📜 Journey Progress</h2>
+          <span id="journey-fraction-run" class="stat-chip">0 / 306 mi</span>
+        </div>
+        <p class="sub-text" style="margin-bottom:8px">Your runs count toward the Pheidippides Journey alongside your rucks.</p>
+        <div class="progress-bar-wrap">
+          <div id="journey-bar-run" class="progress-bar-fill" style="width:0%"></div>
+        </div>
+        <div class="run-section-cta">
+          <button class="btn-ghost-sm" id="go-to-ruck-btn">View full journey →</button>
+        </div>
+      </div>
+
+      <!-- Recent Runs -->
+      <div class="card">
+        <h2 class="card-h2">Recent Runs</h2>
+        <div id="recent-runs"><p class="dim-msg">No runs logged yet.</p></div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ── VAULT ─────────────────────────────────────────────────────────────── -->
+  <section class="page-section" id="section-vault">
+    <div class="section-scroll">
+
+      <div class="card">
+        <h2 class="card-h2">⚔️ Monster Trophies</h2>
+        <p class="sub-text" style="margin-bottom:10px">Complete a 6-session microcycle to slay a monster.</p>
+        <div class="badge-grid" id="trophies-list">
+          <div class="empty-msg">Complete a cycle to earn your first trophy.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 class="card-h2">🌿 Olympian Laurels</h2>
+        <p class="sub-text" style="margin-bottom:10px">Log 3 activities (any type) in a calendar week.</p>
+        <div class="badge-grid" id="laurels-list">
+          <div class="empty-msg">Train 3× this week to earn a Laurel.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 class="card-h2">📜 Journey Waypoints</h2>
+        <p class="sub-text" style="margin-bottom:10px">Ruck and run your way from Athens to Sparta and back.</p>
+        <div id="vault-postcards" class="postcard-list">
+          <div class="empty-msg">Unlock waypoints by covering journey miles.</div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ── HISTORY ────────────────────────────────────────────────────────────── -->
+  <section class="page-section" id="section-history">
+    <div class="section-scroll">
+
+      <div class="card">
+        <div class="filter-row">
+          <button class="filter-btn active" data-filter="all">All</button>
+          <button class="filter-btn" data-filter="lifting">Lifting</button>
+          <button class="filter-btn" data-filter="ruck">Ruck</button>
+          <button class="filter-btn" data-filter="run">Run</button>
+        </div>
+        <div id="history-list"><p class="dim-msg">No activity logged yet — get moving!</p></div>
+      </div>
+
+    </div>
+  </section>
+
+</main>
+
+<!-- ═══ BOTTOM NAV ═══════════════════════════════════════════════════════════ -->
+<nav class="bottom-nav">
+  <button class="nav-btn active" data-section="train">
+    <span class="nav-icon">⚔️</span>
+    <span class="nav-label">Train</span>
+  </button>
+  <button class="nav-btn" data-section="ruck">
+    <span class="nav-icon">🎒</span>
+    <span class="nav-label">Ruck</span>
+  </button>
+  <button class="nav-btn" data-section="run">
+    <span class="nav-icon">🏃</span>
+    <span class="nav-label">Run</span>
+  </button>
+  <button class="nav-btn" data-section="vault">
+    <span class="nav-icon">🏆</span>
+    <span class="nav-label">Vault</span>
+  </button>
+  <button class="nav-btn" data-section="history">
+    <span class="nav-icon">📜</span>
+    <span class="nav-label">History</span>
+  </button>
+</nav>
+
+<!-- ═══ TOAST ════════════════════════════════════════════════════════════════ -->
+<div id="toast" class="toast" role="alert" aria-live="polite"></div>
+
+<!-- ═══ CUSTOM WORKOUT DIALOG ════════════════════════════════════════════════ -->
+<div id="custom-dialog" class="dialog-overlay" hidden>
+  <div class="dialog" role="dialog" aria-modal="true">
+    <h3>Log Custom Workout</h3>
+    <textarea id="custom-text" rows="4"
+              placeholder="Describe your workout… (Ctrl+Enter to submit)"></textarea>
+    <div class="dialog-actions">
+      <button class="btn-ghost" id="cancel-custom">Cancel</button>
+      <button class="btn-primary" id="submit-custom">Log It</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ TRACK PREVIEW DIALOG ════════════════════════════════════════════════ -->
+<div id="preview-dialog" class="dialog-overlay" hidden>
+  <div class="dialog dialog-wide" role="dialog" aria-modal="true">
+    <div class="dialog-top-row">
+      <h3 id="preview-track-name">Track Preview</h3>
+      <button class="btn-icon" id="close-preview-btn">✕</button>
+    </div>
+    <p class="sub-text" style="margin-bottom:12px">Tap a session to expand details.</p>
+    <div id="preview-sessions" class="preview-sessions"></div>
+    <div class="dialog-actions">
+      <button class="btn-ghost" id="cancel-preview-btn">Close</button>
+      <button class="btn-primary" id="start-previewed-btn">Start This Track</button>
+    </div>
+  </div>
+</div>
+
+<script src="static/main.js?v=6"></script>
 <script>
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("service-worker.js");
-}
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("service-worker.js");
+  }
 </script>
 </body>
 </html>
