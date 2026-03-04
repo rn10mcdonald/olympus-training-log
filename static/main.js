@@ -126,22 +126,88 @@ function renderHeader(state) {
 // ── Train section ─────────────────────────────────────────────────────────────
 function renderTrainSection(state, workout) {
   renderWorkout(workout);
+  renderCycleGrid(state);
+}
 
-  const done = Math.min((state.microcycle || {}).sessions_completed || 0, SESSIONS_NEEDED);
-  const pct  = (done / SESSIONS_NEEDED) * 100;
-  document.getElementById("cycle-bar").style.width = pct.toFixed(1) + "%";
+// ── Cycle grid ────────────────────────────────────────────────────────────────
+function getMondayOf(dateStr) {
+  // Parse as local noon to avoid timezone-midnight edge cases
+  const d = new Date(dateStr + "T12:00:00");
+  const day = d.getDay(); // 0 = Sun, 1 = Mon … 6 = Sat
+  const diff = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diff);
+  return d;
+}
+
+function fmtShort(d) {
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function renderCycleGrid(state) {
+  const el  = document.getElementById("cycle-grid");
+  const mc  = state.microcycle || {};
+  const done = Math.min(mc.sessions_completed || 0, SESSIONS_NEEDED);
+
   document.getElementById("cycle-fraction").textContent = `${done} / ${SESSIONS_NEEDED}`;
 
-  let note = "";
-  if (!workout || workout.status === "no_track") {
-    note = "Select a track below to begin your microcycle.";
-  } else if (workout.status === "cycle_complete") {
-    note = "Cycle complete! Start a new track or log a custom workout.";
-  } else {
-    const track = state.track ? (state.templates || {})[state.track] || "" : "";
-    note = track ? `Active: ${track}` : "";
+  if (!mc.start_date) {
+    el.innerHTML = `<p class="dim-msg">Select a track below to begin.</p>`;
+    return;
   }
-  document.getElementById("cycle-note").textContent = note;
+
+  // Week 1 = Mon of week containing start_date; Week 2 = 7 days later
+  const mon1 = getMondayOf(mc.start_date);
+  const sun1 = new Date(mon1); sun1.setDate(sun1.getDate() + 6);
+  const mon2 = new Date(mon1); mon2.setDate(mon2.getDate() + 7);
+  const sun2 = new Date(mon2); sun2.setDate(sun2.getDate() + 6);
+
+  // Pull dates for sessions logged in this cycle (workouts on or after start_date)
+  const cycleLogs = (state.workouts || [])
+    .filter(w => w.date >= mc.start_date)
+    .slice(0, SESSIONS_NEEDED);
+
+  function sessionCell(idx) {
+    const num   = `S${idx + 1}`;
+    if (idx < done) {
+      const raw  = cycleLogs[idx]?.date || "";
+      const label = raw
+        ? fmtShort(new Date(raw + "T12:00:00"))
+        : "done";
+      return `<div class="cs cs-done" title="Session ${idx+1} — ${label}">
+        <span class="cs-icon">✓</span>
+        <span class="cs-num">${num}</span>
+        <span class="cs-date">${label}</span>
+      </div>`;
+    }
+    if (idx === done) {
+      return `<div class="cs cs-next" title="Session ${idx+1} — up next">
+        <span class="cs-icon">→</span>
+        <span class="cs-num">${num}</span>
+        <span class="cs-date">next</span>
+      </div>`;
+    }
+    return `<div class="cs cs-upcoming" title="Session ${idx+1} — upcoming">
+      <span class="cs-icon">○</span>
+      <span class="cs-num">${num}</span>
+    </div>`;
+  }
+
+  el.innerHTML = `
+    <div class="cycle-week">
+      <div class="cycle-week-hdr">
+        <span class="cw-label">Week 1</span>
+        <span class="cw-range">${fmtShort(mon1)} – ${fmtShort(sun1)}</span>
+      </div>
+      <div class="cs-row">${sessionCell(0)}${sessionCell(1)}${sessionCell(2)}</div>
+    </div>
+    <div class="cycle-divider"></div>
+    <div class="cycle-week">
+      <div class="cycle-week-hdr">
+        <span class="cw-label">Week 2</span>
+        <span class="cw-range">${fmtShort(mon2)} – ${fmtShort(sun2)}</span>
+      </div>
+      <div class="cs-row">${sessionCell(3)}${sessionCell(4)}${sessionCell(5)}</div>
+    </div>`;
 }
 
 function renderWorkout(w) {

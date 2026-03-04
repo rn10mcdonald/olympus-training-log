@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Olympus Training Log</title>
 <link rel="manifest" href="static/manifest.json">
-<link rel="stylesheet" href="static/style.css">
+<link rel="stylesheet" href="static/style.css?v=4">
 </head>
 <body>
 
@@ -53,10 +53,7 @@
           <h2>Microcycle</h2>
           <span id="cycle-fraction" class="stat-chip">0 / 6</span>
         </div>
-        <div class="progress-bar-wrap" style="margin-top:8px">
-          <div id="cycle-bar" class="progress-bar-fill bar-green" style="width:0%"></div>
-        </div>
-        <p id="cycle-note" class="sub-text">Select a track below to begin.</p>
+        <div id="cycle-grid"><p class="dim-msg">Select a track below to begin.</p></div>
       </div>
 
       <!-- Track Picker -->
@@ -276,7 +273,7 @@
   </div>
 </div>
 
-<script src="static/main.js"></script>
+<script src="static/main.js?v=4"></script>
 <script>
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("service-worker.js");

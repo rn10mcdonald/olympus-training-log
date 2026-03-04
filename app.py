@@ -54,7 +54,9 @@ def statics(path: str):
     file_path = STATIC / path
     if not file_path.exists():
         raise HTTPException(404)
-    return FileResponse(file_path)
+    resp = FileResponse(file_path)
+    resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    return resp
 
 @app.get("/img/{path:path}")
 def images(path: str):

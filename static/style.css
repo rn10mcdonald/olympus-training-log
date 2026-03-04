@@ -348,6 +348,96 @@ body {
 .bar-green { background: var(--success); }
 .bar-blue  { background: var(--accent); }
 
+/* ── Cycle grid (2-week session tracker) ─────────────────────────────────── */
+.cycle-week       { padding: 2px 0; }
+
+.cycle-week-hdr   {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.cw-label {
+  font-size: 0.68rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--gold);
+}
+
+.cw-range {
+  font-size: 0.68rem;
+  color: var(--text-dim);
+  font-family: var(--mono);
+}
+
+.cs-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
+.cs {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 4px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: var(--surface-hi);
+  text-align: center;
+  min-width: 0;
+}
+
+.cs-done {
+  border-color: var(--success);
+  background: rgba(106, 191, 106, 0.10);
+}
+
+.cs-next {
+  border-color: var(--gold);
+  background: var(--gold-glow);
+}
+
+.cs-icon {
+  font-size: 0.95rem;
+  line-height: 1;
+}
+
+.cs-done .cs-icon  { color: var(--success); }
+.cs-next .cs-icon  { color: var(--gold); }
+.cs-upcoming .cs-icon { color: var(--text-dim); font-size: 0.7rem; }
+
+.cs-num {
+  font-size: 0.65rem;
+  font-family: var(--mono);
+  color: var(--text-dim);
+}
+
+.cs-done .cs-num { color: var(--success); }
+.cs-next .cs-num { color: var(--gold); }
+
+.cs-date {
+  font-size: 0.58rem;
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.cs-done .cs-date { color: var(--success); }
+.cs-next .cs-date { color: var(--gold); }
+
+.cycle-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 10px 0;
+}
+
 /* ── Input forms ──────────────────────────────────────────────────────────── */
 .input-row {
   display: flex;
