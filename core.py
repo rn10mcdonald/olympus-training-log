@@ -73,13 +73,23 @@ RUCK_STOPS = [
 ]
 TRIP_MILES = RUCK_STOPS[-1][0]   # 306
 
+# ── Drachma for lifting ────────────────────────────────────────────────────────
+# Base coins awarded per recommended session (at the standard bell weight).
+# Scales linearly with the bell weight used vs the session's standard (std_kg),
+# clamped to 0.5×–2.0× the base.  Custom workouts earn a flat 3 coins.
+BASE_WORKOUT_COINS  = 5.0
+CUSTOM_WORKOUT_COINS = 3.0
+
 # ── Training templates ────────────────────────────────────────────────────────
+# std_kg = conventional female kettlebell standard for the main movement
+# (per bell for bilateral movements such as double-KB front squat / deadlift).
 TEMPLATES = {
     "hermes_power_forge": {
         "name": "Hermes' Power Forge (2-week / 6 sessions)",
         "sessions": [
             {   # Wk-1 Day-1  Lower Push
-                "main": "Double-KB Front Squat 5×5 @ RPE 7",
+                "main":     "Double-KB Front Squat 5×5 @ RPE 7",
+                "std_kg":   12,
                 "accessory": [
                     "Bulgarian Split Squat 3×8 /leg",
                     "TRX Row 3×10",
@@ -88,7 +98,8 @@ TEMPLATES = {
                 "finisher": "30 s Goblet-Squat Pulse / 30 s rest × 4",
             },
             {   # Wk-1 Day-2  Upper
-                "main": "Single-Arm Clean + Press 5×5 /side",
+                "main":     "Single-Arm Clean + Press 5×5 /side",
+                "std_kg":   12,
                 "accessory": [
                     "Single-KB Floor Press 3×10 /side",
                     "Bent-Over Row 3×8 /side",
@@ -97,7 +108,8 @@ TEMPLATES = {
                 "finisher": "KB Hollow-Body OH Hold 20 s on / 10 s off × 4",
             },
             {   # Wk-1 Day-3  Lower Hinge
-                "main": "Double-KB Deadlift 6×6 @ RPE 7",
+                "main":     "Double-KB Deadlift 6×6 @ RPE 7",
+                "std_kg":   16,
                 "accessory": [
                     "Alternating KB Swing EMOM 8 (12 reps)",
                     "TRX Hamstring Curl 3×15",
@@ -106,7 +118,8 @@ TEMPLATES = {
                 "finisher": "20-lb-vest Step-Ups 30 s / 15 s × 5",
             },
             {   # Wk-2 Day-1  Lower Push Progression
-                "main": "Double-KB Front Squat 6×4 (↑ load)",
+                "main":     "Double-KB Front Squat 6×4 (↑ load)",
+                "std_kg":   16,
                 "accessory": [
                     "Goblet Box-Squat Pulse 3×12",
                     "TRX Single-Leg Hip Thrust 3×10 /leg",
@@ -115,7 +128,8 @@ TEMPLATES = {
                 "finisher": "Tabata Alternating Swings (4 min)",
             },
             {   # Wk-2 Day-2  Upper Progression
-                "main": "Clean + Push-Press Ladder (1-2-3-2-1) × 3",
+                "main":     "Clean + Push-Press Ladder (1-2-3-2-1) × 3",
+                "std_kg":   12,
                 "accessory": [
                     "Renegade Row 3×8 /side",
                     "TRX Atomic Push-Up 3×10",
@@ -124,7 +138,8 @@ TEMPLATES = {
                 "finisher": "Farmer-Carry March 45 s / 15 s × 4",
             },
             {   # Wk-2 Day-3  Lower Hinge Progression
-                "main": "Tempo KB RDL (3-s eccentric) 4×8",
+                "main":     "Tempo KB RDL (3-s eccentric) 4×8",
+                "std_kg":   16,
                 "accessory": [
                     "High Pull EMOM 10 (6 /side)",
                     "Weighted Step-Up 3×12 /leg",
@@ -139,7 +154,8 @@ TEMPLATES = {
         "name": "Ares' Battle Conditioning (2-week / 6 sessions)",
         "sessions": [
             {   # Wk-1 Day-1  Swing Power
-                "main": "KB Swing EMOM 20 min (15 reps/min)",
+                "main":     "KB Swing EMOM 20 min (15 reps/min)",
+                "std_kg":   16,
                 "accessory": [
                     "Goblet Squat 3×12",
                     "Push-Up 3×15",
@@ -148,7 +164,8 @@ TEMPLATES = {
                 "finisher": "30 Swings every minute on the minute × 5",
             },
             {   # Wk-1 Day-2  Clean & Press Complex
-                "main": "KB Clean + Press Complex 5×(5+5) /side",
+                "main":     "KB Clean + Press Complex 5×(5+5) /side",
+                "std_kg":   12,
                 "accessory": [
                     "Bent-Over Row 3×10 /side",
                     "Lateral Lunge 3×8 /side",
@@ -157,7 +174,8 @@ TEMPLATES = {
                 "finisher": "5 Cleans + 5 Presses + 5 Squats /side × 3 (no rest)",
             },
             {   # Wk-1 Day-3  Snatch Intervals
-                "main": "KB Snatch Intervals 8 × 1 min (max reps, switch at will)",
+                "main":     "KB Snatch Intervals 8 × 1 min (max reps, switch at will)",
+                "std_kg":   12,
                 "accessory": [
                     "Hip Hinge Drill 3×10",
                     "TRX Row 3×12",
@@ -166,7 +184,8 @@ TEMPLATES = {
                 "finisher": "100 Snatches for time (any split)",
             },
             {   # Wk-2 Day-1  Swing Ladder
-                "main": "Double-KB Swing Ladder: 5-10-15-10-5 (rest = set time) × 3",
+                "main":     "Double-KB Swing Ladder: 5-10-15-10-5 (rest = set time) × 3",
+                "std_kg":   16,
                 "accessory": [
                     "Goblet Squat 4×10 (heavier)",
                     "Single-Leg Deadlift 3×8 /side",
@@ -175,7 +194,8 @@ TEMPLATES = {
                 "finisher": "200 Swings for time",
             },
             {   # Wk-2 Day-2  Long Cycle
-                "main": "KB Long Cycle Clean & Jerk 2×5 min (switch hands each min)",
+                "main":     "KB Long Cycle Clean & Jerk 2×5 min (switch hands each min)",
+                "std_kg":   12,
                 "accessory": [
                     "Press 3×6 /side (strict)",
                     "Renegade Row 3×6 /side",
@@ -184,7 +204,8 @@ TEMPLATES = {
                 "finisher": "Max C&J in 5 min (one hand, no switching)",
             },
             {   # Wk-2 Day-3  Snatch Test Prep
-                "main": "KB Snatch 10 min test-pace (switch every 60 s)",
+                "main":     "KB Snatch 10 min test-pace (switch every 60 s)",
+                "std_kg":   12,
                 "accessory": [
                     "High Pull 3×8 /side",
                     "Swing 3×20",
@@ -199,7 +220,8 @@ TEMPLATES = {
         "name": "Athena's Tactical Strength (2-week / 6 sessions)",
         "sessions": [
             {   # Wk-1 Day-1  TGU Foundation
-                "main": "Turkish Get-Up 5×3 /side (light — perfect form)",
+                "main":     "Turkish Get-Up 5×3 /side (light — perfect form)",
+                "std_kg":   8,
                 "accessory": [
                     "Windmill 3×5 /side",
                     "Arm Bar 2×60 s /side",
@@ -208,7 +230,8 @@ TEMPLATES = {
                 "finisher": "TGU + 5 Swings /side × 3 (flow circuit)",
             },
             {   # Wk-1 Day-2  Strict Press
-                "main": "Strict Military Press 5×5 /side @ RPE 7",
+                "main":     "Strict Military Press 5×5 /side @ RPE 7",
+                "std_kg":   12,
                 "accessory": [
                     "Bent-Over Row 4×8 /side",
                     "TRX Face-Pull 3×15",
@@ -217,7 +240,8 @@ TEMPLATES = {
                 "finisher": "Max strict press /side in 3 min (moderate bell)",
             },
             {   # Wk-1 Day-3  Bent Press & Hinge
-                "main": "Bent Press 4×3 /side (technical focus)",
+                "main":     "Bent Press 4×3 /side (technical focus)",
+                "std_kg":   12,
                 "accessory": [
                     "Single-Leg RDL 3×8 /side",
                     "Goblet Squat 3×10",
@@ -226,7 +250,8 @@ TEMPLATES = {
                 "finisher": "Get-Up Sit-Up × 10 /side + 10 Swings × 3",
             },
             {   # Wk-2 Day-1  TGU Ladder
-                "main": "TGU Ladder (1-2-3-2-1 /side) × 2 (add load from Wk-1)",
+                "main":     "TGU Ladder (1-2-3-2-1 /side) × 2 (add load from Wk-1)",
+                "std_kg":   12,
                 "accessory": [
                     "Windmill 3×6 /side (heavier)",
                     "Half-Kneeling Press 3×8 /side",
@@ -235,7 +260,8 @@ TEMPLATES = {
                 "finisher": "TGU AMRAP in 8 min (alternating sides)",
             },
             {   # Wk-2 Day-2  Push-Press + Floor Press
-                "main": "Push-Press 5×5 /side + KB Floor Press 3×8 /side (superset)",
+                "main":     "Push-Press 5×5 /side + KB Floor Press 3×8 /side (superset)",
+                "std_kg":   12,
                 "accessory": [
                     "Chest-Supported Row 3×10",
                     "Overhead Carry 4×20 m /side",
@@ -244,7 +270,8 @@ TEMPLATES = {
                 "finisher": "5 Push-Press + 5 Floor Press /side × 4 (no rest)",
             },
             {   # Wk-2 Day-3  Windmill + TGU Complex
-                "main": "Windmill + TGU Complex: 5 Windmills → 1 TGU /side × 4",
+                "main":     "Windmill + TGU Complex: 5 Windmills → 1 TGU /side × 4",
+                "std_kg":   12,
                 "accessory": [
                     "Bottoms-Up Carry 3×20 m /side",
                     "Bent Press 3×3 /side",
@@ -259,7 +286,8 @@ TEMPLATES = {
         "name": "Apollo's Endurance Forge (2-week / 6 sessions)",
         "sessions": [
             {   # Wk-1 Day-1  Volume Squat
-                "main": "Double-KB Front Squat 4×10 @ RPE 6",
+                "main":     "Double-KB Front Squat 4×10 @ RPE 6",
+                "std_kg":   12,
                 "accessory": [
                     "Step-Up 3×15 /leg",
                     "TRX Squat Jump 3×12",
@@ -268,7 +296,8 @@ TEMPLATES = {
                 "finisher": "Goblet Squat 50 reps for time (1 weight)",
             },
             {   # Wk-1 Day-2  Clean Volume
-                "main": "KB Clean 5×8 /side (focus: linkage, no arm-curling)",
+                "main":     "KB Clean 5×8 /side (focus: linkage, no arm-curling)",
+                "std_kg":   12,
                 "accessory": [
                     "KB Row 4×10 /side",
                     "Push-Up 3×20",
@@ -277,7 +306,8 @@ TEMPLATES = {
                 "finisher": "Ladder: 1-2-3-4-5 Clean /side, no rest between rungs",
             },
             {   # Wk-1 Day-3  Swing Intervals
-                "main": "Swing Intervals 30 s on / 30 s off × 15 rounds",
+                "main":     "Swing Intervals 30 s on / 30 s off × 15 rounds",
+                "std_kg":   16,
                 "accessory": [
                     "Box Jump 3×8",
                     "Hip Flexor Stretch 2×60 s /side",
@@ -286,7 +316,8 @@ TEMPLATES = {
                 "finisher": "300 Swings — every time you put it down, 10 Push-Ups",
             },
             {   # Wk-2 Day-1  Goblet Volume
-                "main": "Goblet Squat 5×15 (heavier than Wk-1)",
+                "main":     "Goblet Squat 5×15 (heavier than Wk-1)",
+                "std_kg":   16,
                 "accessory": [
                     "Reverse Lunge 4×10 /leg",
                     "TRX Row 4×15",
@@ -295,7 +326,8 @@ TEMPLATES = {
                 "finisher": "Goblet + Swing alternating: 10 each × 6 (no rest)",
             },
             {   # Wk-2 Day-2  Push-Press Ladder
-                "main": "Push-Press Ladder (1-2-3-4-5 /side) × 4",
+                "main":     "Push-Press Ladder (1-2-3-4-5 /side) × 4",
+                "std_kg":   12,
                 "accessory": [
                     "Single-Arm Row 4×12 /side",
                     "Face-Pull 3×20",
@@ -304,7 +336,8 @@ TEMPLATES = {
                 "finisher": "AMRAP in 5 min: 5 Push-Press + 5 Row /side",
             },
             {   # Wk-2 Day-3  200 Swing Challenge
-                "main": "200 KB Swings EMOM — 10 reps at the top of every minute",
+                "main":     "200 KB Swings EMOM — 10 reps at the top of every minute",
+                "std_kg":   16,
                 "accessory": [
                     "Hip Hinge Mobility 2×10",
                     "Glute Bridge Hold 3×30 s",
@@ -319,7 +352,8 @@ TEMPLATES = {
         "name": "Poseidon's Wave Protocol (2-week / 6 sessions)",
         "sessions": [
             {   # Wk-1 Day-1  Wave Deadlift
-                "main": "Wave-Load KB Deadlift: (3 @ heavy, 2 @ heavier, 1 @ heaviest) × 3 waves",
+                "main":     "Wave-Load KB Deadlift: (3 @ heavy, 2 @ heavier, 1 @ heaviest) × 3 waves",
+                "std_kg":   16,
                 "accessory": [
                     "Romanian Deadlift 3×8 /side",
                     "Reverse Hyper (body weight) 3×15",
@@ -328,7 +362,8 @@ TEMPLATES = {
                 "finisher": "Single-Leg RDL 10 /side + 10 Swings × 3 (no rest)",
             },
             {   # Wk-1 Day-2  Wave Press
-                "main": "Wave-Load Strict Press: (5, 3, 2 /side) × 2 waves",
+                "main":     "Wave-Load Strict Press: (5, 3, 2 /side) × 2 waves",
+                "std_kg":   12,
                 "accessory": [
                     "Pull-Up or TRX Row 4×8",
                     "Lateral Raise 3×15",
@@ -337,7 +372,8 @@ TEMPLATES = {
                 "finisher": "Push-Press max reps in 3 min (one bell, switch once)",
             },
             {   # Wk-1 Day-3  Wave Swing
-                "main": "Swing Wave: 10-20-30-20-10 (rest = equal work time) × 2",
+                "main":     "Swing Wave: 10-20-30-20-10 (rest = equal work time) × 2",
+                "std_kg":   16,
                 "accessory": [
                     "Goblet Squat 3×10",
                     "Hip Flexor Mobilization 2×90 s /side",
@@ -346,7 +382,8 @@ TEMPLATES = {
                 "finisher": "30 s max swings / 30 s rest × 10 rounds",
             },
             {   # Wk-2 Day-1  Heavy Wave Deadlift
-                "main": "Heavy Wave KB DL: (2 @ near-max, 1 @ max) × 4 waves",
+                "main":     "Heavy Wave KB DL: (2 @ near-max, 1 @ max) × 4 waves",
+                "std_kg":   20,
                 "accessory": [
                     "Suitcase Deadlift 3×5 /side (heavy)",
                     "Nordic Hamstring Curl (eccentric) 3×5",
@@ -355,7 +392,8 @@ TEMPLATES = {
                 "finisher": "Heavy Swing 5 × 10 with 90 s rest",
             },
             {   # Wk-2 Day-2  Heavy Wave Press
-                "main": "Heavy Wave Press: (3, 2, 1 /side) × 3 waves (add load)",
+                "main":     "Heavy Wave Press: (3, 2, 1 /side) × 3 waves (add load)",
+                "std_kg":   16,
                 "accessory": [
                     "Weighted Pull-Up or TRX Archer Row 4×5",
                     "KB Windmill 3×5 /side",
@@ -364,7 +402,8 @@ TEMPLATES = {
                 "finisher": "5 Strict + 5 Push-Press /side × 4 (no rest between)",
             },
             {   # Wk-2 Day-3  Full-Body Wave Complex
-                "main": "Wave Complex /side: (Swing + Clean + Press + Squat) × 3-2-1 × 3",
+                "main":     "Wave Complex /side: (Swing + Clean + Press + Squat) × 3-2-1 × 3",
+                "std_kg":   12,
                 "accessory": [
                     "Turkish Get-Up 2×2 /side",
                     "Mobility Flow (hip + thoracic) 2×5 min",
@@ -379,7 +418,8 @@ TEMPLATES = {
         "name": "Hades' Iron Temple (2-week / 6 sessions)",
         "sessions": [
             {   # Wk-1 Day-1  Heavy Squat
-                "main": "Double-KB Front Squat 6×3 @ RPE 8–9",
+                "main":     "Double-KB Front Squat 6×3 @ RPE 8–9",
+                "std_kg":   20,
                 "accessory": [
                     "Pause Goblet Squat (3-s hold) 3×5",
                     "Single-Leg Press (wall-sit variant) 3×30 s /leg",
@@ -388,7 +428,8 @@ TEMPLATES = {
                 "finisher": "Heavy Goblet Hold (max weight) 3×45 s",
             },
             {   # Wk-1 Day-2  Heavy Floor Press
-                "main": "Single-KB Floor Press 5×5 /side (heaviest possible)",
+                "main":     "Single-KB Floor Press 5×5 /side (heaviest possible)",
+                "std_kg":   16,
                 "accessory": [
                     "Chest-Supported Row 4×6 (heavy)",
                     "Triceps Extension 3×10",
@@ -397,7 +438,8 @@ TEMPLATES = {
                 "finisher": "Floor Press Max Set /side (no set-down to failure)",
             },
             {   # Wk-1 Day-3  Heavy Hinge
-                "main": "Double-KB Deadlift 5×3 @ RPE 9 (near-maximal)",
+                "main":     "Double-KB Deadlift 5×3 @ RPE 9 (near-maximal)",
+                "std_kg":   24,
                 "accessory": [
                     "Banded Good Morning 3×12",
                     "Copenhagen Plank 3×25 s /side",
@@ -406,7 +448,8 @@ TEMPLATES = {
                 "finisher": "Heavy Swing 10 × 5 EMOM (competition-pace)",
             },
             {   # Wk-2 Day-1  Squat + Pause
-                "main": "Double-KB Front Squat 5×2 (↑ load from Wk-1) + 3-s pause",
+                "main":     "Double-KB Front Squat 5×2 (↑ load from Wk-1) + 3-s pause",
+                "std_kg":   24,
                 "accessory": [
                     "Rear-Foot-Elevated Split Squat 3×5 /leg (heavy)",
                     "Glute-Ham Walkout 3×10",
@@ -415,7 +458,8 @@ TEMPLATES = {
                 "finisher": "Double-KB Front Squat × 3 reps on the minute × 8",
             },
             {   # Wk-2 Day-2  Strict Press Max
-                "main": "Strict Press 5×3 /side (heavier than Wk-1) — no leg drive",
+                "main":     "Strict Press 5×3 /side (heavier than Wk-1) — no leg drive",
+                "std_kg":   16,
                 "accessory": [
                     "Weighted Pull-Up or TRX One-Arm Row 4×4 /side",
                     "Bottoms-Up Press 3×3 /side",
@@ -424,7 +468,8 @@ TEMPLATES = {
                 "finisher": "Strict Press 1RM attempt /side (3 warm-up singles → PR)",
             },
             {   # Wk-2 Day-3  Total Grind
-                "main": "Heavy Complex /side: (DL + Clean + Press + Squat) 5×3",
+                "main":     "Heavy Complex /side: (DL + Clean + Press + Squat) 5×3",
+                "std_kg":   16,
                 "accessory": [
                     "Turkish Get-Up 3×1 /side (heaviest manageable)",
                     "Farmers Carry 3×40 m (max load)",
@@ -450,11 +495,11 @@ def default_state() -> dict:
             "start_date": str(dt.date.today()),
             "badge_given": False,
         },
-        "workouts":          [],   # list[{date, type, details}]
+        "workouts":          [],   # list[{date, type, details, coins, weight_kg?}]
         "ruck_log":          [],   # list[{date, distance_miles, weight_lbs, coins}]
         "run_log":           [],   # list[{date, distance_miles, coins, pace_min_per_mile?}]
         "badges":            [],   # list of badge records
-        "treasury":          0.0,  # drachma accumulated (ruck + run)
+        "treasury":          0.0,  # drachma accumulated (lift + ruck + run)
         "total_ruck_miles":  0.0,  # lifetime ruck distance
         "total_run_miles":   0.0,  # lifetime run distance
         "journey_miles":     0.0,  # combined ruck + run (used for milestone checks)
@@ -480,6 +525,7 @@ def get_today_workout(state: dict) -> dict:
         "session_num":    idx + 1,
         "total_sessions": SESSIONS_NEEDED,
         "main":           sess["main"],
+        "std_kg":         sess.get("std_kg", 16),   # standard bell weight for drachma scaling
         "accessory":      sess["accessory"],
         "finisher":       sess["finisher"],
         "track_name":     TEMPLATES[track]["name"],
@@ -512,8 +558,14 @@ def init_track(state: dict, key: str) -> str:
     return f"Started {TEMPLATES[key]['name']}"
 
 
-def log_rec(state: dict) -> str:
-    """Log the next recommended session for the active micro-cycle."""
+def log_rec(state: dict, weight_kg: float | None = None) -> str:
+    """Log the next recommended session.
+
+    weight_kg – the bell weight used (kg). If None the user skipped weight entry
+                and earns the BASE_WORKOUT_COINS flat amount.  Otherwise coins
+                scale linearly with weight vs the session's std_kg, clamped to
+                0.5×–2.0× the base (so 2.50–10.00 Drachma per session).
+    """
     track = state.get("track")
     if not track or track not in TEMPLATES:
         return "No active track. Please select a track first."
@@ -522,29 +574,51 @@ def log_rec(state: dict) -> str:
     if idx >= SESSIONS_NEEDED:
         return "Cycle already complete. Log custom or start a new track."
 
-    tpl = TEMPLATES[track]["sessions"][idx]
-    state["workouts"].append({
+    tpl    = TEMPLATES[track]["sessions"][idx]
+    std_kg = tpl.get("std_kg", 16)
+
+    if weight_kg and weight_kg > 0:
+        ratio = min(max(weight_kg / std_kg, 0.5), 2.0)
+        coins = round(BASE_WORKOUT_COINS * ratio, 2)
+    else:
+        coins = BASE_WORKOUT_COINS
+
+    entry: dict = {
         "date":    str(dt.date.today()),
         "type":    "recommended",
         "details": tpl["main"],
-    })
+        "std_kg":  std_kg,
+        "coins":   coins,
+    }
+    if weight_kg and weight_kg > 0:
+        entry["weight_kg"] = round(weight_kg, 2)
+
+    state["workouts"].append(entry)
+    state["treasury"] = round(state.get("treasury", 0.0) + coins, 2)
     mc["sessions_completed"] += 1
     _increment_weekly_streak(state)
     _maybe_award_cycle_badge(state)
-    return f"✔ Logged: {tpl['main']}"
+
+    if weight_kg and weight_kg > 0:
+        lbs = round(weight_kg * 2.20462)
+        return f"⚔️ Logged: {tpl['main']} @ {lbs} lbs — earned 🪙 {coins:.2f} Drachma"
+    return f"⚔️ Logged: {tpl['main']} — earned 🪙 {coins:.2f} Drachma"
 
 
 def log_custom(state: dict, text: str) -> str:
-    """Log a free-text custom workout."""
+    """Log a free-text custom workout (earns a flat CUSTOM_WORKOUT_COINS)."""
+    coins = CUSTOM_WORKOUT_COINS
     state["workouts"].append({
         "date":    str(dt.date.today()),
         "type":    "custom",
         "details": text,
+        "coins":   coins,
     })
+    state["treasury"] = round(state.get("treasury", 0.0) + coins, 2)
     state["microcycle"]["sessions_completed"] += 1
     _increment_weekly_streak(state)
     _maybe_award_cycle_badge(state)
-    return "✔ Custom workout logged."
+    return f"⚔️ Custom workout logged — earned 🪙 {coins:.2f} Drachma"
 
 
 def log_ruck(state: dict, miles: float, pounds: float) -> str:

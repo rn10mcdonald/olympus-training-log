@@ -100,9 +100,17 @@ async def select_track(req: Request):
     return {"status": "ok", "msg": msg, "state": state}
 
 @app.post("/api/workout/recommended")
-def log_recommended():
+async def log_recommended(req: Request):
+    weight_kg = None
+    try:
+        p = await req.json()
+        weight_lbs = p.get("weight_lbs")
+        if weight_lbs is not None:
+            weight_kg = float(weight_lbs) * 0.453592
+    except Exception:
+        pass   # body may be absent or non-JSON — that's fine
     state = _load()
-    msg   = core.log_rec(state)
+    msg   = core.log_rec(state, weight_kg=weight_kg)
     _save(state)
     return {"status": "ok", "msg": msg, "state": state}
 

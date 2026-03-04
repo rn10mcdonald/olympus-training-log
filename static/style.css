@@ -277,6 +277,76 @@ body {
   padding: 6px 0;
 }
 
+/* ── Weight logging row (optional bell weight for recommended sessions) ────── */
+.weight-log-row {
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: rgba(201, 176, 55, 0.06);
+  border: 1px solid rgba(201, 176, 55, 0.25);
+  border-radius: 7px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.weight-log-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.63rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-dim);
+}
+
+.weight-std-hint {
+  color: var(--gold-dim);
+  font-size: 0.62rem;
+  font-family: var(--mono);
+  font-style: italic;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.weight-log-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.weight-log-controls input {
+  background: var(--surface-hi);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  padding: 7px 10px;
+  font-size: 0.9rem;
+  font-family: var(--mono);
+  width: 90px;
+  flex-shrink: 0;
+}
+
+.weight-log-controls input:focus {
+  outline: none;
+  border-color: var(--gold);
+}
+
+.weight-log-unit {
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.weight-coins-preview {
+  margin-left: auto;
+  font-size: 0.9rem;
+  color: var(--gold);
+  font-family: var(--mono);
+  font-weight: bold;
+  transition: color 0.2s;
+}
+
 /* ── Action row ───────────────────────────────────────────────────────────── */
 .action-row {
   display: flex;

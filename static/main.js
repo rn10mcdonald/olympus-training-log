@@ -71,11 +71,24 @@ function formatPace(decMin) {
   return `${min}:${sec.toString().padStart(2, "0")}`;
 }
 
+// ── Drachma helpers ───────────────────────────────────────────────────────────
+const BASE_WORKOUT_COINS   = 5.0;
+const CUSTOM_WORKOUT_COINS = 3.0;
+
+/** Convert lbs → kg and compute estimated workout Drachma, mirroring core.py logic. */
+function estimateWorkoutCoins(lbs, stdKg) {
+  if (!lbs || lbs <= 0 || !stdKg) return BASE_WORKOUT_COINS;
+  const kg    = lbs * 0.453592;
+  const ratio = Math.min(Math.max(kg / stdKg, 0.5), 2.0);
+  return Math.round(BASE_WORKOUT_COINS * ratio * 100) / 100;
+}
+
 // ── App state ─────────────────────────────────────────────────────────────────
 let appState        = null;
 let prevBadgeCount  = 0;
 let historyFilter   = "all";
 let previewedKey    = null;   // track key currently shown in preview dialog
+let currentStdKg    = 16;     // std_kg of the currently displayed session
 
 // ── Section navigation ────────────────────────────────────────────────────────
 function switchSection(name) {
@@ -211,15 +224,33 @@ function renderCycleGrid(state) {
 }
 
 function renderWorkout(w) {
-  const el = document.getElementById("workout-display");
+  const el         = document.getElementById("workout-display");
+  const weightRow  = document.getElementById("weight-log-row");
+  const stdHint    = document.getElementById("weight-std-hint");
+  const coinPreview = document.getElementById("weight-coins-preview");
+
   if (!w || w.status === "no_track") {
     el.innerHTML = `<p class="dim-msg">No active track. Choose a track below and press <strong>Start</strong>.</p>`;
+    weightRow.setAttribute("hidden", "");
     return;
   }
   if (w.status === "cycle_complete") {
     el.innerHTML = `<p class="dim-msg">🏅 Cycle complete! Log a custom workout or start a new track below.</p>`;
+    weightRow.setAttribute("hidden", "");
     return;
   }
+
+  // Store current std_kg for live coin preview calculations
+  currentStdKg = w.std_kg || 16;
+  const stdLbs = Math.round(currentStdKg * 2.20462);
+  stdHint.textContent = `· std: ${stdLbs} lbs (${currentStdKg} kg)`;
+  coinPreview.textContent = `🪙 ${BASE_WORKOUT_COINS.toFixed(2)}`;
+  weightRow.removeAttribute("hidden");
+
+  // Reset weight field on new workout display
+  const weightInput = document.getElementById("bell-weight-lbs");
+  if (weightInput) weightInput.value = "";
+
   const accessories = (w.accessory || []).map(a => `<li>${escHtml(a)}</li>`).join("");
   el.innerHTML = `
     <div class="workout-track-name">${escHtml(w.track_name || "")}</div>
@@ -233,6 +264,14 @@ function renderWorkout(w) {
       <span class="finisher-label">Finisher</span>
       ${escHtml(w.finisher)}
     </div>`;
+}
+
+// Live Drachma preview as user adjusts weight
+function updateCoinPreview() {
+  const el  = document.getElementById("weight-coins-preview");
+  if (!el) return;
+  const lbs = parseFloat(document.getElementById("bell-weight-lbs").value || 0);
+  el.textContent = `🪙 ${estimateWorkoutCoins(lbs, currentStdKg).toFixed(2)}`;
 }
 
 async function populateTracks(state) {
@@ -363,9 +402,17 @@ function renderHistory(state, filter) {
   if (filter === "all" || filter === "lifting") {
     for (const w of state.workouts || []) {
       if (!w.date) continue;
+      let detail = w.details || "";
+      if (w.weight_kg) {
+        const lbs = Math.round(w.weight_kg * 2.20462);
+        detail += ` · ${lbs} lbs`;
+      }
+      if (w.coins != null) {
+        detail += ` · 🪙 ${Number(w.coins).toFixed(2)}`;
+      }
       (byDate[w.date] = byDate[w.date] || [])
         .push({ kind: w.type === "recommended" ? "lifting" : "custom",
-                detail: w.details, _filter: "lifting" });
+                detail, _filter: "lifting" });
     }
   }
 
@@ -461,9 +508,12 @@ async function startPreviewedTrack() {
 
 // ── Actions ───────────────────────────────────────────────────────────────────
 async function logRecommended() {
+  const lbs     = parseFloat(document.getElementById("bell-weight-lbs").value || 0);
+  const payload = lbs > 0 ? { weight_lbs: lbs } : {};
   try {
-    const r = await api("/api/workout/recommended", {});
-    toast(r.msg || "✔ Workout logged!");
+    const r = await api("/api/workout/recommended", payload);
+    toast(r.msg || "⚔️ Workout logged!");
+    document.getElementById("bell-weight-lbs").value = "";
     appState = r.state;
     const workout = await api("/api/workout/today");
     renderAll(appState, workout);
@@ -574,6 +624,9 @@ document.getElementById("log-rec-btn").addEventListener("click", logRecommended)
 document.getElementById("log-custom-btn").addEventListener("click", openCustomDialog);
 document.getElementById("preview-track-btn").addEventListener("click", showTrackPreview);
 document.getElementById("start-track-btn").addEventListener("click", () => startTrack());
+
+// Bell weight live preview
+document.getElementById("bell-weight-lbs").addEventListener("input", updateCoinPreview);
 
 // Ruck section
 document.getElementById("log-ruck-btn").addEventListener("click", logRuck);
