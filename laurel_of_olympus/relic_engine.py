@@ -1,8 +1,9 @@
 """
 relic_engine.py – Relic inventory management and buff computation.
 
-Relics are loaded from data/relics.json (new schema).
-Relics provide passive bonuses applied to farms and workouts.
+Relics are loaded from data/relics.json (new nested schema).
+Relic rarity probabilities are loaded from data/rarity_tables.json.
+Capacity is read from relics.json["inventory"]["max_relics"].
 
 Public API:
   add_relic(state, relic_id) -> tuple[bool, str]
@@ -17,26 +18,45 @@ Public API:
       Compute combined buff multipliers/bonuses from all held relics.
       Same key format as creature_engine.get_sanctuary_buffs().
 
-  describe_effect(effect) -> str
-      Human-readable description of an effect dict.
+  roll_relic_reward() -> dict
+      Roll a random relic using relic_rarity_rolls probability table.
+      Returns an enriched relic dict.
+
+  get_all_relics() -> list[dict]
+      Return all relics with enriched display fields.
+
+  get_inventory_details(state) -> list[dict]
+      Return enriched dicts for all relics in the player's inventory.
 """
 
 from __future__ import annotations
 
 import json
+import random
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from laurel_of_olympus.game_state import PlayerState
 
 # ---------------------------------------------------------------------------
-# Load data
+# Load data files once at import time
 # ---------------------------------------------------------------------------
-_DATA_DIR  = Path(__file__).parent / "data"
-_RELICS: List[dict] = json.loads((_DATA_DIR / "relics.json").read_text())
+_DATA_DIR = Path(__file__).parent / "data"
+
+_RAW           = json.loads((_DATA_DIR / "relics.json").read_text())
+_RELICS: List[dict] = _RAW["relics"]
 _RELIC_MAP: Dict[str, dict] = {r["id"]: r for r in _RELICS}
 
-RELIC_CAPACITY = 5   # max relics a player can carry
+# Capacity from schema (not hardcoded)
+RELIC_CAPACITY: int = _RAW["inventory"]["max_relics"]
+
+_RARITY_TABLES = json.loads((_DATA_DIR / "rarity_tables.json").read_text())
+
+# Index relics by rarity for fast lookup
+_RELICS_BY_RARITY: Dict[str, List[dict]] = {}
+for _r in _RELICS:
+    _rar = _r.get("rarity", "rare")
+    _RELICS_BY_RARITY.setdefault(_rar, []).append(_r)
 
 RARITY_ICONS = {
     "common":    "🌿",
@@ -44,6 +64,24 @@ RARITY_ICONS = {
     "epic":      "🔥",
     "legendary": "✨",
 }
+
+
+# ---------------------------------------------------------------------------
+# Rarity roll helper
+# ---------------------------------------------------------------------------
+
+def _roll_rarity(rolls: List[dict]) -> str:
+    """
+    Weighted random rarity selection from a probability table.
+    Each entry: {"rarity": str, "probability": float}.
+    """
+    r = random.random()
+    cumulative = 0.0
+    for entry in rolls:
+        cumulative += entry["probability"]
+        if r < cumulative:
+            return entry["rarity"]
+    return rolls[-1]["rarity"]  # fallback
 
 
 # ---------------------------------------------------------------------------
@@ -59,9 +97,10 @@ def add_relic(state: PlayerState, relic_id: str) -> Tuple[bool, str]:
         return False, f"Unknown relic: {relic_id}"
     if relic_id in state.relics:
         return False, "You already possess this relic."
-    if len(state.relics) >= state.relic_capacity:
+    capacity = state.relic_capacity
+    if len(state.relics) >= capacity:
         return False, (
-            f"Relic inventory is full ({state.relic_capacity}/{state.relic_capacity}). "
+            f"Relic inventory is full ({capacity}/{capacity}). "
             "Discard a relic to make room."
         )
     state.relics.append(relic_id)
@@ -82,55 +121,75 @@ def remove_relic(state: PlayerState, relic_id: str) -> Tuple[bool, str]:
 
 
 # ---------------------------------------------------------------------------
+# Relic reward roll (for future event rewards)
+# ---------------------------------------------------------------------------
+
+def roll_relic_reward() -> Optional[dict]:
+    """
+    Roll a random relic using relic_rarity_rolls from rarity_tables.json.
+    Returns an enriched relic dict.
+    """
+    rarity     = _roll_rarity(_RARITY_TABLES["relic_rarity_rolls"])
+    candidates = _RELICS_BY_RARITY.get(rarity) or _RELICS
+    return _enrich(random.choice(candidates))
+
+
+# ---------------------------------------------------------------------------
 # Buff computation
 # ---------------------------------------------------------------------------
 
 def get_relic_buffs(state: PlayerState) -> dict:
     """
     Aggregate buff multipliers/bonuses from all held relics.
-    Same key format as creature_engine.get_sanctuary_buffs().
+    Uses the same buff_type -> internal key mapping as creature_engine.
+
+    buff_type -> internal buff key:
+        farm_production   -> all_farms          (multiplier)
+        drachmae_gain     -> workout_all         (multiplier)
+        running_rewards   -> workout_running     (multiplier)
+        strength_rewards  -> workout_strength    (multiplier)
+        event_chance      -> event_chance        (additive)
+        all_rewards       -> workout_all         (multiplier)
+        rare_events       -> rare_event_chance   (additive)
+        army_strength     -> army_strength       (multiplier, future)
+        campaign_rewards  -> campaign_rewards    (multiplier, future)
     """
     buffs: dict = {}
     for relic_id in state.relics:
         relic = _RELIC_MAP.get(relic_id)
         if not relic:
             continue
-        effect = relic.get("effect", {})
-        _merge_effect(buffs, effect)
+        buff_type  = relic.get("buff_type", "")
+        buff_value = float(relic.get("buff_value", 0.0))
+        _merge_buff(buffs, buff_type, buff_value)
     return buffs
 
 
-def _merge_effect(buffs: dict, effect: dict) -> None:
-    """Merge one effect dict into the running buffs accumulator."""
-    etype = effect.get("type", "")
-    mult  = float(effect.get("multiplier", 1.0))
-    bonus = float(effect.get("bonus", 0.0))
+def _merge_buff(buffs: dict, buff_type: str, buff_value: float) -> None:
+    """Merge one buff_type/buff_value pair into the running buffs accumulator."""
+    mult = 1.0 + buff_value  # e.g. buff_value=0.15 -> 15 % boost
 
-    if etype == "farm_bonus":
-        farm = effect.get("farm")
-        if farm:
-            key = f"farm_{farm}"
-            buffs[key] = buffs.get(key, 1.0) * mult
-        else:
-            # No specific farm → applies to all farms
-            buffs["all_farms"] = buffs.get("all_farms", 1.0) * mult
+    if buff_type == "farm_production":
+        buffs["all_farms"] = buffs.get("all_farms", 1.0) * mult
 
-    elif etype == "workout_bonus":
-        workout = effect.get("workout", "")
-        if workout:
-            key = f"workout_{workout}"
-            buffs[key] = buffs.get(key, 1.0) * mult
+    elif buff_type in ("drachmae_gain", "all_rewards"):
+        buffs["workout_all"] = buffs.get("workout_all", 1.0) * mult
 
-    elif etype == "event_chance":
-        buffs["event_chance"] = buffs.get("event_chance", 0.0) + bonus
+    elif buff_type == "running_rewards":
+        buffs["workout_running"] = buffs.get("workout_running", 1.0) * mult
 
-    elif etype == "laurel_bonus":
-        buffs["laurel_bonus"] = buffs.get("laurel_bonus", 0) + int(bonus)
+    elif buff_type == "strength_rewards":
+        buffs["workout_strength"] = buffs.get("workout_strength", 1.0) * mult
+
+    elif buff_type == "event_chance":
+        buffs["event_chance"] = buffs.get("event_chance", 0.0) + buff_value
+
+    elif buff_type == "rare_events":
+        buffs["rare_event_chance"] = buffs.get("rare_event_chance", 0.0) + buff_value
 
     else:
-        # army_defense and other future types stored for reference
-        if mult != 1.0:
-            buffs[etype] = buffs.get(etype, 1.0) * mult
+        # army_strength, campaign_rewards -> stored for future use
+        buffs[buff_type] = buffs.get(buff_type, 1.0) * mult
 
 
 # ---------------------------------------------------------------------------
@@ -148,32 +207,29 @@ def get_inventory_details(state: PlayerState) -> List[dict]:
 
 
 def _enrich(relic: dict) -> dict:
-    rarity = relic.get("rarity", "common")
+    """Add display-only fields to a relic dict."""
+    rarity     = relic.get("rarity", "rare")
+    buff_type  = relic.get("buff_type", "")
+    buff_value = float(relic.get("buff_value", 0.0))
     return {
         **relic,
         "icon":       RARITY_ICONS.get(rarity, "🔮"),
-        "buff_label": describe_effect(relic.get("effect", {})),
+        "buff_label": describe_buff(buff_type, buff_value),
     }
 
 
-def describe_effect(effect: dict) -> str:
-    """Return a short human-readable buff description."""
-    etype = effect.get("type", "")
-    mult  = effect.get("multiplier", 1.0)
-    bonus = effect.get("bonus", 0)
-    pct   = round((float(mult) - 1.0) * 100)
-
-    if etype == "farm_bonus":
-        farm = effect.get("farm", "").replace("_", " ")
-        return f"+{pct}% {farm} production" if farm else f"+{pct}% all farm production"
-    if etype == "workout_bonus":
-        workout = effect.get("workout", "workout")
-        return f"+{pct}% {workout} drachmae"
-    if etype == "event_chance":
-        return f"+{round(float(bonus) * 100)}% event chance"
-    if etype == "laurel_bonus":
-        n = int(bonus)
-        return f"+{n} bonus laurel{'s' if n != 1 else ''} per streak"
-    if etype == "army_defense":
-        return f"+{pct}% army defense (future)"
-    return "Passive bonus"
+def describe_buff(buff_type: str, buff_value: float) -> str:
+    """Return a short human-readable buff description from buff_type + buff_value."""
+    pct = round(buff_value * 100)
+    labels = {
+        "farm_production":  f"+{pct}% farm production",
+        "drachmae_gain":    f"+{pct}% all drachmae",
+        "running_rewards":  f"+{pct}% running drachmae",
+        "strength_rewards": f"+{pct}% strength drachmae",
+        "event_chance":     f"+{pct}% event chance",
+        "all_rewards":      f"+{pct}% all rewards",
+        "rare_events":      f"+{pct}% rare event chance",
+        "army_strength":    f"+{pct}% army strength",
+        "campaign_rewards": f"+{pct}% campaign rewards",
+    }
+    return labels.get(buff_type, f"+{pct}% passive bonus")

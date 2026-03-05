@@ -40,7 +40,7 @@ from typing import Optional
 
 _DATA_DIR   = Path(__file__).parent / "data"
 _FLAVOR     = json.loads((_DATA_DIR / "flavor_text.json").read_text())
-_CREATURES  = json.loads((_DATA_DIR / "creatures.json").read_text())
+_CREATURES  = json.loads((_DATA_DIR / "creatures.json").read_text())["creatures"]
 
 # ---------------------------------------------------------------------------
 # Event type weights  (must sum to 100)

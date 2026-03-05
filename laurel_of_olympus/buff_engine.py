@@ -58,9 +58,16 @@ def apply_farm_buff(buffs: dict, farm_type: str, base_amount: int) -> int:
 
 
 def apply_workout_buff(buffs: dict, workout_type: str, base_reward: float) -> float:
-    """Scale a workout drachmae reward by the relevant workout multiplier."""
-    mult = buffs.get(f"workout_{workout_type}", 1.0)
-    return round(base_reward * mult, 2)
+    """
+    Scale a workout drachmae reward by the relevant workout multiplier.
+
+    Applies both the type-specific multiplier (e.g. "workout_running") and the
+    all-workout multiplier ("workout_all") from drachmae_gain / all_rewards buffs.
+    Both are combined multiplicatively.
+    """
+    type_mult = buffs.get(f"workout_{workout_type}", 1.0)
+    all_mult  = buffs.get("workout_all", 1.0)
+    return round(base_reward * type_mult * all_mult, 2)
 
 
 def effective_event_chance(buffs: dict, base_chance: float) -> float:

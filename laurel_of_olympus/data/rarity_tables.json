@@ -1,0 +1,37 @@
+{
+  "creature_spawn_chance": 0.05,
+
+  "creature_rarity_rolls": [
+    {
+      "rarity": "common",
+      "probability": 0.60
+    },
+    {
+      "rarity": "rare",
+      "probability": 0.25
+    },
+    {
+      "rarity": "epic",
+      "probability": 0.12
+    },
+    {
+      "rarity": "legendary",
+      "probability": 0.03
+    }
+  ],
+
+  "relic_rarity_rolls": [
+    {
+      "rarity": "rare",
+      "probability": 0.60
+    },
+    {
+      "rarity": "epic",
+      "probability": 0.30
+    },
+    {
+      "rarity": "legendary",
+      "probability": 0.10
+    }
+  ]
+}

@@ -111,8 +111,9 @@ def process_workout(
     multiplier = _dr_multiplier(workout_number)
     base_final = round(raw * multiplier, 2)
 
-    # Apply sanctuary / relic workout buff
-    workout_mult = buffs.get(f"workout_{workout_type}", 1.0)
+    # Apply sanctuary / relic workout buffs
+    # type-specific multiplier (e.g. running_rewards) × all-workout multiplier
+    workout_mult = buffs.get(f"workout_{workout_type}", 1.0) * buffs.get("workout_all", 1.0)
     final = round(base_final * workout_mult, 2)
     buff_bonus = round(final - base_final, 2)
 

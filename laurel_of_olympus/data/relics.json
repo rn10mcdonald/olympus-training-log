@@ -1,56 +1,71 @@
-[
-  {
-    "id": "hermes_sandals",
-    "name": "Hermes' Sandals",
-    "description": "The winged sandals of Hermes grant unnatural speed.",
-    "rarity": "rare",
-    "effect": {"type": "workout_bonus", "workout": "running", "multiplier": 1.2},
-    "source": "event",
-    "flavor": "They fit perfectly, which is suspicious."
-  },
-  {
-    "id": "golden_laurel",
-    "name": "Golden Laurel",
-    "description": "A laurel wreath cast in pure Olympian gold.",
-    "rarity": "epic",
-    "effect": {"type": "laurel_bonus", "bonus": 1},
-    "source": "campaign",
-    "flavor": "Heavier than it looks. Still worth it."
-  },
-  {
-    "id": "aegis_fragment",
-    "name": "Aegis Fragment",
-    "description": "A shard of Athena's divine shield.",
-    "rarity": "rare",
-    "effect": {"type": "army_defense", "multiplier": 1.15},
-    "source": "campaign",
-    "flavor": "Still crackles with divine energy."
-  },
-  {
-    "id": "ambrosia_chalice",
-    "name": "Ambrosia Chalice",
-    "description": "A cup that once held ambrosia, food of the gods.",
-    "rarity": "epic",
-    "effect": {"type": "farm_bonus", "multiplier": 1.25},
-    "source": "event",
-    "flavor": "Smells faintly of honey and hubris."
-  },
-  {
-    "id": "ruck_of_sisyphus",
-    "name": "Ruck of Sisyphus",
-    "description": "An ancient pack that gets heavier the further you walk.",
-    "rarity": "legendary",
-    "effect": {"type": "workout_bonus", "workout": "rucking", "multiplier": 1.5},
-    "source": "event",
-    "flavor": "Sisyphus would know exactly how you feel."
-  },
-  {
-    "id": "owl_of_athena",
-    "name": "Owl of Athena",
-    "description": "Athena's owl perches on your estate and keeps watch.",
-    "rarity": "common",
-    "effect": {"type": "event_chance", "bonus": 0.05},
-    "source": "event",
-    "flavor": "It judges you constantly. You deserve it."
+{
+  "relics": [
+    {
+      "id": "sandals_of_hermes",
+      "name": "Sandals of Hermes",
+      "rarity": "rare",
+      "buff_type": "running_rewards",
+      "buff_value": 0.15,
+      "description": "Swift as the messenger of the gods.",
+      "sprite": "sandals_of_hermes.png"
+    },
+    {
+      "id": "helm_of_athena",
+      "name": "Helm of Athena",
+      "rarity": "rare",
+      "buff_type": "strength_rewards",
+      "buff_value": 0.15,
+      "description": "Wisdom and power in equal measure.",
+      "sprite": "helm_of_athena.png"
+    },
+    {
+      "id": "shield_of_ares",
+      "name": "Shield of Ares",
+      "rarity": "epic",
+      "buff_type": "army_strength",
+      "buff_value": 0.20,
+      "description": "Forged for champions of battle.",
+      "sprite": "shield_of_ares.png"
+    },
+    {
+      "id": "cornucopia_of_demeter",
+      "name": "Cornucopia of Demeter",
+      "rarity": "rare",
+      "buff_type": "farm_production",
+      "buff_value": 0.20,
+      "description": "Abundance flows from this sacred horn.",
+      "sprite": "cornucopia_of_demeter.png"
+    },
+    {
+      "id": "lyre_of_apollo",
+      "name": "Lyre of Apollo",
+      "rarity": "epic",
+      "buff_type": "event_chance",
+      "buff_value": 0.10,
+      "description": "Music that pleases both mortals and gods.",
+      "sprite": "lyre_of_apollo.png"
+    },
+    {
+      "id": "trident_of_poseidon",
+      "name": "Trident of Poseidon",
+      "rarity": "legendary",
+      "buff_type": "all_rewards",
+      "buff_value": 0.15,
+      "description": "Power drawn from the depths of the sea.",
+      "sprite": "trident_of_poseidon.png"
+    },
+    {
+      "id": "torch_of_hecate",
+      "name": "Torch of Hecate",
+      "rarity": "epic",
+      "buff_type": "rare_events",
+      "buff_value": 0.20,
+      "description": "Illuminates paths unseen by ordinary eyes.",
+      "sprite": "torch_of_hecate.png"
+    }
+  ],
+
+  "inventory": {
+    "max_relics": 10
   }
-]
+}
