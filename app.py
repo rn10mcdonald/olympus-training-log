@@ -4,6 +4,7 @@ from pathlib import Path
 import json, core, datetime as dt
 from laurel_of_olympus import game_state as gs
 from laurel_of_olympus import workout_engine, farm_engine, event_engine
+from laurel_of_olympus import oracle_engine, title_engine
 
 BASE   = Path(__file__).parent
 DATA   = BASE / "data.json"
@@ -252,11 +253,33 @@ async def estate_simulate_workout(req: Request):
         kwargs["volume"] = 5000.0
     elif workout_type in ("walking", "running", "rucking") and "miles" not in kwargs:
         kwargs["miles"] = 2.0
+
     state = gs.load(ESTATE_SAVE)
     events = workout_engine.process_workout(state, workout_type, **kwargs)
     farm_events = farm_engine.produce_farms(state)
     events.extend(farm_events)
-    narrative_event = event_engine.maybe_trigger_event(state.to_dict())
+
+    # ── Title checks (run before event priority chain) ───────────────────────
+    newly_unlocked = title_engine.check_and_unlock_titles(state)
+    for tid in newly_unlocked:
+        events.append(f"  🏅 Title unlocked: {tid.replace('_', ' ').title()}")
+
+    # ── Event priority chain (only one popup per workout) ────────────────────
+    # 1. Ultra-rare: Kassandra Breaks Composure (0.1%, phase ≥ 4)
+    narrative_event = oracle_engine.maybe_kassandra_break(state, chance=0.001)
+    if narrative_event:
+        # Kassandra break also unlocks "favorite_of_kassandra"
+        if "favorite_of_kassandra" not in state.titles_unlocked:
+            state.titles_unlocked.append("favorite_of_kassandra")
+            state.active_titles["legendary_titles"] = "favorite_of_kassandra"
+            events.append("  🌟 Title unlocked: Favorite of Kassandra")
+    else:
+        # 2. Oracle visit (10%)
+        narrative_event = oracle_engine.maybe_oracle_visit(state, chance=0.10)
+        if narrative_event is None:
+            # 3. Regular flavour event (20%)
+            narrative_event = event_engine.maybe_trigger_event(state.to_dict())
+
     gs.save(state, ESTATE_SAVE)
     return {
         "status": "ok",
@@ -264,3 +287,12 @@ async def estate_simulate_workout(req: Request):
         "state":  state.to_dict(),
         "event":  narrative_event,   # None or event dict
     }
+
+
+@app.get("/api/estate/prophecy")
+def get_prophecy_scroll():
+    """Return the full Prophecy Scroll payload (titles + oracle phase + combined title)."""
+    state = gs.load(ESTATE_SAVE)
+    scroll = title_engine.get_prophecy_scroll(state)
+    gs.save(state, ESTATE_SAVE)  # persist any newly unlocked titles
+    return scroll

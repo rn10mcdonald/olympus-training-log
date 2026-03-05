@@ -1143,6 +1143,12 @@ async function initEstate() {
     estateState = await api("/api/estate/state");
     renderEstateResources();
     renderEstateGrid();
+    // Populate prophecy title preview without opening the dialog
+    try {
+      const scroll = await api("/api/estate/prophecy");
+      const previewEl = document.getElementById("prophecy-combined-preview");
+      if (previewEl) previewEl.textContent = scroll.combined_title || "Unnamed Mortal";
+    } catch (_) { /* non-fatal */ }
   } catch (e) {
     console.error("Estate init failed:", e);
   }
@@ -1279,6 +1285,112 @@ document.getElementById("simulate-workout-btn")?.addEventListener("click", async
   } finally {
     btn.disabled = false;
   }
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// PROPHECY SCROLL
+// ══════════════════════════════════════════════════════════════════════════════
+
+const CATEGORY_ICONS = {
+  consistency_titles: "⏳",
+  workout_titles:     "⚔️",
+  estate_titles:      "🌾",
+  legendary_titles:   "✨",
+  secret_titles:      "🔒",
+};
+
+async function openProphecyScroll() {
+  const overlay = document.getElementById("prophecy-overlay");
+  overlay.hidden = false;
+  document.getElementById("close-prophecy-btn").focus();
+
+  // Show loading state
+  document.getElementById("prophecy-dialog-title").textContent = "Loading…";
+  document.getElementById("prophecy-categories").innerHTML =
+    '<p class="dim-msg" style="padding:12px">Consulting the fates…</p>';
+
+  try {
+    const scroll = await api("/api/estate/prophecy");
+    renderProphecyScroll(scroll);
+
+    // Also update the estate state so laurels + titles reflect backend state
+    if (estateState) {
+      estateState.laurels         = scroll.laurels;
+      estateState.oracle_phase    = scroll.oracle_phase;
+      estateState.oracle_visits   = scroll.oracle_visits;
+      estateState.titles_unlocked = (scroll.titles_by_category || [])
+        .flatMap(c => c.titles.filter(t => t.unlocked).map(t => t.id));
+      renderEstateResources();
+    }
+
+    // Update the preview chip in the estate card
+    const previewEl = document.getElementById("prophecy-combined-preview");
+    if (previewEl) previewEl.textContent = scroll.combined_title || "Unnamed Mortal";
+
+  } catch (err) {
+    toast("Prophecy error: " + err.message, 4000);
+    overlay.hidden = true;
+  }
+}
+
+function renderProphecyScroll(scroll) {
+  // Title
+  const combined = scroll.combined_title || "Unnamed Mortal";
+  document.getElementById("prophecy-dialog-title").textContent = combined;
+
+  // Oracle bar
+  document.getElementById("prophecy-oracle-phase-name").textContent =
+    scroll.oracle_phase_name || "Stranger";
+  document.getElementById("prophecy-oracle-visits").textContent =
+    `${scroll.oracle_visits || 0} visit${scroll.oracle_visits === 1 ? "" : "s"}`;
+
+  // Laurels
+  document.getElementById("prophecy-laurels").textContent = scroll.laurels ?? 0;
+
+  // Categories
+  const catsEl = document.getElementById("prophecy-categories");
+  if (!scroll.titles_by_category || !scroll.titles_by_category.length) {
+    catsEl.innerHTML = '<p class="dim-msg">No titles data.</p>';
+    return;
+  }
+
+  catsEl.innerHTML = scroll.titles_by_category.map(cat => {
+    const icon       = CATEGORY_ICONS[cat.category] || "📜";
+    const unlockedN  = cat.titles.filter(t => t.unlocked).length;
+    const total      = cat.titles.length;
+
+    const itemsHtml = cat.titles.map(t => {
+      const cls   = t.unlocked ? "prophecy-title-item unlocked" : "prophecy-title-item";
+      const check = t.unlocked ? "✓" : "";
+      return `<li class="${cls}">
+        <div class="prophecy-title-check">${check}</div>
+        <div class="prophecy-title-info">
+          <span class="prophecy-title-name">${escHtml(t.name)}</span>
+          <span class="prophecy-title-condition">${escHtml(t.condition)}</span>
+        </div>
+      </li>`;
+    }).join("");
+
+    return `<div class="prophecy-cat">
+      <div class="prophecy-cat-header">
+        <span class="prophecy-cat-name">${icon} ${escHtml(cat.label)}</span>
+        <span class="prophecy-cat-count">${unlockedN} / ${total}</span>
+      </div>
+      <ul class="prophecy-title-list">${itemsHtml}</ul>
+    </div>`;
+  }).join("");
+}
+
+function closeProphecyScroll() {
+  document.getElementById("prophecy-overlay").hidden = true;
+}
+
+// Prophecy scroll event listeners
+document.getElementById("open-prophecy-btn")?.addEventListener("click", openProphecyScroll);
+document.getElementById("close-prophecy-btn")?.addEventListener("click", closeProphecyScroll);
+document.getElementById("cancel-prophecy-btn")?.addEventListener("click", closeProphecyScroll);
+document.getElementById("prophecy-overlay")?.addEventListener("click", e => {
+  if (e.target === e.currentTarget) closeProphecyScroll();
 });
 
 // ── Init ──────────────────────────────────────────────────────────────────────

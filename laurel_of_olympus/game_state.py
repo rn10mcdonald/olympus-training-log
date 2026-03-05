@@ -87,6 +87,13 @@ class PlayerState:
     # ── Earned titles by category ────────────────────────────────────────────
     active_titles: Dict[str, str] = field(default_factory=dict)
 
+    # ── All unlocked title IDs (full history) ────────────────────────────────
+    titles_unlocked: List[str] = field(default_factory=list)
+
+    # ── Oracle relationship ──────────────────────────────────────────────────
+    oracle_phase: int = 0    # 0=stranger … 5=Kassandra ally
+    oracle_visits: int = 0   # total oracle visits (drives phase advancement)
+
     # ── Version for future migrations ────────────────────────────────────────
     version: int = 1
 
