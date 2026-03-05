@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+venv/
+.venv/
+*.egg-info/
+
+# Data / saves
+data.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude worktrees & config
+.claude/
+.claire/
+
+# Design docs (local only)
+balance_table.txt
+laurel_of_olympus_master_design_v3.txt
