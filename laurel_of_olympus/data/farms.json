@@ -1,0 +1,62 @@
+[
+  {
+    "id": "grain_field",
+    "name": "Grain Field",
+    "resource": "grain",
+    "icon": "\ud83c\udf3e",
+    "color": "#f4d03f",
+    "levels": [
+      {"level": 1, "production": 2, "build_cost": 250, "upgrade_cost": null},
+      {"level": 2, "production": 3, "build_cost": null, "upgrade_cost": 400},
+      {"level": 3, "production": 4, "build_cost": null, "upgrade_cost": 650}
+    ]
+  },
+  {
+    "id": "vineyard",
+    "name": "Vineyard",
+    "resource": "grapes",
+    "icon": "\ud83c\udf47",
+    "color": "#9b59b6",
+    "levels": [
+      {"level": 1, "production": 2, "build_cost": 300, "upgrade_cost": null},
+      {"level": 2, "production": 3, "build_cost": null, "upgrade_cost": 450},
+      {"level": 3, "production": 4, "build_cost": null, "upgrade_cost": 700}
+    ]
+  },
+  {
+    "id": "olive_grove",
+    "name": "Olive Grove",
+    "resource": "olives",
+    "icon": "\ud83e\uded2",
+    "color": "#6b8e5e",
+    "levels": [
+      {"level": 1, "production": 2, "build_cost": 300, "upgrade_cost": null},
+      {"level": 2, "production": 3, "build_cost": null, "upgrade_cost": 450},
+      {"level": 3, "production": 4, "build_cost": null, "upgrade_cost": 700}
+    ]
+  },
+  {
+    "id": "apiary",
+    "name": "Apiary",
+    "resource": "honey",
+    "icon": "\ud83d\udc1d",
+    "color": "#f39c12",
+    "levels": [
+      {"level": 1, "production": 1, "build_cost": 350, "upgrade_cost": null},
+      {"level": 2, "production": 2, "build_cost": null, "upgrade_cost": 500},
+      {"level": 3, "production": 3, "build_cost": null, "upgrade_cost": 800}
+    ]
+  },
+  {
+    "id": "herb_garden",
+    "name": "Herb Garden",
+    "resource": "herbs",
+    "icon": "\ud83c\udf3f",
+    "color": "#27ae60",
+    "levels": [
+      {"level": 1, "production": 2, "build_cost": 275, "upgrade_cost": null},
+      {"level": 2, "production": 3, "build_cost": null, "upgrade_cost": 425},
+      {"level": 3, "production": 4, "build_cost": null, "upgrade_cost": 675}
+    ]
+  }
+]

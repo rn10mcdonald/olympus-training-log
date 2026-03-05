@@ -1,0 +1,50 @@
+[
+  {
+    "id": "satyr",
+    "name": "Satyr",
+    "description": "A woodland spirit with a fondness for vineyards.",
+    "rarity": "common",
+    "effect": {"type": "farm_bonus", "farm": "vineyard", "multiplier": 1.1},
+    "flavor": "Very enthusiastic about grape quality. Questionably so."
+  },
+  {
+    "id": "dryad",
+    "name": "Dryad",
+    "description": "A tree nymph who nurtures orchards and herb gardens.",
+    "rarity": "common",
+    "effect": {"type": "farm_bonus", "farm": "herb_garden", "multiplier": 1.15},
+    "flavor": "She does not appreciate when you call her a plant lady."
+  },
+  {
+    "id": "pegasus",
+    "name": "Pegasus",
+    "description": "The winged horse. Does not pull plows. Has opinions about this.",
+    "rarity": "epic",
+    "effect": {"type": "workout_bonus", "workout": "running", "multiplier": 1.2},
+    "flavor": "Technically a liability. Aesthetically worth it."
+  },
+  {
+    "id": "griffin",
+    "name": "Griffin",
+    "description": "Half eagle, half lion, fully territorial about the estate.",
+    "rarity": "rare",
+    "effect": {"type": "estate_defense", "multiplier": 1.2},
+    "flavor": "Excellent guard animal. Zero liability waivers available."
+  },
+  {
+    "id": "phoenix",
+    "name": "Phoenix",
+    "description": "A firebird of renewal. Excellent for morale, terrible for insurance.",
+    "rarity": "legendary",
+    "effect": {"type": "all_farm_bonus", "multiplier": 1.2},
+    "flavor": "Do not ask what happened to the last apiary."
+  },
+  {
+    "id": "cerberus",
+    "name": "Cerberus",
+    "description": "Three-headed dog of Hades. Surprisingly good with children.",
+    "rarity": "epic",
+    "effect": {"type": "army_strength", "multiplier": 1.15},
+    "flavor": "Needs three times the treats. Still worth it."
+  }
+]

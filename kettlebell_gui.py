@@ -569,6 +569,14 @@ class KBApp(tk.Tk):
         style.configure("TFrame", background=BG_DARK)
         style.configure("TLabel", background=BG_DARK, foreground=ACCENT_G)
         style.configure("TButton", background=ACCENT_G)
+        # Notebook tab styling
+        style.configure("TNotebook",           background=BG_DARK, borderwidth=0)
+        style.configure("TNotebook.Tab",       background="#1a2f4a", foreground=ACCENT_G,
+                                               padding=[12, 5], font=("Georgia", 10, "bold"))
+        style.map("TNotebook.Tab",
+                  background=[("selected", "#0d1b2a")],
+                  foreground=[("selected", "#ffffff")])
+        style.configure("Game.TFrame",         background=BG_DARK)
 
         # build UI and initial refreshes
         self._build_ui()
@@ -797,10 +805,27 @@ class KBApp(tk.Tk):
 
 
         # ──────────────────────────────────────────────────────────────
-        # Main content area  (Temple | Log+Menu+Journey | Laurels | History)
+        # Notebook with Training Log + Laurel of Olympus game tabs
         # ──────────────────────────────────────────────────────────────
-        content = ttk.Frame(self)
-        content.pack(fill="both", expand=True, padx=8)
+        self._notebook = ttk.Notebook(self)
+        self._notebook.pack(fill="both", expand=True, padx=8)
+
+        # Training Log tab (hosts the existing layout)
+        log_tab = ttk.Frame(self._notebook)
+        self._notebook.add(log_tab, text="📋 Training Log")
+
+        # Laurel of Olympus game tab
+        try:
+            from laurel_of_olympus.ui.game_tab import GameTab
+            game_tab = GameTab(self._notebook)
+            self._notebook.add(game_tab, text="🏛 Laurel of Olympus")
+        except Exception as _game_err:
+            fallback = ttk.Frame(self._notebook)
+            ttk.Label(fallback, text=f"Game failed to load: {_game_err}").pack(pady=40)
+            self._notebook.add(fallback, text="🏛 Laurel of Olympus")
+
+        # All existing layout code uses 'content' — point it at the log tab
+        content = log_tab
 
         # column weights: let centre column stretch, others fixed
         content.columnconfigure(1, weight=1)   # centre (log/menu/journey)
