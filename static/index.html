@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Olympus Training Log</title>
 <link rel="manifest" href="static/manifest.json">
-<link rel="stylesheet" href="static/style.css?v=8">
+<link rel="stylesheet" href="static/style.css?v=9">
 </head>
 <body>
 
@@ -319,6 +319,66 @@
         </div>
       </div>
 
+      <!-- Barracks -->
+      <div class="card">
+        <div class="card-header">
+          <h2>🏰 Barracks</h2>
+          <span id="army-strength-pill" class="stat-chip">⚔️ 0 str</span>
+        </div>
+
+        <!-- State A: not yet built -->
+        <div id="barracks-locked">
+          <p class="sub-text" style="margin-bottom:10px">
+            Train soldiers to defend your estate and launch campaigns.
+          </p>
+          <div class="barracks-cost-row">
+            <span class="barracks-cost-label">Build cost:</span>
+            <span class="barracks-cost-resources">🪙 600 · 🌾 40 grain · 🍷 10 wine</span>
+          </div>
+          <button class="btn-primary" id="build-barracks-btn" style="margin-top:12px;width:100%">
+            🏰 Build Barracks
+          </button>
+        </div>
+
+        <!-- State B: barracks open -->
+        <div id="barracks-open" hidden>
+          <div class="army-stats-row">
+            <div class="army-stat-chip">
+              <span class="army-stat-label">Units</span>
+              <span id="army-count" class="army-stat-val">0 / 10</span>
+            </div>
+            <div class="army-stat-chip">
+              <span class="army-stat-label">Strength</span>
+              <span id="army-total-strength" class="army-stat-val">0</span>
+            </div>
+          </div>
+
+          <!-- Current army list -->
+          <div id="army-unit-list" class="unit-list" style="margin-top:12px">
+            <p class="dim-msg">No soldiers recruited yet.</p>
+          </div>
+
+          <!-- Recruit section -->
+          <div class="recruit-section">
+            <div class="recruit-section-header">⚔️ Recruit Soldiers</div>
+            <div id="recruit-unit-list" class="recruit-list">
+              <!-- Populated by renderArmy() -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Campaign Map CTA -->
+      <div class="card prophecy-cta-card">
+        <div class="prophecy-cta-row">
+          <div>
+            <div class="prophecy-cta-label">Military Campaigns</div>
+            <div id="campaigns-won-preview" class="prophecy-cta-title">0 victories</div>
+          </div>
+          <button class="btn-outline" id="open-campaign-map-btn">⚔️ Campaign Map</button>
+        </div>
+      </div>
+
       <!-- Prophecy Scroll button -->
       <div class="card prophecy-cta-card">
         <div class="prophecy-cta-row">
@@ -586,7 +646,44 @@
   </div>
 </div>
 
-<script src="static/main.js?v=8"></script>
+<!-- ═══ CAMPAIGN MAP DIALOG ════════════════════════════════════════════════ -->
+<div id="campaign-overlay" class="dialog-overlay" hidden>
+  <div class="dialog dialog-wide campaign-dialog" role="dialog" aria-modal="true"
+       aria-labelledby="campaign-dialog-title">
+
+    <div class="dialog-top-row">
+      <div>
+        <div class="prophecy-scroll-eyebrow">Military Campaign</div>
+        <h3 id="campaign-dialog-title" class="prophecy-scroll-title">Choose Your Battle</h3>
+      </div>
+      <button class="btn-icon" id="close-campaign-btn">✕</button>
+    </div>
+
+    <!-- Army strength bar -->
+    <div class="campaign-army-bar">
+      <span class="campaign-army-icon">⚔️</span>
+      <div class="campaign-army-info">
+        <span class="campaign-army-label">Army Strength</span>
+        <strong id="campaign-army-strength-display" class="campaign-army-val">0</strong>
+      </div>
+    </div>
+
+    <p class="sub-text campaign-cost-note">
+      Launch cost: 🪙 50 drachmae · 🌾 5 grain
+    </p>
+
+    <!-- Region list -->
+    <div id="campaign-region-list" class="campaign-region-list">
+      <p class="dim-msg">Loading regions…</p>
+    </div>
+
+    <div class="dialog-actions">
+      <button class="btn-ghost" id="cancel-campaign-btn">Close</button>
+    </div>
+  </div>
+</div>
+
+<script src="static/main.js?v=9"></script>
 <script>
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("service-worker.js");

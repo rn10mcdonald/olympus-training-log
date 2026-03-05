@@ -102,6 +102,12 @@ class PlayerState:
     relics: List[str] = field(default_factory=list)      # relic IDs
     relic_capacity: int = 10
 
+    # ── Army (Barracks + Campaign) ────────────────────────────────────────────
+    barracks_built: bool = False
+    army: List[str] = field(default_factory=list)        # unit IDs (duplicates allowed)
+    army_limit: int = 10
+    campaigns_won: int = 0
+
     # ── Version for future migrations ────────────────────────────────────────
     version: int = 1
 

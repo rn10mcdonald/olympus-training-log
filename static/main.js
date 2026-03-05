@@ -1143,10 +1143,11 @@ async function initEstate() {
     estateState = await api("/api/estate/state");
     renderEstateResources();
     renderEstateGrid();
-    // Load sanctuary, relics, and prophecy preview in parallel
+    // Load sanctuary, relics, army, and prophecy preview in parallel
     await Promise.allSettled([
       initSanctuary(),
       initRelics(),
+      initArmy(),
       api("/api/estate/prophecy").then(scroll => {
         const previewEl = document.getElementById("prophecy-combined-preview");
         if (previewEl) previewEl.textContent = scroll.combined_title || "Unnamed Mortal";
@@ -1628,6 +1629,300 @@ document.getElementById("cancel-prophecy-btn")?.addEventListener("click", closeP
 document.getElementById("prophecy-overlay")?.addEventListener("click", e => {
   if (e.target === e.currentTarget) closeProphecyScroll();
 });
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ARMY + CAMPAIGN SYSTEMS
+// ══════════════════════════════════════════════════════════════════════════════
+
+const UNIT_ICONS = {
+  hoplite:          "⚔️",
+  archer:           "🏹",
+  cavalry:          "🐴",
+  myrmidon_captain: "🛡️",
+};
+
+// ── Army / Barracks ────────────────────────────────────────────────────────────
+
+let _armyData = null;
+
+async function initArmy() {
+  try {
+    _armyData = await api("/api/estate/army");
+    renderArmy(_armyData);
+  } catch (e) {
+    console.error("Army init failed:", e);
+  }
+}
+
+function renderArmy(data) {
+  if (!data) return;
+
+  const lockedEl  = document.getElementById("barracks-locked");
+  const openEl    = document.getElementById("barracks-open");
+  const pillEl    = document.getElementById("army-strength-pill");
+  const countEl   = document.getElementById("army-count");
+  const strEl     = document.getElementById("army-total-strength");
+  const unitListEl = document.getElementById("army-unit-list");
+  const recruitEl = document.getElementById("recruit-unit-list");
+  const campaignsEl = document.getElementById("campaigns-won-preview");
+
+  if (!lockedEl || !openEl) return;
+
+  const built    = data.barracks_built;
+  const units    = data.army          || [];
+  const limit    = data.army_limit    || 10;
+  const strength = data.army_strength || 0;
+  const allUnits = data.all_units     || [];
+  const won      = data.campaigns_won || 0;
+
+  // Toggle barracks state
+  lockedEl.hidden = built;
+  openEl.hidden   = !built;
+
+  if (pillEl) pillEl.textContent = `⚔️ ${strength} str`;
+  if (campaignsEl) campaignsEl.textContent =
+    won === 1 ? "1 victory" : `${won} victories`;
+
+  if (!built) return;
+
+  if (countEl)  countEl.textContent  = `${units.length} / ${limit}`;
+  if (strEl)    strEl.textContent    = strength;
+
+  // Army unit list (collapsed by type)
+  if (unitListEl) {
+    if (!units.length) {
+      unitListEl.innerHTML = '<p class="dim-msg">No soldiers recruited yet.</p>';
+    } else {
+      unitListEl.innerHTML = units.map(u => {
+        const icon  = UNIT_ICONS[u.id] || "⚔️";
+        const color = RARITY_COLORS[u.rarity] || "var(--text)";
+        return `<div class="unit-card">
+          <div class="unit-card-icon" style="color:${color}">${icon}</div>
+          <div class="unit-card-info">
+            <div class="unit-card-name">${escHtml(u.name)}
+              <span class="unit-card-count">×${u.count}</span>
+            </div>
+            <div class="unit-card-stat">⚔️ ${u.total_strength} strength total</div>
+            <div class="unit-card-flavor">${escHtml(u.description || "")}</div>
+          </div>
+          <button class="btn-ghost-sm unit-disband-btn"
+                  data-id="${escHtml(u.id)}" data-name="${escHtml(u.name)}"
+                  title="Disband one ${escHtml(u.name)}">
+            Disband
+          </button>
+        </div>`;
+      }).join("");
+
+      // Disband handlers
+      unitListEl.querySelectorAll(".unit-disband-btn").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          btn.disabled = true;
+          try {
+            const res = await api("/api/estate/army/disband", { unit_id: btn.dataset.id });
+            estateState = res.state;
+            renderEstateResources();
+            toast(`${btn.dataset.name} disbanded.`);
+            await initArmy();
+          } catch (e) {
+            toast("Disband failed: " + e.message, 4000);
+            btn.disabled = false;
+          }
+        });
+      });
+    }
+  }
+
+  // Recruit panel
+  if (recruitEl) {
+    recruitEl.innerHTML = allUnits.map(u => {
+      const icon  = UNIT_ICONS[u.id] || "⚔️";
+      const color = RARITY_COLORS[u.rarity] || "var(--text)";
+      return `<div class="recruit-card">
+        <div class="recruit-card-icon" style="color:${color}">${icon}</div>
+        <div class="recruit-card-info">
+          <div class="recruit-card-name">${escHtml(u.name)}</div>
+          <div class="recruit-card-stat">⚔️ ${u.strength} str</div>
+          <div class="recruit-card-cost">${escHtml(u.cost_str)}</div>
+        </div>
+        <button class="btn-outline-sm recruit-unit-btn"
+                data-id="${escHtml(u.id)}" data-name="${escHtml(u.name)}">
+          +1
+        </button>
+      </div>`;
+    }).join("");
+
+    recruitEl.querySelectorAll(".recruit-unit-btn").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        btn.disabled = true;
+        try {
+          const res = await api("/api/estate/army/recruit", { unit_id: btn.dataset.id });
+          estateState = res.state;
+          renderEstateResources();
+          toast(`⚔️ ${btn.dataset.name} recruited!`);
+          await initArmy();
+        } catch (e) {
+          toast(e.message, 4000);
+          btn.disabled = false;
+        }
+      });
+    });
+  }
+}
+
+document.getElementById("build-barracks-btn")?.addEventListener("click", async () => {
+  const btn = document.getElementById("build-barracks-btn");
+  btn.disabled = true;
+  try {
+    const res = await api("/api/estate/barracks/build", {});
+    estateState = res.state;
+    renderEstateResources();
+    toast("🏰 Barracks constructed! Soldiers may now be recruited.");
+    await initArmy();
+  } catch (e) {
+    toast(e.message, 4000);
+    btn.disabled = false;
+  }
+});
+
+// ── Campaign Map ───────────────────────────────────────────────────────────────
+
+async function openCampaignMap() {
+  document.getElementById("campaign-overlay").hidden = false;
+  document.getElementById("close-campaign-btn").focus();
+
+  const listEl  = document.getElementById("campaign-region-list");
+  const strengthEl = document.getElementById("campaign-army-strength-display");
+
+  listEl.innerHTML = '<p class="dim-msg">Loading regions…</p>';
+  try {
+    const data = await api("/api/estate/army");
+    _armyData  = data;
+    const strength = data.army_strength || 0;
+    if (strengthEl) strengthEl.textContent = strength;
+    renderCampaignMap(data);
+  } catch (e) {
+    listEl.innerHTML = `<p class="dim-msg">Error: ${escHtml(e.message)}</p>`;
+  }
+}
+
+function renderCampaignMap(data) {
+  const listEl = document.getElementById("campaign-region-list");
+  if (!listEl) return;
+
+  const regions  = data.all_regions || [];
+  const strength = data.army_strength || 0;
+
+  if (!regions.length) {
+    listEl.innerHTML = '<p class="dim-msg">No regions available.</p>';
+    return;
+  }
+
+  listEl.innerHTML = regions.map(r => {
+    const canWin   = strength > r.difficulty;
+    const stateClass = canWin ? "region-card region-winnable" : "region-card region-tough";
+    const indicator  = canWin ? "✅" : "⚠️";
+    return `<div class="${stateClass}">
+      <div class="region-card-header">
+        <div class="region-card-info">
+          <div class="region-card-name">${escHtml(r.name)}</div>
+          <div class="region-card-desc">${escHtml(r.description)}</div>
+        </div>
+        <div class="region-card-difficulty">
+          <span class="region-diff-label">Difficulty</span>
+          <span class="region-diff-val">${r.difficulty}</span>
+          <span class="region-diff-indicator">${indicator}</span>
+        </div>
+      </div>
+      <div class="region-card-rewards">
+        <span>🪙 ${r.reward_drachmae[0]}–${r.reward_drachmae[1]}</span>
+        <span title="Relic chance">⚗️ ${Math.round(r.relic_chance * 100)}%</span>
+        <span title="Creature chance">🐾 ${Math.round(r.creature_chance * 100)}%</span>
+      </div>
+      <button class="btn-primary launch-campaign-btn"
+              data-id="${escHtml(r.id)}" data-name="${escHtml(r.name)}">
+        ⚔️ Launch Campaign
+      </button>
+    </div>`;
+  }).join("");
+
+  listEl.querySelectorAll(".launch-campaign-btn").forEach(btn => {
+    btn.addEventListener("click", () => launchCampaign(btn.dataset.id, btn.dataset.name));
+  });
+}
+
+function closeCampaignMap() {
+  document.getElementById("campaign-overlay").hidden = true;
+}
+
+async function launchCampaign(regionId, regionName) {
+  const btn = document.querySelector(`.launch-campaign-btn[data-id="${regionId}"]`);
+  if (btn) btn.disabled = true;
+  try {
+    const res = await api("/api/estate/campaign/launch", { region_id: regionId });
+    estateState = res.state;
+    renderEstateResources();
+
+    const result = res.result;
+
+    // Log campaign outcome to estate log
+    const logType = result.victory ? "reward" : "system";
+    pushEstateLog(
+      result.victory
+        ? `⚔️ Victory at ${result.region_name}! +${result.drachmae_earned?.toFixed(0)} 🪙`
+        : `💀 Defeat at ${result.region_name}. Units lost: ${result.units_lost?.join(", ")}`,
+      logType
+    );
+
+    if (result.title_unlocked) {
+      pushEstateLog(`🏅 Title unlocked: ${result.title_unlocked}`, "reward");
+      toast(`🏅 ${result.title_unlocked} — legendary title earned!`, 5000);
+    }
+
+    // Update army display + campaign count
+    await initArmy();
+
+    // Add relic feedback to result lines if it was auto-added
+    if (result.relic_reward && !result.relic_reward.not_added) {
+      await initRelics();
+    }
+
+    // Close campaign map first, then show result popup
+    closeCampaignMap();
+
+    // Show campaign result in event popup
+    showEventPopup({
+      type:  "campaign",
+      icon:  result.icon,
+      title: result.title,
+      lines: result.lines,
+    });
+
+    // Show creature encounter dialog if creature found
+    if (res.creature_encounter) {
+      // Queue encounter after event popup is dismissed
+      const origDismiss = document.getElementById("event-dismiss-btn").onclick;
+      document.getElementById("event-dismiss-btn").addEventListener("click", function onDismiss() {
+        document.getElementById("event-dismiss-btn").removeEventListener("click", onDismiss);
+        showEncounterDialog(res.creature_encounter);
+      }, { once: true });
+    }
+
+  } catch (e) {
+    toast("Campaign failed: " + e.message, 4000);
+    if (btn) btn.disabled = false;
+  }
+}
+
+// Campaign dialog event listeners
+document.getElementById("open-campaign-map-btn")?.addEventListener("click", openCampaignMap);
+document.getElementById("close-campaign-btn")?.addEventListener("click", closeCampaignMap);
+document.getElementById("cancel-campaign-btn")?.addEventListener("click", closeCampaignMap);
+document.getElementById("campaign-overlay")?.addEventListener("click", e => {
+  if (e.target === e.currentTarget) closeCampaignMap();
+});
+
+// ── Extend EVENT_TYPE_LABELS for campaign ─────────────────────────────────────
+EVENT_TYPE_LABELS["campaign"] = "campaign";
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 window.addEventListener("load", () => { refresh(); initEstate(); });

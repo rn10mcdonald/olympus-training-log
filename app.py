@@ -6,6 +6,7 @@ from laurel_of_olympus import game_state as gs
 from laurel_of_olympus import workout_engine, farm_engine, event_engine
 from laurel_of_olympus import oracle_engine, title_engine
 from laurel_of_olympus import creature_engine, relic_engine, buff_engine
+from laurel_of_olympus import army_engine
 
 BASE   = Path(__file__).parent
 DATA   = BASE / "data.json"
@@ -397,3 +398,106 @@ async def remove_relic(req: Request):
         raise HTTPException(400, msg)
     gs.save(state, ESTATE_SAVE)
     return {"status": "ok", "msg": msg, "state": state.to_dict()}
+
+# ── Army / Barracks endpoints ───────────────────────────────────────────────────
+
+@app.get("/api/estate/army")
+def get_army():
+    """Return army details, all unit defs, all regions, barracks status, strength."""
+    state = gs.load(ESTATE_SAVE)
+    buffs = buff_engine.get_all_buffs(state)
+    return {
+        "barracks_built": state.barracks_built,
+        "barracks_cost":  army_engine.BARRACKS_COST,
+        "army":           army_engine.get_army_details(state),
+        "army_ids":       state.army,
+        "army_limit":     state.army_limit,
+        "army_strength":  army_engine.get_army_strength(state, buffs),
+        "campaigns_won":  state.campaigns_won,
+        "all_units":      army_engine.get_all_units(),
+        "all_regions":    army_engine.get_all_regions(),
+        "buffs":          buffs,
+    }
+
+
+@app.post("/api/estate/barracks/build")
+async def build_barracks(req: Request):
+    state = gs.load(ESTATE_SAVE)
+    ok, msg = army_engine.build_barracks(state)
+    if not ok:
+        raise HTTPException(400, msg)
+    gs.save(state, ESTATE_SAVE)
+    return {"status": "ok", "msg": msg, "state": state.to_dict()}
+
+
+@app.post("/api/estate/army/recruit")
+async def recruit_unit(req: Request):
+    p = await req.json()
+    unit_id = p.get("unit_id", "").strip()
+    if not unit_id:
+        raise HTTPException(400, "unit_id is required")
+    state = gs.load(ESTATE_SAVE)
+    ok, msg = army_engine.recruit_unit(state, unit_id)
+    if not ok:
+        raise HTTPException(400, msg)
+    gs.save(state, ESTATE_SAVE)
+    return {"status": "ok", "msg": msg, "state": state.to_dict()}
+
+
+@app.post("/api/estate/army/disband")
+async def disband_unit(req: Request):
+    p = await req.json()
+    unit_id = p.get("unit_id", "").strip()
+    if not unit_id:
+        raise HTTPException(400, "unit_id is required")
+    state = gs.load(ESTATE_SAVE)
+    ok, msg = army_engine.disband_unit(state, unit_id)
+    if not ok:
+        raise HTTPException(400, msg)
+    gs.save(state, ESTATE_SAVE)
+    return {"status": "ok", "msg": msg, "state": state.to_dict()}
+
+
+@app.post("/api/estate/campaign/launch")
+async def launch_campaign(req: Request):
+    p = await req.json()
+    region_id = p.get("region_id", "").strip()
+    if not region_id:
+        raise HTTPException(400, "region_id is required")
+
+    state = gs.load(ESTATE_SAVE)
+    buffs = buff_engine.get_all_buffs(state)
+
+    result = army_engine.launch_campaign(state, region_id, buffs=buffs)
+
+    # If engine returned an error string, propagate as 400
+    if "error" in result:
+        raise HTTPException(400, result["error"])
+
+    # Auto-add relic reward to inventory if found and space available
+    if result.get("relic_reward"):
+        relic_id = result["relic_reward"]["id"]
+        ok_relic, _ = relic_engine.add_relic(state, relic_id)
+        if not ok_relic:
+            # Inventory full — mark relic as not added so frontend can inform player
+            result["relic_reward"]["not_added"] = True
+
+    # Award champion_of_the_gods title if 20 campaigns won
+    if (
+        state.campaigns_won >= 20
+        and "champion_of_the_gods" not in state.titles_unlocked
+    ):
+        state.titles_unlocked.append("champion_of_the_gods")
+        state.active_titles["legendary"] = "champion_of_the_gods"
+        result["title_unlocked"] = "Champion of the Gods"
+
+    gs.save(state, ESTATE_SAVE)
+
+    # creature_reward (if any) is returned to the frontend as an encounter dict;
+    # the frontend shows the encounter dialog so the player can recruit or release.
+    return {
+        "status":           "ok",
+        "result":           result,
+        "creature_encounter": result.get("creature_reward"),
+        "state":            state.to_dict(),
+    }
