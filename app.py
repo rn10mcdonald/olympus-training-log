@@ -3,7 +3,7 @@ from fastapi.responses import FileResponse, HTMLResponse
 from pathlib import Path
 import json, core, datetime as dt
 from laurel_of_olympus import game_state as gs
-from laurel_of_olympus import workout_engine, farm_engine
+from laurel_of_olympus import workout_engine, farm_engine, event_engine
 
 BASE   = Path(__file__).parent
 DATA   = BASE / "data.json"
@@ -256,5 +256,11 @@ async def estate_simulate_workout(req: Request):
     events = workout_engine.process_workout(state, workout_type, **kwargs)
     farm_events = farm_engine.produce_farms(state)
     events.extend(farm_events)
+    narrative_event = event_engine.maybe_trigger_event(state.to_dict())
     gs.save(state, ESTATE_SAVE)
-    return {"status": "ok", "events": events, "state": state.to_dict()}
+    return {
+        "status": "ok",
+        "events": events,
+        "state":  state.to_dict(),
+        "event":  narrative_event,   # None or event dict
+    }

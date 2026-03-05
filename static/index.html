@@ -444,6 +444,34 @@
   </div>
 </div>
 
+<!-- ═══ ESTATE EVENT POPUP ════════════════════════════════════════════════════ -->
+<div id="event-overlay" class="event-overlay" hidden>
+  <div class="event-popup" role="dialog" aria-modal="true" aria-labelledby="event-title">
+
+    <div class="event-popup-header">
+      <span id="event-icon"  class="event-icon">🔮</span>
+      <span id="event-type-badge" class="event-type-badge">oracle</span>
+    </div>
+
+    <h3 id="event-title" class="event-title">The Oracle Appears</h3>
+
+    <div id="event-lines" class="event-lines">
+      <!-- Lines injected by showEventPopup() -->
+    </div>
+
+    <!-- Creature card (hidden unless creature event) -->
+    <div id="event-creature-card" class="event-creature-card" hidden>
+      <span id="event-creature-rarity" class="event-creature-rarity"></span>
+      <span id="event-creature-name"   class="event-creature-name"></span>
+    </div>
+
+    <button class="btn-primary event-dismiss-btn" id="event-dismiss-btn">
+      Continue →
+    </button>
+
+  </div>
+</div>
+
 <script src="static/main.js?v=7"></script>
 <script>
   if ("serviceWorker" in navigator) {

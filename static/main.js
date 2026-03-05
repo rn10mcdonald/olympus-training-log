@@ -1209,6 +1209,54 @@ function renderEstateLog() {
   ).join("");
 }
 
+// ── Estate Event Popup ────────────────────────────────────────────────────────
+
+const EVENT_TYPE_LABELS = {
+  oracle:      "oracle",
+  creature:    "encounter",
+  merchant:    "merchant",
+  philosopher: "philosophy",
+  rare:        "rare event",
+};
+
+function showEventPopup(event) {
+  if (!event) return;
+
+  document.getElementById("event-icon").textContent       = event.icon  || "✨";
+  document.getElementById("event-title").textContent      = event.title || "Something happens…";
+  document.getElementById("event-type-badge").textContent = EVENT_TYPE_LABELS[event.type] || event.type;
+
+  const linesEl = document.getElementById("event-lines");
+  linesEl.innerHTML = (event.lines || [])
+    .map(l => `<p class="event-line">${escHtml(l)}</p>`)
+    .join("");
+
+  const cardEl = document.getElementById("event-creature-card");
+  if (event.creature) {
+    document.getElementById("event-creature-rarity").textContent = event.creature.rarity;
+    document.getElementById("event-creature-name").textContent   = event.creature.name;
+    cardEl.hidden = false;
+  } else {
+    cardEl.hidden = true;
+  }
+
+  const overlay = document.getElementById("event-overlay");
+  overlay.hidden = false;
+  document.getElementById("event-dismiss-btn").focus();
+}
+
+function hideEventPopup() {
+  document.getElementById("event-overlay").hidden = true;
+}
+
+document.getElementById("event-dismiss-btn").addEventListener("click", hideEventPopup);
+document.getElementById("event-overlay").addEventListener("click", e => {
+  if (e.target === e.currentTarget) hideEventPopup();
+});
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape") hideEventPopup();
+});
+
 document.getElementById("simulate-workout-btn")?.addEventListener("click", async () => {
   const btn  = document.getElementById("simulate-workout-btn");
   const type = document.getElementById("estate-workout-type")?.value || "strength";
@@ -1225,6 +1273,7 @@ document.getElementById("simulate-workout-btn")?.addEventListener("click", async
       pushEstateLog(evt, t);
     });
     toast(`⚔️ ${res.events?.[0] || "Workout logged!"}`);
+    if (res.event) showEventPopup(res.event);
   } catch (e) {
     toast("Estate error: " + e.message, 4000);
   } finally {
