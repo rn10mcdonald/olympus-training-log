@@ -1054,5 +1054,127 @@ document.getElementById("lib-grid").addEventListener("touchend", e => {
   insertMovement(pill.dataset.name, pill.dataset.hint);
 });
 
+// ══════════════════════════════════════════════════════════════════════════════
+// ESTATE TAB  (Laurel of Olympus RPG)
+// ══════════════════════════════════════════════════════════════════════════════
+
+const ESTATE_COLS = 7;
+const ESTATE_ROWS = 5;
+
+const ESTATE_RES = [
+  { key: "laurels",  icon: "🌿", label: "Laurels" },
+  { key: "grain",    icon: "🌾", label: "Grain" },
+  { key: "grapes",   icon: "🍇", label: "Grapes" },
+  { key: "olives",   icon: "🫒", label: "Olives" },
+  { key: "honey",    icon: "🍯", label: "Honey" },
+  { key: "herbs",    icon: "🌱", label: "Herbs" },
+];
+
+const FARM_ICON = {
+  grain_field: "🌾", vineyard: "🍇", olive_grove: "🫒",
+  apiary: "🍯", herb_garden: "🌱",
+};
+const FARM_COLOR = {
+  grain_field: "#7a5c10", vineyard: "#4b2a72", olive_grove: "#1a4a2a",
+  apiary: "#7a4a00", herb_garden: "#0f4030", empty: "#0f1e2e",
+};
+
+let estateState = null;
+let estateLog   = [];  // [{text, type, time}]  newest first
+
+async function initEstate() {
+  try {
+    estateState = await api("/api/estate/state");
+    renderEstateResources();
+    renderEstateGrid();
+  } catch (e) {
+    console.error("Estate init failed:", e);
+  }
+}
+
+function renderEstateResources() {
+  const el = document.getElementById("estate-resources");
+  if (!el || !estateState) return;
+  const drachEl = document.getElementById("estate-drachma-pill");
+  if (drachEl) drachEl.textContent = `🪙 ${(estateState.drachmae ?? 0).toFixed(2)}`;
+  el.innerHTML = ESTATE_RES.map(r => {
+    const val = estateState[r.key] ?? 0;
+    return `<div class="estate-res-pill">
+      <span class="estate-res-icon">${r.icon}</span>
+      <span class="estate-res-val">${val}</span>
+      <span class="estate-res-lbl">${r.label}</span>
+    </div>`;
+  }).join("");
+}
+
+function renderEstateGrid() {
+  const el = document.getElementById("estate-grid");
+  if (!el || !estateState) return;
+  const farmMap = {};
+  (estateState.farms || []).forEach(f => { farmMap[`${f.col},${f.row}`] = f; });
+  let html = '<div class="estate-grid-inner">';
+  for (let row = 0; row < ESTATE_ROWS; row++) {
+    for (let col = 0; col < ESTATE_COLS; col++) {
+      const farm  = farmMap[`${col},${row}`];
+      const type  = farm ? farm.farm_type : "empty";
+      const icon  = farm ? (FARM_ICON[type] || "🟩") : "";
+      const lvl   = farm ? `L${farm.level || 1}` : "";
+      const bg    = FARM_COLOR[type] || FARM_COLOR.empty;
+      html += `<div class="estate-tile" style="background:${bg}" title="${type}">
+        <span class="estate-tile-icon">${icon}</span>
+        <span class="estate-tile-lvl">${lvl}</span>
+      </div>`;
+    }
+  }
+  html += "</div>";
+  el.innerHTML = html;
+}
+
+function pushEstateLog(text, type = "system") {
+  const time = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  estateLog.unshift({ text, type, time });
+  if (estateLog.length > 60) estateLog.pop();
+  renderEstateLog();
+}
+
+function renderEstateLog() {
+  const el = document.getElementById("estate-event-log");
+  if (!el) return;
+  if (!estateLog.length) {
+    el.innerHTML = '<p class="dim-msg">Log a workout to see events.</p>';
+    return;
+  }
+  const COLOR = { reward: "var(--gold)", farm: "var(--success)", system: "var(--accent)" };
+  el.innerHTML = estateLog.map(e =>
+    `<div class="estate-log-row" style="color:${COLOR[e.type] || COLOR.system}">
+      <span class="estate-log-time">${e.time}</span>
+      <span>${escHtml(e.text)}</span>
+    </div>`
+  ).join("");
+}
+
+document.getElementById("simulate-workout-btn")?.addEventListener("click", async () => {
+  const btn  = document.getElementById("simulate-workout-btn");
+  const type = document.getElementById("estate-workout-type")?.value || "strength";
+  btn.disabled = true;
+  try {
+    const res = await api("/api/estate/simulate-workout", { workout_type: type });
+    estateState = res.state;
+    renderEstateResources();
+    renderEstateGrid();
+    (res.events || []).forEach(evt => {
+      const t = evt.includes("Farm") || evt.includes("harvest") ? "farm"
+              : evt.includes("drachma") || evt.includes("LAUREL")  ? "reward"
+              : "system";
+      pushEstateLog(evt, t);
+    });
+    toast(`⚔️ ${res.events?.[0] || "Workout logged!"}`);
+  } catch (e) {
+    toast("Estate error: " + e.message, 4000);
+  } finally {
+    btn.disabled = false;
+  }
+});
+
 // ── Init ──────────────────────────────────────────────────────────────────────
-window.addEventListener("load", refresh);
+window.addEventListener("load", () => { refresh(); initEstate(); });

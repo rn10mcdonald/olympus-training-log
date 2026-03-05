@@ -204,6 +204,58 @@
     </div>
   </section>
 
+  <!-- ── ESTATE ────────────────────────────────────────────────────────────── -->
+  <section class="page-section" id="section-estate">
+    <div class="section-scroll">
+
+      <!-- Resource Bar -->
+      <div class="card">
+        <div class="card-header">
+          <h2>🏛️ Estate Resources</h2>
+          <span id="estate-drachma-pill" class="stat-chip">🪙 0.00</span>
+        </div>
+        <div class="estate-resource-bar" id="estate-resources">
+          <!-- Rendered by renderEstateResources() -->
+        </div>
+      </div>
+
+      <!-- Estate Grid -->
+      <div class="card">
+        <div class="card-header">
+          <h2>🌾 Estate</h2>
+          <span class="sub-text" style="font-size:0.78rem">7 × 5 grid</span>
+        </div>
+        <div class="estate-grid-wrap" id="estate-grid">
+          <!-- Rendered by renderEstateGrid() -->
+        </div>
+      </div>
+
+      <!-- Simulate Workout -->
+      <div class="card">
+        <h2 class="card-h2">⚔️ Simulate Workout</h2>
+        <div class="input-row" style="flex-wrap:wrap;gap:8px">
+          <select id="estate-workout-type" class="track-select" style="flex:1;min-width:130px">
+            <option value="strength">Strength</option>
+            <option value="rucking">Rucking</option>
+            <option value="running">Running</option>
+            <option value="walking">Walking</option>
+          </select>
+          <button class="btn-primary" id="simulate-workout-btn">Log &amp; Harvest</button>
+        </div>
+        <p class="sub-text" style="margin-top:8px">Awards drachmae · triggers daily farm harvest</p>
+      </div>
+
+      <!-- Event Log -->
+      <div class="card">
+        <h2 class="card-h2">📜 Estate Log</h2>
+        <div class="estate-event-log" id="estate-event-log">
+          <p class="dim-msg">Log a workout to see events.</p>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
   <!-- ── HISTORY ────────────────────────────────────────────────────────────── -->
   <section class="page-section" id="section-history">
     <div class="section-scroll">
@@ -240,6 +292,10 @@
   <button class="nav-btn" data-section="vault">
     <span class="nav-icon">🏆</span>
     <span class="nav-label">Vault</span>
+  </button>
+  <button class="nav-btn" data-section="estate">
+    <span class="nav-icon">🏛️</span>
+    <span class="nav-label">Estate</span>
   </button>
   <button class="nav-btn" data-section="history">
     <span class="nav-icon">📜</span>

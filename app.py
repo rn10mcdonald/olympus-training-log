@@ -2,6 +2,8 @@ from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import FileResponse, HTMLResponse
 from pathlib import Path
 import json, core, datetime as dt
+from laurel_of_olympus import game_state as gs
+from laurel_of_olympus import workout_engine, farm_engine
 
 BASE   = Path(__file__).parent
 DATA   = BASE / "data.json"
@@ -212,3 +214,28 @@ def delete_custom_track(track_id: str):
         raise HTTPException(404, f"Custom track not found: {track_id}")
     _save(state)
     return {"status": "ok", "state": state}
+
+# ── Estate (Laurel of Olympus RPG) ─────────────────────────────────────────────
+
+ESTATE_SAVE = Path.home() / ".laurel_of_olympus.json"
+
+@app.get("/api/estate/state")
+def get_estate_state():
+    return gs.load(ESTATE_SAVE).to_dict()
+
+@app.post("/api/estate/simulate-workout")
+async def estate_simulate_workout(req: Request):
+    p = await req.json()
+    workout_type = p.get("workout_type", "strength")
+    kwargs = {k: v for k, v in p.items() if k != "workout_type"}
+    # Provide sensible defaults so the call always succeeds
+    if workout_type == "strength" and "volume" not in kwargs:
+        kwargs["volume"] = 5000.0
+    elif workout_type in ("walking", "running", "rucking") and "miles" not in kwargs:
+        kwargs["miles"] = 2.0
+    state = gs.load(ESTATE_SAVE)
+    events = workout_engine.process_workout(state, workout_type, **kwargs)
+    farm_events = farm_engine.produce_farms(state)
+    events.extend(farm_events)
+    gs.save(state, ESTATE_SAVE)
+    return {"status": "ok", "events": events, "state": state.to_dict()}
