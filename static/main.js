@@ -1292,12 +1292,15 @@ document.getElementById("simulate-workout-btn")?.addEventListener("click", async
 // ══════════════════════════════════════════════════════════════════════════════
 
 const CATEGORY_ICONS = {
-  consistency_titles: "⏳",
-  workout_titles:     "⚔️",
-  estate_titles:      "🌾",
-  legendary_titles:   "✨",
-  secret_titles:      "🔒",
+  consistency: "⏳",
+  workout:     "⚔️",
+  estate:      "🌾",
+  legendary:   "✨",
+  secret:      "🔒",
 };
+
+// Categories whose unearned titles are hidden (name + condition masked)
+const HIDDEN_CATEGORIES = new Set(["legendary", "secret"]);
 
 async function openProphecyScroll() {
   const overlay = document.getElementById("prophecy-overlay");
@@ -1359,7 +1362,19 @@ function renderProphecyScroll(scroll) {
     const unlockedN  = cat.titles.filter(t => t.unlocked).length;
     const total      = cat.titles.length;
 
+    const isHiddenCat = HIDDEN_CATEGORIES.has(cat.category);
+
     const itemsHtml = cat.titles.map(t => {
+      if (!t.unlocked && isHiddenCat) {
+        // Mask unearned legendary / secret titles completely
+        return `<li class="prophecy-title-item prophecy-title-hidden">
+          <div class="prophecy-title-check"></div>
+          <div class="prophecy-title-info">
+            <span class="prophecy-title-name prophecy-title-redacted">??? Unknown Title</span>
+            <span class="prophecy-title-condition prophecy-title-redacted">Complete hidden deeds to reveal</span>
+          </div>
+        </li>`;
+      }
       const cls   = t.unlocked ? "prophecy-title-item unlocked" : "prophecy-title-item";
       const check = t.unlocked ? "✓" : "";
       return `<li class="${cls}">
@@ -1371,10 +1386,15 @@ function renderProphecyScroll(scroll) {
       </li>`;
     }).join("");
 
+    // For hidden categories, only show unlocked count (not total — keep mysteries mysterious)
+    const countLabel = isHiddenCat
+      ? (unlockedN > 0 ? `${unlockedN} revealed` : "none revealed")
+      : `${unlockedN} / ${total}`;
+
     return `<div class="prophecy-cat">
       <div class="prophecy-cat-header">
         <span class="prophecy-cat-name">${icon} ${escHtml(cat.label)}</span>
-        <span class="prophecy-cat-count">${unlockedN} / ${total}</span>
+        <span class="prophecy-cat-count">${countLabel}</span>
       </div>
       <ul class="prophecy-title-list">${itemsHtml}</ul>
     </div>`;

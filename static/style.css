@@ -1780,3 +1780,17 @@ body {
   font-style: italic;
   line-height: 1.4;
 }
+
+/* Hidden / secret title rows */
+.prophecy-title-hidden {
+  opacity: 0.35;
+}
+
+.prophecy-title-redacted {
+  filter: blur(3.5px);
+  user-select: none;
+  pointer-events: none;
+}
+.prophecy-title-hidden:hover .prophecy-title-redacted {
+  filter: blur(5px); /* stay blurred even on hover */
+}
