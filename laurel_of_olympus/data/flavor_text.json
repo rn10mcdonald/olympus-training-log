@@ -1,0 +1,204 @@
+{
+  "oracle_lines":[
+    "The Oracle sighs.",
+    "You again.",
+    "Another workout? Curious.",
+    "The scroll rustles with mild interest.",
+    "I suppose discipline has its uses.",
+    "The gods are watching. Mostly with confusion.",
+    "A mortal with persistence. How novel.",
+    "You continue. This is... unexpected.",
+    "The prophecy adjusts slightly.",
+    "The scroll has opinions."
+  ],
+
+  "oracle_irritated_lines":[
+    "Must you keep returning?",
+    "Yes yes, very heroic.",
+    "Another workout. Groundbreaking.",
+    "The scroll is unimpressed.",
+    "I had hoped for silence today.",
+    "Your persistence borders on stubbornness.",
+    "Fine. I will record it.",
+    "The prophecy sighs.",
+    "Very well, continue.",
+    "You are annoyingly consistent."
+  ],
+
+  "oracle_impressed_lines":[
+    "Hm.",
+    "The scroll grows longer.",
+    "You are becoming difficult to ignore.",
+    "The prophecy strengthens.",
+    "The gods are beginning to notice.",
+    "This is... respectable.",
+    "Progress has been observed.",
+    "Even I must admit improvement.",
+    "The scroll approves.",
+    "Your legend grows slowly."
+  ],
+
+  "kassandra_lines":[
+    "I suppose introductions are overdue.",
+    "My name is Kassandra.",
+    "Yes, that Kassandra.",
+    "Try not to let the prophecy go to your head.",
+    "You are doing well. Relatively speaking.",
+    "The gods enjoy a good story.",
+    "Your scroll is becoming interesting.",
+    "Persistence is rarer than strength.",
+    "I am beginning to approve.",
+    "Continue."
+  ],
+
+  "merchant_lines":[
+    "Traveler! Care to trade?",
+    "Fine goods for a disciplined hero!",
+    "Wine? Oil? Something mysterious?",
+    "Every hero needs supplies.",
+    "Ah! A customer with coin.",
+    "You look like someone who appreciates olives.",
+    "Careful with that wine.",
+    "I once sold to a Spartan. Terrifying experience.",
+    "A little trade never hurt anyone.",
+    "Business improves when heroes appear."
+  ],
+
+  "philosopher_lines":[
+    "Socrates would approve of your discipline.",
+    "Or perhaps Plato.",
+    "One of them, certainly.",
+    "The examined life includes exercise.",
+    "Philosophy and walking pair nicely.",
+    "Strength sharpens the mind.",
+    "A sound body produces inconvenient questions.",
+    "Meditation can be performed while rucking.",
+    "Aristotle wrote about balance.",
+    "You appear to be testing that theory."
+  ],
+
+  "workout_lines":[
+    "The gods approve.",
+    "Your muscles protest.",
+    "Progress has been recorded.",
+    "A heroic effort.",
+    "Another step toward legend.",
+    "The scroll grows slightly heavier.",
+    "Discipline is becoming a habit.",
+    "Your persistence echoes through Olympus.",
+    "Well done.",
+    "The prophecy notes your effort."
+  ],
+
+  "streak_lines":[
+    "Consistency impresses even the Oracle.",
+    "A streak worthy of notice.",
+    "Persistence builds legends.",
+    "Your dedication continues.",
+    "The scroll glows faintly.",
+    "You are difficult to discourage.",
+    "This level of effort is unusual.",
+    "The prophecy grows optimistic.",
+    "Even the gods admire stubbornness.",
+    "Momentum favors you."
+  ],
+
+  "estate_lines":[
+    "Your estate grows stronger.",
+    "The fields prosper.",
+    "The vineyard flourishes.",
+    "The land responds to your care.",
+    "The hills are pleased.",
+    "Olive trees thrive in this sun.",
+    "Your domain expands.",
+    "The countryside approves.",
+    "A peaceful valley emerges.",
+    "Even the cypress trees seem impressed."
+  ],
+
+  "creature_encounter_lines":[
+    "Something stirs in the hills.",
+    "A strange creature emerges.",
+    "The wilds reveal a secret.",
+    "A myth walks the countryside.",
+    "The air crackles with legend.",
+    "You sense ancient power.",
+    "A beast watches from the grove.",
+    "Mythology appears unexpectedly.",
+    "A creature of story approaches.",
+    "The sanctuary may soon grow."
+  ],
+
+  "victory_lines":[
+    "Victory echoes across the valley.",
+    "Your strength prevails.",
+    "The enemy falters.",
+    "A triumphant moment.",
+    "The gods nod in approval.",
+    "Your legend advances.",
+    "A successful encounter.",
+    "The scroll celebrates quietly.",
+    "Another story added to the prophecy.",
+    "Victory favors the disciplined."
+  ],
+
+  "rare_event_lines":[
+    "The air shifts strangely.",
+    "Fate intervenes.",
+    "Something unusual occurs.",
+    "The prophecy brightens.",
+    "Fortune smiles briefly.",
+    "The gods whisper.",
+    "Luck favors you today.",
+    "An unexpected opportunity appears.",
+    "The scroll shimmers.",
+    "Fate is amused."
+  ],
+
+  "prophecy_lines":[
+    "Kassandra studies the prophecy scroll.",
+    "The scroll shifts.",
+    "A new title emerges.",
+    "Your legend gains a name.",
+    "The prophecy expands.",
+    "The scroll glows faintly.",
+    "A title reveals itself.",
+    "Your deeds demand recognition.",
+    "The prophecy acknowledges you.",
+    "Your story grows."
+  ],
+
+  "title_reactions":[
+    "Acceptable.",
+    "Accurate.",
+    "Interesting.",
+    "The scroll approves.",
+    "This suits you.",
+    "Reasonable.",
+    "Unexpected.",
+    "Appropriate.",
+    "Not bad.",
+    "The prophecy rarely lies."
+  ],
+
+  "roman_jokes":[
+    "At least you are not Roman.",
+    "Rome would have taxed this workout.",
+    "Romans rarely appreciate olives properly.",
+    "Your discipline surpasses most Romans.",
+    "The prophecy prefers Greeks.",
+    "Rome builds roads. You build strength.",
+    "A Roman would have stopped earlier.",
+    "Fortunately, this is not Rome.",
+    "Romans would write a report about this.",
+    "Better Greek than Roman."
+  ],
+
+  "kassandra_laugh_event":[
+    "Kassandra stares at the scroll.",
+    "For a moment, she laughs.",
+    "The sound surprises even her.",
+    "\"Well done.\"",
+    "\"Do not let this go to your head.\""
+  ]
+}
