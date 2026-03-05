@@ -5,6 +5,7 @@ import json, core, datetime as dt
 from laurel_of_olympus import game_state as gs
 from laurel_of_olympus import workout_engine, farm_engine, event_engine
 from laurel_of_olympus import oracle_engine, title_engine
+from laurel_of_olympus import creature_engine, relic_engine, buff_engine
 
 BASE   = Path(__file__).parent
 DATA   = BASE / "data.json"
@@ -255,14 +256,24 @@ async def estate_simulate_workout(req: Request):
         kwargs["miles"] = 2.0
 
     state = gs.load(ESTATE_SAVE)
-    events = workout_engine.process_workout(state, workout_type, **kwargs)
-    farm_events = farm_engine.produce_farms(state)
+
+    # ── Compute passive buffs from sanctuary + relics ────────────────────────
+    buffs = buff_engine.get_all_buffs(state)
+
+    events = workout_engine.process_workout(state, workout_type, buffs=buffs, **kwargs)
+    farm_events = farm_engine.produce_farms(state, buffs=buffs)
     events.extend(farm_events)
 
     # ── Title checks (run before event priority chain) ───────────────────────
     newly_unlocked = title_engine.check_and_unlock_titles(state)
     for tid in newly_unlocked:
         events.append(f"  🏅 Title unlocked: {tid.replace('_', ' ').title()}")
+
+    # ── Creature encounter (outdoor workouts only, 5% base) ──────────────────
+    encounter_chance = buff_engine.effective_event_chance(buffs, 0.05)
+    creature_encounter = creature_engine.maybe_creature_encounter(
+        workout_type, chance=encounter_chance
+    )
 
     # ── Event priority chain (only one popup per workout) ────────────────────
     # 1. Ultra-rare: Kassandra Breaks Composure (0.1%, phase ≥ 4)
@@ -271,21 +282,25 @@ async def estate_simulate_workout(req: Request):
         # Kassandra break also unlocks "favorite_of_kassandra"
         if "favorite_of_kassandra" not in state.titles_unlocked:
             state.titles_unlocked.append("favorite_of_kassandra")
-            state.active_titles["legendary_titles"] = "favorite_of_kassandra"
+            state.active_titles["legendary"] = "favorite_of_kassandra"
             events.append("  🌟 Title unlocked: Favorite of Kassandra")
     else:
         # 2. Oracle visit (10%)
         narrative_event = oracle_engine.maybe_oracle_visit(state, chance=0.10)
         if narrative_event is None:
-            # 3. Regular flavour event (20%)
-            narrative_event = event_engine.maybe_trigger_event(state.to_dict())
+            # 3. Regular flavour event — base 20% + event_chance buff
+            flavour_chance = buff_engine.effective_event_chance(buffs, 0.20)
+            narrative_event = event_engine.maybe_trigger_event(
+                state.to_dict(), chance=flavour_chance
+            )
 
     gs.save(state, ESTATE_SAVE)
     return {
-        "status": "ok",
-        "events": events,
-        "state":  state.to_dict(),
-        "event":  narrative_event,   # None or event dict
+        "status":             "ok",
+        "events":             events,
+        "state":              state.to_dict(),
+        "event":              narrative_event,       # None or event dict
+        "creature_encounter": creature_encounter,    # None or creature dict
     }
 
 
@@ -296,3 +311,89 @@ def get_prophecy_scroll():
     scroll = title_engine.get_prophecy_scroll(state)
     gs.save(state, ESTATE_SAVE)  # persist any newly unlocked titles
     return scroll
+
+
+# ── Creature / Sanctuary endpoints ─────────────────────────────────────────────
+
+@app.get("/api/estate/sanctuary")
+def get_sanctuary():
+    """Return sanctuary contents and all creature definitions."""
+    state = gs.load(ESTATE_SAVE)
+    return {
+        "sanctuary":          creature_engine.get_sanctuary_details(state),
+        "capacity":           state.sanctuary_capacity,
+        "sanctuary_ids":      state.sanctuary,
+        "all_creatures":      creature_engine.get_all_creatures(),
+        "buffs":              creature_engine.get_sanctuary_buffs(state),
+    }
+
+
+@app.post("/api/estate/creature/recruit")
+async def recruit_creature(req: Request):
+    p = await req.json()
+    creature_id = p.get("creature_id", "").strip()
+    if not creature_id:
+        raise HTTPException(400, "creature_id is required")
+    state = gs.load(ESTATE_SAVE)
+    ok, msg = creature_engine.recruit_creature(state, creature_id)
+    if not ok:
+        raise HTTPException(400, msg)
+    gs.save(state, ESTATE_SAVE)
+    return {"status": "ok", "msg": msg, "state": state.to_dict()}
+
+
+@app.post("/api/estate/creature/release")
+async def release_creature(req: Request):
+    p = await req.json()
+    creature_id = p.get("creature_id", "").strip()
+    if not creature_id:
+        raise HTTPException(400, "creature_id is required")
+    state = gs.load(ESTATE_SAVE)
+    ok, msg, reward = creature_engine.release_creature(state, creature_id)
+    if not ok:
+        raise HTTPException(400, msg)
+    gs.save(state, ESTATE_SAVE)
+    return {"status": "ok", "msg": msg, "reward": reward, "state": state.to_dict()}
+
+
+# ── Relic endpoints ─────────────────────────────────────────────────────────────
+
+@app.get("/api/estate/relics")
+def get_relics():
+    """Return relic inventory and all relic definitions."""
+    state = gs.load(ESTATE_SAVE)
+    return {
+        "inventory":     relic_engine.get_inventory_details(state),
+        "capacity":      state.relic_capacity,
+        "relic_ids":     state.relics,
+        "all_relics":    relic_engine.get_all_relics(),
+        "buffs":         relic_engine.get_relic_buffs(state),
+    }
+
+
+@app.post("/api/estate/relic/add")
+async def add_relic(req: Request):
+    p = await req.json()
+    relic_id = p.get("relic_id", "").strip()
+    if not relic_id:
+        raise HTTPException(400, "relic_id is required")
+    state = gs.load(ESTATE_SAVE)
+    ok, msg = relic_engine.add_relic(state, relic_id)
+    if not ok:
+        raise HTTPException(400, msg)
+    gs.save(state, ESTATE_SAVE)
+    return {"status": "ok", "msg": msg, "state": state.to_dict()}
+
+
+@app.post("/api/estate/relic/remove")
+async def remove_relic(req: Request):
+    p = await req.json()
+    relic_id = p.get("relic_id", "").strip()
+    if not relic_id:
+        raise HTTPException(400, "relic_id is required")
+    state = gs.load(ESTATE_SAVE)
+    ok, msg = relic_engine.remove_relic(state, relic_id)
+    if not ok:
+        raise HTTPException(400, msg)
+    gs.save(state, ESTATE_SAVE)
+    return {"status": "ok", "msg": msg, "state": state.to_dict()}

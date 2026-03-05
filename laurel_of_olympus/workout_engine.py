@@ -5,14 +5,16 @@ All formulas come directly from balance_table.txt.
 
 Public API:
     calculate_reward(workout_type, **kwargs) -> float
-    process_workout(state, workout_type, **kwargs) -> list[str]
+    process_workout(state, workout_type, buffs=None, **kwargs) -> list[str]
         Mutates state, returns list of event strings for the event log.
+        buffs: optional dict from buff_engine.get_all_buffs(state).
+               Key "workout_{workout_type}" scales the final drachmae reward.
 """
 
 from __future__ import annotations
 
 import datetime as dt
-from typing import List
+from typing import Dict, List, Optional
 
 from laurel_of_olympus.game_state import PlayerState
 
@@ -82,14 +84,19 @@ def calculate_reward(workout_type: str, **kwargs) -> float:
 def process_workout(
     state: PlayerState,
     workout_type: str,
+    buffs: Optional[dict] = None,
     **kwargs,
 ) -> List[str]:
     """
     Award drachmae for a workout, update counters, apply diminishing returns.
     Returns a list of event strings for display in the event log.
+
+    buffs: dict from buff_engine.get_all_buffs(state).
+           "workout_{workout_type}" multiplier is applied after DR scaling.
     """
     events: List[str] = []
     today = str(dt.date.today())
+    buffs = buffs or {}
 
     # ── Reset daily counter if it's a new day ───────────────────────────────
     if state.last_workout_date != today:
@@ -102,7 +109,12 @@ def process_workout(
     # ── Calculate reward ────────────────────────────────────────────────────
     raw = calculate_reward(workout_type, **kwargs)
     multiplier = _dr_multiplier(workout_number)
-    final = round(raw * multiplier, 2)
+    base_final = round(raw * multiplier, 2)
+
+    # Apply sanctuary / relic workout buff
+    workout_mult = buffs.get(f"workout_{workout_type}", 1.0)
+    final = round(base_final * workout_mult, 2)
+    buff_bonus = round(final - base_final, 2)
 
     state.drachmae = round(state.drachmae + final, 2)
 
@@ -136,7 +148,8 @@ def process_workout(
         param_parts.append(f"vol {int(kwargs['volume'])}")
     param_str = ", ".join(param_parts)
 
-    events.append(f"[{label}] {param_str}  →  +{final} drachmae")
+    buff_str = f"  ✨ +{buff_bonus} from sanctuary/relics" if buff_bonus > 0 else ""
+    events.append(f"[{label}] {param_str}  →  +{final} drachmae{buff_str}")
 
     if workout_number > 1:
         events.append(

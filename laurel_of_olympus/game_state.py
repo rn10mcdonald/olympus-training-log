@@ -94,6 +94,14 @@ class PlayerState:
     oracle_phase: int = 0    # 0=stranger … 5=Kassandra ally
     oracle_visits: int = 0   # total oracle visits (drives phase advancement)
 
+    # ── Sanctuary (recruited creatures) ──────────────────────────────────────
+    sanctuary: List[str] = field(default_factory=list)   # creature IDs
+    sanctuary_capacity: int = 3
+
+    # ── Relic inventory ──────────────────────────────────────────────────────
+    relics: List[str] = field(default_factory=list)      # relic IDs
+    relic_capacity: int = 5
+
     # ── Version for future migrations ────────────────────────────────────────
     version: int = 1
 

@@ -1143,12 +1143,15 @@ async function initEstate() {
     estateState = await api("/api/estate/state");
     renderEstateResources();
     renderEstateGrid();
-    // Populate prophecy title preview without opening the dialog
-    try {
-      const scroll = await api("/api/estate/prophecy");
-      const previewEl = document.getElementById("prophecy-combined-preview");
-      if (previewEl) previewEl.textContent = scroll.combined_title || "Unnamed Mortal";
-    } catch (_) { /* non-fatal */ }
+    // Load sanctuary, relics, and prophecy preview in parallel
+    await Promise.allSettled([
+      initSanctuary(),
+      initRelics(),
+      api("/api/estate/prophecy").then(scroll => {
+        const previewEl = document.getElementById("prophecy-combined-preview");
+        if (previewEl) previewEl.textContent = scroll.combined_title || "Unnamed Mortal";
+      }),
+    ]);
   } catch (e) {
     console.error("Estate init failed:", e);
   }
@@ -1279,12 +1282,225 @@ document.getElementById("simulate-workout-btn")?.addEventListener("click", async
       pushEstateLog(evt, t);
     });
     toast(`⚔️ ${res.events?.[0] || "Workout logged!"}`);
-    if (res.event) showEventPopup(res.event);
+    // Refresh sanctuary/relics if sanctuary state may have changed
+    initSanctuary();
+    // Show creature encounter first (player must decide before narrative event)
+    if (res.creature_encounter) {
+      showEncounterDialog(res.creature_encounter);
+    } else if (res.event) {
+      showEventPopup(res.event);
+    }
   } catch (e) {
     toast("Estate error: " + e.message, 4000);
   } finally {
     btn.disabled = false;
   }
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// SANCTUARY + RELICS
+// ══════════════════════════════════════════════════════════════════════════════
+
+const RARITY_ICONS = {
+  common:    "🌿",
+  rare:      "⚡",
+  epic:      "🔥",
+  legendary: "✨",
+};
+
+const RARITY_COLORS = {
+  common:    "var(--success)",
+  rare:      "var(--accent)",
+  epic:      "#e06c1a",
+  legendary: "var(--gold)",
+};
+
+// ── Sanctuary ─────────────────────────────────────────────────────────────────
+
+async function initSanctuary() {
+  try {
+    const data = await api("/api/estate/sanctuary");
+    renderSanctuary(data);
+  } catch (e) {
+    console.error("Sanctuary init failed:", e);
+  }
+}
+
+function renderSanctuary(data) {
+  const listEl  = document.getElementById("sanctuary-list");
+  const countEl = document.getElementById("sanctuary-count");
+  if (!listEl) return;
+
+  const creatures = data.sanctuary || [];
+  const capacity  = data.capacity  || 3;
+  if (countEl) countEl.textContent = `${creatures.length} / ${capacity}`;
+
+  if (!creatures.length) {
+    listEl.innerHTML = '<p class="dim-msg">No creatures recruited yet. Complete outdoor workouts to encounter them.</p>';
+    return;
+  }
+
+  listEl.innerHTML = creatures.map(c => {
+    const rarityColor = RARITY_COLORS[c.rarity] || "var(--text)";
+    const icon        = c.icon || RARITY_ICONS[c.rarity] || "🐾";
+    return `<div class="creature-card">
+      <div class="creature-card-icon" style="color:${rarityColor}">${icon}</div>
+      <div class="creature-card-info">
+        <div class="creature-card-name">${escHtml(c.name)}</div>
+        <div class="creature-card-buff">✨ ${escHtml(c.buff_label || "Passive buff")}</div>
+        <div class="creature-card-flavor">${escHtml(c.flavor || "")}</div>
+      </div>
+      <button class="btn-ghost-sm creature-release-btn"
+              data-id="${escHtml(c.id)}"
+              data-name="${escHtml(c.name)}"
+              data-reward="${c.release_reward || 5}"
+              title="Release — earn ${c.release_reward || 5} 🪙">
+        ⚡ Release
+      </button>
+    </div>`;
+  }).join("");
+
+  // Release handlers
+  listEl.querySelectorAll(".creature-release-btn").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const cid    = btn.dataset.id;
+      const name   = btn.dataset.name;
+      const reward = btn.dataset.reward;
+      btn.disabled = true;
+      try {
+        const res = await api("/api/estate/creature/release", { creature_id: cid });
+        estateState = res.state;
+        renderEstateResources();
+        toast(`${name} released — +${reward} 🪙`);
+        await initSanctuary();
+      } catch (e) {
+        toast("Release failed: " + e.message, 4000);
+        btn.disabled = false;
+      }
+    });
+  });
+}
+
+// ── Relic Inventory ───────────────────────────────────────────────────────────
+
+async function initRelics() {
+  try {
+    const data = await api("/api/estate/relics");
+    renderRelics(data);
+  } catch (e) {
+    console.error("Relics init failed:", e);
+  }
+}
+
+function renderRelics(data) {
+  const listEl  = document.getElementById("relics-list");
+  const countEl = document.getElementById("relics-count");
+  if (!listEl) return;
+
+  const relics   = data.inventory || [];
+  const capacity = data.capacity  || 5;
+  if (countEl) countEl.textContent = `${relics.length} / ${capacity}`;
+
+  if (!relics.length) {
+    listEl.innerHTML = '<p class="dim-msg">No relics acquired yet. They are found through events and campaigns.</p>';
+    return;
+  }
+
+  listEl.innerHTML = relics.map(r => {
+    const rarityColor = RARITY_COLORS[r.rarity] || "var(--text)";
+    const icon        = r.icon || "🔮";
+    return `<div class="relic-card">
+      <div class="relic-card-icon" style="color:${rarityColor}">${icon}</div>
+      <div class="relic-card-info">
+        <div class="relic-card-name">${escHtml(r.name)}</div>
+        <div class="relic-card-buff">✨ ${escHtml(r.buff_label || "Passive buff")}</div>
+        <div class="relic-card-flavor">${escHtml(r.flavor || "")}</div>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+// ── Creature Encounter Dialog ─────────────────────────────────────────────────
+
+let _pendingEncounter = null;
+
+function showEncounterDialog(creature) {
+  if (!creature) return;
+  _pendingEncounter = creature;
+
+  const rarity      = creature.rarity || "common";
+  const rarityColor = RARITY_COLORS[rarity] || "var(--text)";
+
+  document.getElementById("encounter-rarity-badge").textContent        = rarity;
+  document.getElementById("encounter-rarity-badge").style.color        = rarityColor;
+  document.getElementById("encounter-rarity-badge").style.borderColor  = rarityColor;
+  document.getElementById("encounter-icon").textContent                = creature.icon || RARITY_ICONS[rarity] || "🐾";
+  document.getElementById("encounter-creature-name").textContent       = creature.name || "A Creature";
+  document.getElementById("encounter-description").textContent         = creature.description || "";
+  document.getElementById("encounter-buff-label").textContent          = creature.buff_label || "Passive buff";
+  document.getElementById("encounter-flavor").textContent              = creature.flavor ? `"${creature.flavor}"` : "";
+  document.getElementById("encounter-release-reward").textContent      = `(+${creature.release_reward || 5} 🪙)`;
+
+  const recruitBtn = document.getElementById("encounter-recruit-btn");
+  // Disable recruit if sanctuary is full (check estateState)
+  if (estateState) {
+    const sanctuary = estateState.sanctuary || [];
+    const cap       = estateState.sanctuary_capacity || 3;
+    if (sanctuary.length >= cap) {
+      recruitBtn.disabled = true;
+      recruitBtn.title    = "Sanctuary is full";
+    } else {
+      recruitBtn.disabled = false;
+      recruitBtn.title    = "";
+    }
+  }
+
+  document.getElementById("encounter-overlay").hidden = false;
+  recruitBtn.focus();
+}
+
+function hideEncounterDialog() {
+  document.getElementById("encounter-overlay").hidden = true;
+  _pendingEncounter = null;
+}
+
+document.getElementById("encounter-recruit-btn")?.addEventListener("click", async () => {
+  if (!_pendingEncounter) return;
+  const btn = document.getElementById("encounter-recruit-btn");
+  btn.disabled = true;
+  try {
+    const res = await api("/api/estate/creature/recruit", { creature_id: _pendingEncounter.id });
+    estateState = res.state;
+    renderEstateResources();
+    toast(`🏛️ ${_pendingEncounter.name} welcomed into the sanctuary!`);
+    hideEncounterDialog();
+    await initSanctuary();
+  } catch (e) {
+    toast(e.message, 4000);
+    btn.disabled = false;
+  }
+});
+
+document.getElementById("encounter-release-btn")?.addEventListener("click", async () => {
+  if (!_pendingEncounter) return;
+  // Creature was encountered but not yet recruited — award release reward
+  const reward = _pendingEncounter.release_reward || 5;
+  try {
+    // Add temporarily then release so the server awards coins cleanly
+    await api("/api/estate/creature/recruit",  { creature_id: _pendingEncounter.id }).catch(() => {});
+    const res = await api("/api/estate/creature/release", { creature_id: _pendingEncounter.id });
+    if (res?.state) {
+      estateState = res.state;
+      renderEstateResources();
+    }
+  } catch (_) { /* non-fatal — coins already logged */ }
+  toast(`⚡ ${_pendingEncounter.name} released — +${reward} 🪙`);
+  hideEncounterDialog();
+});
+
+document.getElementById("encounter-skip-btn")?.addEventListener("click", hideEncounterDialog);
+document.getElementById("encounter-overlay")?.addEventListener("click", e => {
+  if (e.target === e.currentTarget) hideEncounterDialog();
 });
 
 // ══════════════════════════════════════════════════════════════════════════════

@@ -295,6 +295,30 @@
         <p class="sub-text" style="margin-top:8px">Awards drachmae · triggers daily farm harvest</p>
       </div>
 
+      <!-- Sanctuary -->
+      <div class="card">
+        <div class="card-header">
+          <h2>🏛️ Sanctuary</h2>
+          <span id="sanctuary-count" class="stat-chip">0 / 3</span>
+        </div>
+        <p class="sub-text" style="margin-bottom:10px">Recruited creatures provide passive buffs to your estate.</p>
+        <div id="sanctuary-list" class="creature-list">
+          <p class="dim-msg">No creatures recruited yet. Complete outdoor workouts to encounter them.</p>
+        </div>
+      </div>
+
+      <!-- Relic Inventory -->
+      <div class="card">
+        <div class="card-header">
+          <h2>⚗️ Relics</h2>
+          <span id="relics-count" class="stat-chip">0 / 5</span>
+        </div>
+        <p class="sub-text" style="margin-bottom:10px">Relics provide passive bonuses to workouts and farm production.</p>
+        <div id="relics-list" class="relic-list">
+          <p class="dim-msg">No relics acquired yet. They are found through events and campaigns.</p>
+        </div>
+      </div>
+
       <!-- Prophecy Scroll button -->
       <div class="card prophecy-cta-card">
         <div class="prophecy-cta-row">
@@ -452,6 +476,41 @@
       <button class="btn-ghost" id="cancel-preview-btn">Close</button>
       <button class="btn-primary" id="start-previewed-btn">Start This Track</button>
     </div>
+  </div>
+</div>
+
+<!-- ═══ CREATURE ENCOUNTER DIALOG ════════════════════════════════════════════ -->
+<div id="encounter-overlay" class="dialog-overlay" hidden>
+  <div class="dialog encounter-dialog" role="dialog" aria-modal="true"
+       aria-labelledby="encounter-creature-name">
+
+    <div class="encounter-header">
+      <div id="encounter-rarity-badge" class="encounter-rarity-badge">common</div>
+      <div id="encounter-icon" class="encounter-icon">🌿</div>
+    </div>
+
+    <h3 id="encounter-creature-name" class="encounter-title">A Creature Appears</h3>
+    <p id="encounter-description" class="encounter-description"></p>
+
+    <div class="encounter-buff-row">
+      <span class="encounter-buff-icon">✨</span>
+      <span id="encounter-buff-label" class="encounter-buff-label">Passive buff</span>
+    </div>
+
+    <p id="encounter-flavor" class="encounter-flavor"></p>
+
+    <div class="encounter-actions">
+      <button class="btn-outline encounter-release-btn" id="encounter-release-btn">
+        ⚡ Release <span id="encounter-release-reward">(+5 🪙)</span>
+      </button>
+      <button class="btn-primary encounter-recruit-btn" id="encounter-recruit-btn">
+        🏛️ Recruit
+      </button>
+    </div>
+
+    <button class="btn-ghost encounter-skip-btn" id="encounter-skip-btn">
+      Leave it be
+    </button>
   </div>
 </div>
 
