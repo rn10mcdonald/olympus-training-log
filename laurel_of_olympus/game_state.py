@@ -100,7 +100,7 @@ class PlayerState:
 
     # ── Relic inventory ──────────────────────────────────────────────────────
     relics: List[str] = field(default_factory=list)      # relic IDs
-    relic_capacity: int = 5
+    relic_capacity: int = 10
 
     # ── Version for future migrations ────────────────────────────────────────
     version: int = 1
