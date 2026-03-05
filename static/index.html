@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Olympus Training Log</title>
 <link rel="manifest" href="static/manifest.json">
-<link rel="stylesheet" href="static/style.css?v=7">
+<link rel="stylesheet" href="static/style.css?v=8">
 </head>
 <body>
 
@@ -295,6 +295,17 @@
         <p class="sub-text" style="margin-top:8px">Awards drachmae · triggers daily farm harvest</p>
       </div>
 
+      <!-- Prophecy Scroll button -->
+      <div class="card prophecy-cta-card">
+        <div class="prophecy-cta-row">
+          <div>
+            <div class="prophecy-cta-label">Your Heroic Title</div>
+            <div id="prophecy-combined-preview" class="prophecy-cta-title">Unnamed Mortal</div>
+          </div>
+          <button class="btn-outline" id="open-prophecy-btn">📜 Prophecy Scroll</button>
+        </div>
+      </div>
+
       <!-- Event Log -->
       <div class="card">
         <h2 class="card-h2">📜 Estate Log</h2>
@@ -444,6 +455,50 @@
   </div>
 </div>
 
+<!-- ═══ PROPHECY SCROLL DIALOG ═══════════════════════════════════════════════ -->
+<div id="prophecy-overlay" class="dialog-overlay prophecy-overlay" hidden>
+  <div class="dialog dialog-wide prophecy-dialog" role="dialog" aria-modal="true"
+       aria-labelledby="prophecy-dialog-title">
+
+    <!-- Header -->
+    <div class="dialog-top-row prophecy-header">
+      <div>
+        <div class="prophecy-scroll-eyebrow">Prophecy Scroll</div>
+        <h3 id="prophecy-dialog-title" class="prophecy-scroll-title">Unnamed Mortal</h3>
+      </div>
+      <button class="btn-icon" id="close-prophecy-btn">✕</button>
+    </div>
+
+    <!-- Oracle phase bar -->
+    <div class="prophecy-oracle-bar">
+      <span class="prophecy-oracle-icon">🔮</span>
+      <div class="prophecy-oracle-info">
+        <span class="prophecy-oracle-phase-label">Oracle Relationship</span>
+        <span id="prophecy-oracle-phase-name" class="prophecy-oracle-phase-name">Stranger</span>
+      </div>
+      <div class="prophecy-oracle-meta">
+        <span id="prophecy-oracle-visits" class="prophecy-oracle-visits">0 visits</span>
+      </div>
+    </div>
+
+    <!-- Laurels -->
+    <div class="prophecy-laurels-row">
+      <span class="prophecy-laurels-icon">🌿</span>
+      <span class="prophecy-laurels-label">Laurels Earned</span>
+      <span id="prophecy-laurels" class="prophecy-laurels-count">0</span>
+    </div>
+
+    <!-- Title categories -->
+    <div id="prophecy-categories" class="prophecy-categories">
+      <!-- Injected by renderProphecyCategories() -->
+    </div>
+
+    <div class="dialog-actions">
+      <button class="btn-ghost" id="cancel-prophecy-btn">Close</button>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ ESTATE EVENT POPUP ════════════════════════════════════════════════════ -->
 <div id="event-overlay" class="event-overlay" hidden>
   <div class="event-popup" role="dialog" aria-modal="true" aria-labelledby="event-title">
@@ -472,7 +527,7 @@
   </div>
 </div>
 
-<script src="static/main.js?v=7"></script>
+<script src="static/main.js?v=8"></script>
 <script>
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("service-worker.js");

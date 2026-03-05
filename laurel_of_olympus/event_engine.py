@@ -2,13 +2,14 @@
 event_engine.py – Random narrative events triggered after workouts.
 
 Events fire at ~20% chance after any estate workout.
+The oracle now has its own separate channel (oracle_engine.py); this module
+handles creature / merchant / philosopher / rare events only.
 
 Event types:
-  oracle     – The Oracle (or Kassandra) appears with commentary
   creature   – A mythical creature is encountered near the estate
   merchant   – A travelling merchant makes an offer
   philosopher – A philosopher wanders past with unsolicited wisdom
-  rare       – Kassandra laughs (very uncommon)
+  rare       – Something unusual occurs
 
 Public API:
   maybe_trigger_event(state, chance=0.20) -> dict | None
@@ -16,7 +17,7 @@ Public API:
 
 Event dict shape:
   {
-    "type":    str,          # oracle / creature / merchant / philosopher / rare
+    "type":    str,          # creature / merchant / philosopher / rare
     "title":   str,          # popup heading
     "icon":    str,          # emoji
     "lines":   list[str],    # 1–4 flavor text lines
@@ -43,13 +44,13 @@ _CREATURES  = json.loads((_DATA_DIR / "creatures.json").read_text())
 
 # ---------------------------------------------------------------------------
 # Event type weights  (must sum to 100)
+# Oracle has its own separate channel in oracle_engine.py
 # ---------------------------------------------------------------------------
 _EVENT_WEIGHTS = [
-    ("oracle",      35),
-    ("creature",    25),
-    ("merchant",    22),
-    ("philosopher", 15),
-    ("rare",         3),
+    ("creature",    35),
+    ("merchant",    30),
+    ("philosopher", 25),
+    ("rare",        10),
 ]
 _EVENT_TYPES  = [t for t, _ in _EVENT_WEIGHTS]
 _EVENT_WCUM   = []
@@ -65,7 +66,7 @@ def _pick_event_type() -> str:
     for t, cum in zip(_EVENT_TYPES, _EVENT_WCUM):
         if r <= cum:
             return t
-    return "oracle"
+    return "creature"
 
 
 def _pick(lines: list, k: int = 1) -> list[str]:
@@ -78,36 +79,6 @@ def _pick(lines: list, k: int = 1) -> list[str]:
 # ---------------------------------------------------------------------------
 # Per-event builders
 # ---------------------------------------------------------------------------
-
-def _build_oracle(state: dict) -> dict:
-    total_workouts = sum(state.get("workout_counts", {}).values())
-    workouts_today = state.get("workouts_today", 1)
-    laurels        = state.get("laurels", 0)
-
-    # Choose which pool of oracle lines to use
-    if total_workouts >= 15 and laurels >= 1:
-        pool = _FLAVOR["oracle_impressed_lines"]
-        title = "The Oracle Is Impressed"
-    elif workouts_today >= 3 or total_workouts >= 8:
-        pool = _FLAVOR["oracle_irritated_lines"]
-        title = "The Oracle Is Irritated"
-    else:
-        pool = _FLAVOR["oracle_lines"]
-        title = "The Oracle Appears"
-
-    # 30 % chance Kassandra speaks instead of / in addition to the Oracle
-    lines = _pick(pool, 2)
-    if random.random() < 0.30:
-        lines.append(random.choice(_FLAVOR["kassandra_lines"]))
-        title = "Kassandra Speaks"
-
-    return {
-        "type":  "oracle",
-        "title": title,
-        "icon":  "🔮",
-        "lines": lines,
-    }
-
 
 def _build_creature() -> dict:
     creature = random.choice(_CREATURES)
@@ -178,10 +149,12 @@ def _build_rare() -> dict:
 
 def maybe_trigger_event(state: dict, chance: float = 0.20) -> Optional[dict]:
     """
-    Roll for a random narrative event.
+    Roll for a random narrative event (creature / merchant / philosopher / rare).
+
+    The oracle channel is handled separately by oracle_engine.maybe_oracle_visit().
 
     Args:
-        state:  The PlayerState.to_dict() — used for contextual oracle lines.
+        state:  The PlayerState.to_dict() — kept for future contextual builders.
         chance: Probability of an event firing (default 0.20 = 20 %).
 
     Returns:
@@ -193,7 +166,6 @@ def maybe_trigger_event(state: dict, chance: float = 0.20) -> Optional[dict]:
     event_type = _pick_event_type()
 
     builders = {
-        "oracle":      lambda: _build_oracle(state),
         "creature":    _build_creature,
         "merchant":    _build_merchant,
         "philosopher": _build_philosopher,
