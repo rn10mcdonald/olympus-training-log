@@ -1409,3 +1409,125 @@ body {
   font-size: 0.75rem;
   padding-top: 1px;
 }
+
+/* ── Estate Event Popup ──────────────────────────────────────────────────── */
+
+.event-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: fadeIn 0.2s ease;
+}
+.event-overlay[hidden] { display: none; }
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.event-popup {
+  background: var(--surface);
+  border: 1px solid var(--gold-dim);
+  border-radius: 16px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.7), 0 0 60px var(--gold-glow);
+  max-width: 360px;
+  width: 100%;
+  padding: 28px 24px 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  animation: popIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes popIn {
+  from { opacity: 0; transform: scale(0.88) translateY(16px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.event-popup-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.event-icon {
+  font-size: 2.6rem;
+  line-height: 1;
+  filter: drop-shadow(0 0 12px var(--gold-glow));
+}
+
+.event-type-badge {
+  font-size: 0.68rem;
+  font-family: var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--gold-dim);
+  background: rgba(201,176,55,0.10);
+  border: 1px solid var(--gold-dim);
+  border-radius: 20px;
+  padding: 2px 10px;
+}
+
+.event-title {
+  font-family: var(--font);
+  font-size: 1.15rem;
+  color: var(--gold);
+  text-align: center;
+  margin: 0;
+}
+
+.event-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  text-align: center;
+}
+
+.event-line {
+  font-family: var(--font);
+  font-size: 0.92rem;
+  color: var(--text);
+  line-height: 1.55;
+  font-style: italic;
+}
+.event-line:first-child { font-style: normal; font-weight: 600; }
+
+.event-creature-card {
+  background: var(--surface-hi);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 14px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.event-creature-rarity {
+  font-size: 0.68rem;
+  font-family: var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+.event-creature-name {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.event-dismiss-btn {
+  margin-top: 4px;
+  width: 100%;
+  justify-content: center;
+}

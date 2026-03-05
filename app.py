@@ -3,7 +3,7 @@ from fastapi.responses import FileResponse, HTMLResponse
 from pathlib import Path
 import json, core, datetime as dt
 from laurel_of_olympus import game_state as gs
-from laurel_of_olympus import workout_engine, farm_engine
+from laurel_of_olympus import workout_engine, farm_engine, event_engine
 
 BASE   = Path(__file__).parent
 DATA   = BASE / "data.json"
@@ -22,11 +22,16 @@ def _load() -> dict:
                      sum(r.get("distance_miles", 0)
                          for r in d.get("run_log", [])
                          if isinstance(r, dict)))
+        d.setdefault("walk_log", [])
+        d.setdefault("total_walk_miles",
+                     sum(r.get("distance_miles", 0)
+                         for r in d.get("walk_log", [])
+                         if isinstance(r, dict)))
         d.setdefault("run_log", [])
         d.setdefault("week_log", {})
-        # journey_miles = combined ruck + run
+        # journey_miles = combined ruck + run + walk
         d.setdefault("journey_miles",
-                     d["total_ruck_miles"] + d["total_run_miles"])
+                     d["total_ruck_miles"] + d["total_run_miles"] + d["total_walk_miles"])
         mc = d.setdefault("microcycle", {})
         mc.setdefault("start_date",         str(dt.date.today()))
         mc.setdefault("badge_given",         False)
@@ -164,6 +169,20 @@ async def log_ruck(req: Request):
     _save(state)
     return {"status": "ok", "msg": msg, "state": state}
 
+@app.post("/api/walk")
+async def log_walk(req: Request):
+    p = await req.json()
+    try:
+        miles = float(p["miles"])
+    except (KeyError, ValueError):
+        raise HTTPException(400, "miles must be numeric")
+    if miles <= 0:
+        raise HTTPException(400, "miles must be positive")
+    state = _load()
+    msg   = core.log_walk(state, miles)
+    _save(state)
+    return {"status": "ok", "msg": msg, "state": state}
+
 @app.post("/api/run")
 async def log_run(req: Request):
     p = await req.json()
@@ -237,5 +256,11 @@ async def estate_simulate_workout(req: Request):
     events = workout_engine.process_workout(state, workout_type, **kwargs)
     farm_events = farm_engine.produce_farms(state)
     events.extend(farm_events)
+    narrative_event = event_engine.maybe_trigger_event(state.to_dict())
     gs.save(state, ESTATE_SAVE)
-    return {"status": "ok", "events": events, "state": state.to_dict()}
+    return {
+        "status": "ok",
+        "events": events,
+        "state":  state.to_dict(),
+        "event":  narrative_event,   # None or event dict
+    }

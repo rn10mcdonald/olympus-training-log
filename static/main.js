@@ -121,6 +121,7 @@ function renderAll(state, workout) {
   renderTrainSection(state, workout);
   renderRuckSection(state);
   renderRunSection(state);
+  renderWalkSection(state);
   renderVaultSection(state);
   renderHistory(state, historyFilter);
 }
@@ -325,12 +326,14 @@ function updateDeleteTrackBtn() {
 
 // ── Ruck section ──────────────────────────────────────────────────────────────
 function renderRuckSection(state) {
-  const ruckMiles = state.total_ruck_miles || 0;
-  const runMiles  = state.total_run_miles  || 0;
-  const journey   = state.journey_miles    || 0;
+  const ruckMiles = state.total_ruck_miles  || 0;
+  const runMiles  = state.total_run_miles   || 0;
+  const walkMiles = state.total_walk_miles  || 0;
+  const journey   = state.journey_miles     || 0;
 
   document.getElementById("total-ruck-miles").textContent = ruckMiles.toFixed(1) + " mi";
   document.getElementById("total-run-miles-ruck").textContent = runMiles.toFixed(1) + " mi";
+  document.getElementById("total-walk-miles-ruck").textContent = walkMiles.toFixed(1) + " mi";
 
   const pct = Math.min((journey / TRIP_MILES) * 100, 100);
   document.getElementById("journey-bar").style.width = pct.toFixed(1) + "%";
@@ -388,6 +391,32 @@ function renderRunSection(state) {
           <span class="run-date-text">${r.date || ""}</span>
         </div>`).join("")
     : `<p class="dim-msg">No runs logged yet.</p>`;
+}
+
+// ── Walk section ──────────────────────────────────────────────────────────────
+function renderWalkSection(state) {
+  const walkMiles = state.total_walk_miles || 0;
+  const journey   = state.journey_miles    || 0;
+
+  const walkDrachma = (state.walk_log || [])
+    .reduce((sum, r) => sum + (r.coins || 0), 0);
+
+  document.getElementById("total-walk-miles").textContent = walkMiles.toFixed(1) + " mi";
+  document.getElementById("walk-drachma").textContent = "🪙 " + walkDrachma.toFixed(2);
+
+  const pct = Math.min((journey / TRIP_MILES) * 100, 100);
+  document.getElementById("journey-bar-walk").style.width = pct.toFixed(1) + "%";
+  document.getElementById("journey-fraction-walk").textContent =
+    `${journey.toFixed(1)} / ${TRIP_MILES} mi`;
+
+  const walks = [...(state.walk_log || [])].reverse().slice(0, 5);
+  document.getElementById("recent-walks").innerHTML = walks.length
+    ? walks.map(w => `
+        <div class="recent-run-item">
+          <span class="run-miles-text">${w.distance_miles.toFixed(2)} mi</span>
+          <span class="run-date-text">${w.date || ""}</span>
+        </div>`).join("")
+    : `<p class="dim-msg">No walks logged yet.</p>`;
 }
 
 // ── Vault section ─────────────────────────────────────────────────────────────
@@ -468,6 +497,16 @@ function renderHistory(state, filter) {
         .push({ kind: "run",
                 detail: `${r.distance_miles} mi${pace} — 🪙 ${(r.coins || 0).toFixed(2)}`,
                 _filter: "run" });
+    }
+  }
+
+  if (filter === "all" || filter === "walk") {
+    for (const r of state.walk_log || []) {
+      if (!r.date || typeof r.distance_miles !== "number") continue;
+      (byDate[r.date] = byDate[r.date] || [])
+        .push({ kind: "walk",
+                detail: `${r.distance_miles} mi — 🪙 ${(r.coins || 0).toFixed(2)}`,
+                _filter: "walk" });
     }
   }
 
@@ -602,6 +641,21 @@ async function logRuck() {
     document.getElementById("ruck-miles").value = "";
     const newPostcards = (appState.badges || []).filter(b => b.type === "ruck_quest");
     if (newPostcards.length > prevBadgeCount) switchSection("ruck");
+    prevBadgeCount = (appState.badges || []).length;
+  } catch (e) { toast("⚠ " + e.message); }
+}
+
+async function logWalk() {
+  const miles = parseFloat(document.getElementById("walk-miles").value || 0);
+  if (!miles || miles <= 0) { toast("Enter a valid distance."); return; }
+  try {
+    const r = await api("/api/walk", { miles });
+    toast(r.msg || "🚶 Walk logged!");
+    appState = r.state;
+    const workout = await api("/api/workout/today");
+    renderAll(appState, workout);
+    checkNewBadges(appState);
+    document.getElementById("walk-miles").value = "";
     prevBadgeCount = (appState.badges || []).length;
   } catch (e) { toast("⚠ " + e.message); }
 }
@@ -973,7 +1027,9 @@ document.getElementById("log-ruck-btn").addEventListener("click", logRuck);
 
 // Run section
 document.getElementById("log-run-btn").addEventListener("click", logRun);
+document.getElementById("log-walk-btn").addEventListener("click", logWalk);
 document.getElementById("go-to-ruck-btn").addEventListener("click", () => switchSection("ruck"));
+document.getElementById("go-to-ruck-from-walk-btn").addEventListener("click", () => switchSection("ruck"));
 
 // Custom workout dialog
 document.getElementById("submit-custom").addEventListener("click", submitCustomWorkout);
@@ -1153,6 +1209,54 @@ function renderEstateLog() {
   ).join("");
 }
 
+// ── Estate Event Popup ────────────────────────────────────────────────────────
+
+const EVENT_TYPE_LABELS = {
+  oracle:      "oracle",
+  creature:    "encounter",
+  merchant:    "merchant",
+  philosopher: "philosophy",
+  rare:        "rare event",
+};
+
+function showEventPopup(event) {
+  if (!event) return;
+
+  document.getElementById("event-icon").textContent       = event.icon  || "✨";
+  document.getElementById("event-title").textContent      = event.title || "Something happens…";
+  document.getElementById("event-type-badge").textContent = EVENT_TYPE_LABELS[event.type] || event.type;
+
+  const linesEl = document.getElementById("event-lines");
+  linesEl.innerHTML = (event.lines || [])
+    .map(l => `<p class="event-line">${escHtml(l)}</p>`)
+    .join("");
+
+  const cardEl = document.getElementById("event-creature-card");
+  if (event.creature) {
+    document.getElementById("event-creature-rarity").textContent = event.creature.rarity;
+    document.getElementById("event-creature-name").textContent   = event.creature.name;
+    cardEl.hidden = false;
+  } else {
+    cardEl.hidden = true;
+  }
+
+  const overlay = document.getElementById("event-overlay");
+  overlay.hidden = false;
+  document.getElementById("event-dismiss-btn").focus();
+}
+
+function hideEventPopup() {
+  document.getElementById("event-overlay").hidden = true;
+}
+
+document.getElementById("event-dismiss-btn").addEventListener("click", hideEventPopup);
+document.getElementById("event-overlay").addEventListener("click", e => {
+  if (e.target === e.currentTarget) hideEventPopup();
+});
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape") hideEventPopup();
+});
+
 document.getElementById("simulate-workout-btn")?.addEventListener("click", async () => {
   const btn  = document.getElementById("simulate-workout-btn");
   const type = document.getElementById("estate-workout-type")?.value || "strength";
@@ -1169,6 +1273,7 @@ document.getElementById("simulate-workout-btn")?.addEventListener("click", async
       pushEstateLog(evt, t);
     });
     toast(`⚔️ ${res.events?.[0] || "Workout logged!"}`);
+    if (res.event) showEventPopup(res.event);
   } catch (e) {
     toast("Estate error: " + e.message, 4000);
   } finally {

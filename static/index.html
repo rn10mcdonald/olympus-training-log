@@ -101,6 +101,9 @@
           <span class="divider">·</span>
           <span class="dim-text">Run</span>
           <strong id="total-run-miles-ruck" class="gold-text">0.0 mi</strong>
+          <span class="divider">·</span>
+          <span class="dim-text">Walked</span>
+          <strong id="total-walk-miles-ruck" class="gold-text">0.0 mi</strong>
         </div>
       </div>
 
@@ -204,6 +207,53 @@
     </div>
   </section>
 
+  <!-- ── WALK ─────────────────────────────────────────────────────────────── -->
+  <section class="page-section" id="section-walk">
+    <div class="section-scroll">
+
+      <!-- Log Walk -->
+      <div class="card">
+        <h2 class="card-h2">🚶 Log Walk</h2>
+        <div class="input-row">
+          <div class="field-group">
+            <label for="walk-miles">Miles</label>
+            <input id="walk-miles" type="number" placeholder="0.0" step="0.01" min="0">
+          </div>
+          <button class="btn-primary" id="log-walk-btn">Log</button>
+        </div>
+        <div class="stat-row">
+          <span class="dim-text">Walk total</span>
+          <strong id="total-walk-miles" class="gold-text">0.0 mi</strong>
+          <span class="divider">·</span>
+          <span class="dim-text">Earned</span>
+          <strong id="walk-drachma" class="gold-text">🪙 0.00</strong>
+        </div>
+      </div>
+
+      <!-- Journey tie-in -->
+      <div class="card">
+        <div class="card-header">
+          <h2>📜 Journey Progress</h2>
+          <span id="journey-fraction-walk" class="stat-chip">0 / 306 mi</span>
+        </div>
+        <p class="sub-text" style="margin-bottom:8px">Walks count toward the Pheidippides Journey alongside rucks and runs.</p>
+        <div class="progress-bar-wrap">
+          <div id="journey-bar-walk" class="progress-bar-fill" style="width:0%"></div>
+        </div>
+        <div class="run-section-cta">
+          <button class="btn-ghost-sm" id="go-to-ruck-from-walk-btn">View full journey →</button>
+        </div>
+      </div>
+
+      <!-- Recent Walks -->
+      <div class="card">
+        <h2 class="card-h2">Recent Walks</h2>
+        <div id="recent-walks"><p class="dim-msg">No walks logged yet.</p></div>
+      </div>
+
+    </div>
+  </section>
+
   <!-- ── ESTATE ────────────────────────────────────────────────────────────── -->
   <section class="page-section" id="section-estate">
     <div class="section-scroll">
@@ -266,6 +316,7 @@
           <button class="filter-btn" data-filter="lifting">Lifting</button>
           <button class="filter-btn" data-filter="ruck">Ruck</button>
           <button class="filter-btn" data-filter="run">Run</button>
+          <button class="filter-btn" data-filter="walk">Walk</button>
         </div>
         <div id="history-list"><p class="dim-msg">No activity logged yet — get moving!</p></div>
       </div>
@@ -292,6 +343,10 @@
   <button class="nav-btn" data-section="vault">
     <span class="nav-icon">🏆</span>
     <span class="nav-label">Vault</span>
+  </button>
+  <button class="nav-btn" data-section="walk">
+    <span class="nav-icon">🚶</span>
+    <span class="nav-label">Walk</span>
   </button>
   <button class="nav-btn" data-section="estate">
     <span class="nav-icon">🏛️</span>
@@ -386,6 +441,34 @@
       <button class="btn-ghost" id="cancel-preview-btn">Close</button>
       <button class="btn-primary" id="start-previewed-btn">Start This Track</button>
     </div>
+  </div>
+</div>
+
+<!-- ═══ ESTATE EVENT POPUP ════════════════════════════════════════════════════ -->
+<div id="event-overlay" class="event-overlay" hidden>
+  <div class="event-popup" role="dialog" aria-modal="true" aria-labelledby="event-title">
+
+    <div class="event-popup-header">
+      <span id="event-icon"  class="event-icon">🔮</span>
+      <span id="event-type-badge" class="event-type-badge">oracle</span>
+    </div>
+
+    <h3 id="event-title" class="event-title">The Oracle Appears</h3>
+
+    <div id="event-lines" class="event-lines">
+      <!-- Lines injected by showEventPopup() -->
+    </div>
+
+    <!-- Creature card (hidden unless creature event) -->
+    <div id="event-creature-card" class="event-creature-card" hidden>
+      <span id="event-creature-rarity" class="event-creature-rarity"></span>
+      <span id="event-creature-name"   class="event-creature-name"></span>
+    </div>
+
+    <button class="btn-primary event-dismiss-btn" id="event-dismiss-btn">
+      Continue →
+    </button>
+
   </div>
 </div>
 
