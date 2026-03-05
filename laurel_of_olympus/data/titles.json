@@ -1,5 +1,5 @@
 {
-  "consistency_titles": [
+  "consistency": [
     {
       "id": "consistent_mortal",
       "name": "Consistent Mortal",
@@ -21,8 +21,7 @@
       "condition": "earn 20 laurels"
     }
   ],
-
-  "workout_titles": [
+  "workout": [
     {
       "id": "runner_of_hermes",
       "name": "Runner of Hermes",
@@ -44,8 +43,7 @@
       "condition": "complete 30 walks"
     }
   ],
-
-  "estate_titles": [
+  "estate": [
     {
       "id": "keeper_of_the_fields",
       "name": "Keeper of the Fields",
@@ -67,8 +65,7 @@
       "condition": "build 5 farm structures"
     }
   ],
-
-  "legendary_titles": [
+  "legendary": [
     {
       "id": "favorite_of_kassandra",
       "name": "Favorite of Kassandra",
@@ -85,8 +82,7 @@
       "condition": "win 20 campaigns"
     }
   ],
-
-  "secret_titles": [
+  "secret": [
     {
       "id": "cardio_bunny",
       "name": "Cardio Bunny",

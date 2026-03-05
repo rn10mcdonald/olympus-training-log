@@ -1,0 +1,63 @@
+{
+  "campaign_cost": {
+    "drachmae": 50,
+    "grain": 5
+  },
+
+  "regions": [
+    {
+      "id": "attica",
+      "name": "Attica",
+      "difficulty": 20,
+      "reward_drachmae": [120, 180],
+      "relic_chance": 0.10,
+      "creature_chance": 0.05,
+      "description": "Rolling hills and quiet farmland outside Athens."
+    },
+    {
+      "id": "delphi",
+      "name": "Delphi",
+      "difficulty": 25,
+      "reward_drachmae": [150, 220],
+      "relic_chance": 0.12,
+      "creature_chance": 0.06,
+      "description": "Sacred mountain passes watched by the Oracle."
+    },
+    {
+      "id": "sparta",
+      "name": "Sparta",
+      "difficulty": 30,
+      "reward_drachmae": [180, 260],
+      "relic_chance": 0.14,
+      "creature_chance": 0.07,
+      "description": "Harsh lands where only the strong endure."
+    },
+    {
+      "id": "crete",
+      "name": "Crete",
+      "difficulty": 35,
+      "reward_drachmae": [220, 320],
+      "relic_chance": 0.16,
+      "creature_chance": 0.08,
+      "description": "Island ruins echo with ancient myths."
+    },
+    {
+      "id": "macedonia",
+      "name": "Macedonia",
+      "difficulty": 40,
+      "reward_drachmae": [260, 380],
+      "relic_chance": 0.18,
+      "creature_chance": 0.09,
+      "description": "Northern lands where empires once rose."
+    },
+    {
+      "id": "rhodes",
+      "name": "Rhodes",
+      "difficulty": 45,
+      "reward_drachmae": [300, 420],
+      "relic_chance": 0.20,
+      "creature_chance": 0.10,
+      "description": "A wealthy island guarded by legends."
+    }
+  ]
+}
