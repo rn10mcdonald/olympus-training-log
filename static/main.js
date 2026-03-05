@@ -121,6 +121,7 @@ function renderAll(state, workout) {
   renderTrainSection(state, workout);
   renderRuckSection(state);
   renderRunSection(state);
+  renderWalkSection(state);
   renderVaultSection(state);
   renderHistory(state, historyFilter);
 }
@@ -325,12 +326,14 @@ function updateDeleteTrackBtn() {
 
 // ── Ruck section ──────────────────────────────────────────────────────────────
 function renderRuckSection(state) {
-  const ruckMiles = state.total_ruck_miles || 0;
-  const runMiles  = state.total_run_miles  || 0;
-  const journey   = state.journey_miles    || 0;
+  const ruckMiles = state.total_ruck_miles  || 0;
+  const runMiles  = state.total_run_miles   || 0;
+  const walkMiles = state.total_walk_miles  || 0;
+  const journey   = state.journey_miles     || 0;
 
   document.getElementById("total-ruck-miles").textContent = ruckMiles.toFixed(1) + " mi";
   document.getElementById("total-run-miles-ruck").textContent = runMiles.toFixed(1) + " mi";
+  document.getElementById("total-walk-miles-ruck").textContent = walkMiles.toFixed(1) + " mi";
 
   const pct = Math.min((journey / TRIP_MILES) * 100, 100);
   document.getElementById("journey-bar").style.width = pct.toFixed(1) + "%";
@@ -388,6 +391,32 @@ function renderRunSection(state) {
           <span class="run-date-text">${r.date || ""}</span>
         </div>`).join("")
     : `<p class="dim-msg">No runs logged yet.</p>`;
+}
+
+// ── Walk section ──────────────────────────────────────────────────────────────
+function renderWalkSection(state) {
+  const walkMiles = state.total_walk_miles || 0;
+  const journey   = state.journey_miles    || 0;
+
+  const walkDrachma = (state.walk_log || [])
+    .reduce((sum, r) => sum + (r.coins || 0), 0);
+
+  document.getElementById("total-walk-miles").textContent = walkMiles.toFixed(1) + " mi";
+  document.getElementById("walk-drachma").textContent = "🪙 " + walkDrachma.toFixed(2);
+
+  const pct = Math.min((journey / TRIP_MILES) * 100, 100);
+  document.getElementById("journey-bar-walk").style.width = pct.toFixed(1) + "%";
+  document.getElementById("journey-fraction-walk").textContent =
+    `${journey.toFixed(1)} / ${TRIP_MILES} mi`;
+
+  const walks = [...(state.walk_log || [])].reverse().slice(0, 5);
+  document.getElementById("recent-walks").innerHTML = walks.length
+    ? walks.map(w => `
+        <div class="recent-run-item">
+          <span class="run-miles-text">${w.distance_miles.toFixed(2)} mi</span>
+          <span class="run-date-text">${w.date || ""}</span>
+        </div>`).join("")
+    : `<p class="dim-msg">No walks logged yet.</p>`;
 }
 
 // ── Vault section ─────────────────────────────────────────────────────────────
@@ -468,6 +497,16 @@ function renderHistory(state, filter) {
         .push({ kind: "run",
                 detail: `${r.distance_miles} mi${pace} — 🪙 ${(r.coins || 0).toFixed(2)}`,
                 _filter: "run" });
+    }
+  }
+
+  if (filter === "all" || filter === "walk") {
+    for (const r of state.walk_log || []) {
+      if (!r.date || typeof r.distance_miles !== "number") continue;
+      (byDate[r.date] = byDate[r.date] || [])
+        .push({ kind: "walk",
+                detail: `${r.distance_miles} mi — 🪙 ${(r.coins || 0).toFixed(2)}`,
+                _filter: "walk" });
     }
   }
 
@@ -602,6 +641,21 @@ async function logRuck() {
     document.getElementById("ruck-miles").value = "";
     const newPostcards = (appState.badges || []).filter(b => b.type === "ruck_quest");
     if (newPostcards.length > prevBadgeCount) switchSection("ruck");
+    prevBadgeCount = (appState.badges || []).length;
+  } catch (e) { toast("⚠ " + e.message); }
+}
+
+async function logWalk() {
+  const miles = parseFloat(document.getElementById("walk-miles").value || 0);
+  if (!miles || miles <= 0) { toast("Enter a valid distance."); return; }
+  try {
+    const r = await api("/api/walk", { miles });
+    toast(r.msg || "🚶 Walk logged!");
+    appState = r.state;
+    const workout = await api("/api/workout/today");
+    renderAll(appState, workout);
+    checkNewBadges(appState);
+    document.getElementById("walk-miles").value = "";
     prevBadgeCount = (appState.badges || []).length;
   } catch (e) { toast("⚠ " + e.message); }
 }
@@ -973,7 +1027,9 @@ document.getElementById("log-ruck-btn").addEventListener("click", logRuck);
 
 // Run section
 document.getElementById("log-run-btn").addEventListener("click", logRun);
+document.getElementById("log-walk-btn").addEventListener("click", logWalk);
 document.getElementById("go-to-ruck-btn").addEventListener("click", () => switchSection("ruck"));
+document.getElementById("go-to-ruck-from-walk-btn").addEventListener("click", () => switchSection("ruck"));
 
 // Custom workout dialog
 document.getElementById("submit-custom").addEventListener("click", submitCustomWorkout);

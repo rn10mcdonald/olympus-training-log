@@ -22,11 +22,16 @@ def _load() -> dict:
                      sum(r.get("distance_miles", 0)
                          for r in d.get("run_log", [])
                          if isinstance(r, dict)))
+        d.setdefault("walk_log", [])
+        d.setdefault("total_walk_miles",
+                     sum(r.get("distance_miles", 0)
+                         for r in d.get("walk_log", [])
+                         if isinstance(r, dict)))
         d.setdefault("run_log", [])
         d.setdefault("week_log", {})
-        # journey_miles = combined ruck + run
+        # journey_miles = combined ruck + run + walk
         d.setdefault("journey_miles",
-                     d["total_ruck_miles"] + d["total_run_miles"])
+                     d["total_ruck_miles"] + d["total_run_miles"] + d["total_walk_miles"])
         mc = d.setdefault("microcycle", {})
         mc.setdefault("start_date",         str(dt.date.today()))
         mc.setdefault("badge_given",         False)
@@ -161,6 +166,20 @@ async def log_ruck(req: Request):
         raise HTTPException(400, "miles must be positive")
     state = _load()
     msg   = core.log_ruck(state, miles, pounds)
+    _save(state)
+    return {"status": "ok", "msg": msg, "state": state}
+
+@app.post("/api/walk")
+async def log_walk(req: Request):
+    p = await req.json()
+    try:
+        miles = float(p["miles"])
+    except (KeyError, ValueError):
+        raise HTTPException(400, "miles must be numeric")
+    if miles <= 0:
+        raise HTTPException(400, "miles must be positive")
+    state = _load()
+    msg   = core.log_walk(state, miles)
     _save(state)
     return {"status": "ok", "msg": msg, "state": state}
 

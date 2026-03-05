@@ -44,8 +44,8 @@ OLYMPIANS = [
     ("Poseidon", "🌊"), ("Hades", "🖤"),
 ]
 
-# ── Pheidippides Journey milestones (shared by rucking AND running) ────────────
-# Ruck miles + run miles combine into a single journey total.
+# ── Pheidippides Journey milestones (shared by rucking, running AND walking) ──
+# Ruck miles + run miles + walk miles combine into a single journey total.
 RUCK_STOPS = [
     (0,   "Acropolis",
      "\"Welcome to leg-day on hard mode!\" Athena's owl hoots, 'Hoot luck, buddy.'"),
@@ -579,11 +579,13 @@ def default_state() -> dict:
         "workouts":          [],   # list[{date, type, details, coins, weight_kg?}]
         "ruck_log":          [],   # list[{date, distance_miles, weight_lbs, coins}]
         "run_log":           [],   # list[{date, distance_miles, coins, pace_min_per_mile?}]
+        "walk_log":          [],   # list[{date, distance_miles, coins}]
         "badges":            [],   # list of badge records
-        "treasury":          0.0,  # drachma accumulated (lift + ruck + run)
+        "treasury":          0.0,  # drachma accumulated (lift + ruck + run + walk)
         "total_ruck_miles":  0.0,  # lifetime ruck distance
         "total_run_miles":   0.0,  # lifetime run distance
-        "journey_miles":     0.0,  # combined ruck + run (used for milestone checks)
+        "total_walk_miles":  0.0,  # lifetime walk distance
+        "journey_miles":     0.0,  # combined ruck + run + walk (used for milestone checks)
         "week_log":          {},   # {"(year, week)": count} — any activity
         "custom_tracks":     [],   # list of user-built track dicts
         "templates":         {k: v["name"] for k, v in TEMPLATES.items()},
@@ -837,6 +839,27 @@ def log_run(state: dict, miles: float, pace: float | None = None) -> str:
     _check_journey_milestone(state, prev_journey, new_journey)
     _increment_weekly_streak(state)   # runs count toward weekly laurels
     return (f"🏃 Ran {miles:.1f} mi — earned {coins:.2f} Drachma.  "
+            f"Journey: {new_journey:.1f} mi.")
+
+
+def log_walk(state: dict, miles: float) -> str:
+    """Log a walk, award half the run rate, count toward the journey."""
+    coins        = round(miles * 0.5, 2)   # walks earn half vs running
+    prev_journey = state.get("journey_miles", 0.0)
+    new_journey  = prev_journey + miles
+
+    state.setdefault("walk_log", []).append({
+        "date":           str(dt.date.today()),
+        "distance_miles": miles,
+        "coins":          coins,
+    })
+    state["treasury"]        = round(state.get("treasury", 0.0) + coins, 2)
+    state["total_walk_miles"] = state.get("total_walk_miles", 0.0) + miles
+    state["journey_miles"]    = new_journey
+
+    _check_journey_milestone(state, prev_journey, new_journey)
+    _increment_weekly_streak(state)   # walks count toward weekly laurels
+    return (f"🚶 Walked {miles:.1f} mi — earned {coins:.2f} Drachma.  "
             f"Journey: {new_journey:.1f} mi.")
 
 # ── Internal helpers ──────────────────────────────────────────────────────────
