@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Olympus Training Log</title>
 <link rel="manifest" href="static/manifest.json">
-<link rel="stylesheet" href="static/style.css?v=10">
+<link rel="stylesheet" href="static/style.css?v=11">
 </head>
 <body>
 
@@ -182,7 +182,8 @@
 
       <div class="card">
         <h2 class="card-h2">⚔️ Monster Trophies</h2>
-        <p class="sub-text" style="margin-bottom:10px">Complete a 6-session microcycle to slay a monster.</p>
+        <p class="sub-text" style="margin-bottom:10px">Complete a 6-session microcycle to slay a monster and earn a permanent passive bonus.</p>
+        <div id="trophy-buffs-summary"></div>
         <div class="badge-grid" id="trophies-list">
           <div class="empty-msg">Complete a cycle to earn your first trophy.</div>
         </div>
@@ -748,7 +749,7 @@
   </div>
 </div>
 
-<script src="static/main.js?v=10"></script>
+<script src="static/main.js?v=11"></script>
 <script>
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("service-worker.js");

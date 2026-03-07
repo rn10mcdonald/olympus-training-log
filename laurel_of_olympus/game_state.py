@@ -119,6 +119,12 @@ class PlayerState:
     # Maps blessing_id → remaining uses (e.g. {"hermes": 1})
     active_blessings: Dict[str, int] = field(default_factory=dict)
 
+    # ── Trophy inventory ──────────────────────────────────────────────────────
+    # Each entry: {id, name, monster, rarity, buff_type, buff_value, emoji,
+    #              date_earned, buff_label}
+    # Awarded when a 6-workout laurel window completes.
+    trophies: List[Dict] = field(default_factory=list)
+
     # ── Version for future migrations ────────────────────────────────────────
     version: int = 1
 

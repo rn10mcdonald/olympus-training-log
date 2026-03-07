@@ -422,13 +422,23 @@ function renderWalkSection(state) {
 // ── Vault section ─────────────────────────────────────────────────────────────
 function renderVaultSection(state) {
   const badges    = state.badges || [];
-  const trophies  = [...badges].filter(b => b.type === "monster").reverse();
   const laurels   = [...badges].filter(b => b.type === "laurel").reverse();
   const postcards = [...badges].filter(b => b.type === "ruck_quest").reverse();
 
-  document.getElementById("trophies-list").innerHTML = trophies.length
-    ? trophies.map(b => badgeCardHtml(b)).join("")
-    : `<div class="empty-msg">Complete a 6-session cycle to earn your first trophy.</div>`;
+  // Monster trophies: load from estate trophy system (has buff data)
+  api("/api/estate/trophies").then(data => {
+    const trophies = (data.trophies || []).slice().reverse();
+    document.getElementById("trophies-list").innerHTML = trophies.length
+      ? trophies.map(t => trophyCardHtml(t)).join("")
+      : `<div class="empty-msg">Complete a 6-session cycle to earn your first trophy.</div>`;
+    renderTrophyBuffsSummary(data.buff_summary || []);
+  }).catch(() => {
+    // Fallback: legacy badges if estate API unavailable
+    const legacyTrophies = [...badges].filter(b => b.type === "monster").reverse();
+    document.getElementById("trophies-list").innerHTML = legacyTrophies.length
+      ? legacyTrophies.map(b => badgeCardHtml(b)).join("")
+      : `<div class="empty-msg">Complete a 6-session cycle to earn your first trophy.</div>`;
+  });
 
   document.getElementById("laurels-list").innerHTML = laurels.length
     ? laurels.map(b => badgeCardHtml(b)).join("")
@@ -437,6 +447,51 @@ function renderVaultSection(state) {
   document.getElementById("vault-postcards").innerHTML = postcards.length
     ? postcards.map(b => postcardHtml(b)).join("")
     : `<div class="empty-msg">Unlock waypoints by covering journey miles.</div>`;
+}
+
+// Render the stacked trophy buff summary chips above the grid
+function renderTrophyBuffsSummary(buffSummary) {
+  const el = document.getElementById("trophy-buffs-summary");
+  if (!el) return;
+  if (!buffSummary || buffSummary.length === 0) {
+    el.innerHTML = "";
+    return;
+  }
+  const BUFF_ICONS = {
+    drachmae_gain:     "🪙",
+    strength_rewards:  "💪",
+    farm_production:   "🌾",
+    creature_chance:   "🦅",
+    campaign_strength: "⚔️",
+    relic_chance:      "⚗️",
+  };
+  el.innerHTML = buffSummary.map(b => {
+    const icon = BUFF_ICONS[b.buff_type] || "✨";
+    return `<span class="trophy-buff-chip">
+      <span class="trophy-buff-chip-icon">${icon}</span>
+      ${escHtml(b.label)}
+    </span>`;
+  }).join("");
+}
+
+// Trophy card with buff label and rarity indicator
+function trophyCardHtml(t) {
+  const rarityColour = t.rarity_colour || "#a0a0a0";
+  const buffLabel    = t.buff_label    || "";
+  const emoji        = t.emoji         || "🏆";
+  const date         = t.date_earned   || "";
+  const rarity       = t.rarity_label  || (t.rarity || "").replace(/^./, c => c.toUpperCase());
+  return `
+    <div class="badge-card">
+      <div class="badge-emoji">${emoji}</div>
+      <div class="badge-name">${escHtml(t.name || "")}</div>
+      <div class="trophy-buff-label">${escHtml(buffLabel)}</div>
+      <div class="badge-date" style="display:flex;align-items:center;gap:4px;justify-content:center">
+        <span class="trophy-rarity-dot" style="background:${rarityColour}"></span>
+        ${escHtml(rarity)}
+      </div>
+      <div class="badge-date">${date}</div>
+    </div>`;
 }
 
 function badgeCardHtml(b) {
@@ -1262,6 +1317,41 @@ function hideEventPopup() {
   document.getElementById("event-overlay").hidden = true;
 }
 
+// Show a temporary trophy award banner in the estate log area
+function showTrophyAwardBanner(trophy) {
+  const RARITY_COLOURS = {
+    common:    "#a0a0a0",
+    uncommon:  "#4fc35a",
+    rare:      "#4a9eff",
+    epic:      "#b44aff",
+    legendary: "#ffd700",
+  };
+  const colour  = RARITY_COLOURS[trophy.rarity] || "#a0a0a0";
+  const rarity  = (trophy.rarity || "").replace(/^./, c => c.toUpperCase());
+  const buffLbl = trophy.buff_label || trophy.buff_type || "";
+
+  const banner = document.createElement("div");
+  banner.className = "trophy-award-banner";
+  banner.innerHTML = `
+    <div class="trophy-award-emoji">${trophy.emoji || "🏆"}</div>
+    <div class="trophy-award-info">
+      <div class="trophy-award-name">⚔️ Monster Slain! ${escHtml(trophy.name)}</div>
+      <div class="trophy-award-buff">${escHtml(buffLbl)}</div>
+      <div class="trophy-award-rarity" style="color:${colour}">${escHtml(rarity)}</div>
+    </div>`;
+
+  // Insert at top of estate log, or after estate resources
+  const logEl = document.getElementById("estate-log");
+  if (logEl) {
+    logEl.prepend(banner);
+  } else {
+    const resEl = document.querySelector(".estate-resources, #estate-resources");
+    if (resEl) resEl.after(banner);
+  }
+  // Auto-remove after 8s
+  setTimeout(() => banner.remove(), 8000);
+}
+
 document.getElementById("event-dismiss-btn").addEventListener("click", hideEventPopup);
 document.getElementById("event-overlay").addEventListener("click", e => {
   if (e.target === e.currentTarget) hideEventPopup();
@@ -1294,6 +1384,14 @@ document.getElementById("simulate-workout-btn")?.addEventListener("click", async
       const r = res.relic_find;
       pushEstateLog(`⚗️ Relic found: ${r.name} (${r.rarity})!`, "reward");
       await initRelics();
+    }
+    // Show trophy award notification if a microcycle was completed
+    if (res.trophy_award) {
+      const t = res.trophy_award;
+      pushEstateLog(`⚔️ Trophy earned: ${t.emoji} ${t.name} — ${t.buff_label || ""}`, "reward");
+      showTrophyAwardBanner(t);
+      // Refresh vault trophy list + buff summary
+      renderVaultSection(appState || {});
     }
     // Show creature encounter first (player must decide before narrative event)
     if (res.creature_encounter) {
