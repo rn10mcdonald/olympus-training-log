@@ -1,176 +1,162 @@
 {
   "consistency": [
     {
-      "id": "occasionally_motivated",
-      "name": "Occasionally Motivated",
-      "description": "You have logged at least one workout.",
-      "condition": {"type": "total_workouts", "count": 1}
-    },
-    {
-      "id": "disciplined_mortal",
-      "name": "Disciplined Mortal",
-      "description": "You have completed 10 workouts.",
-      "condition": {"type": "total_workouts", "count": 10}
+      "id": "consistent_mortal",
+      "name": "Consistent Mortal",
+      "condition": {"type": "laurels", "count": 1}
     },
     {
       "id": "persistent_hero",
       "name": "Persistent Hero",
-      "description": "You have earned 3 laurels.",
-      "condition": {"type": "laurels", "count": 3}
+      "condition": {"type": "laurels", "count": 5}
     },
     {
-      "id": "favored_of_the_fates",
-      "name": "Favored of the Fates",
-      "description": "You have earned 7 laurels.",
-      "condition": {"type": "laurels", "count": 7}
+      "id": "relentless_champion",
+      "name": "Relentless Champion",
+      "condition": {"type": "laurels", "count": 10}
     },
     {
-      "id": "laureled_champion",
-      "name": "Laureled Champion",
-      "description": "You have earned 15 laurels.",
-      "condition": {"type": "laurels", "count": 15}
+      "id": "discipline_of_olympus",
+      "name": "Disciple of Olympus",
+      "condition": {"type": "laurels", "count": 20}
     }
   ],
   "workout": [
     {
       "id": "jogging_mortal",
       "name": "Jogging Mortal",
-      "description": "Complete 5 running workouts.",
-      "workout_type": "running",
       "condition": {"type": "workout_count", "workout": "running", "count": 5}
     },
     {
       "id": "runner_of_hermes",
       "name": "Runner of Hermes",
-      "description": "Complete 15 running workouts.",
-      "workout_type": "running",
-      "condition": {"type": "workout_count", "workout": "running", "count": 15}
+      "condition": {"type": "workout_count", "workout": "running", "count": 20}
+    },
+    {
+      "id": "messenger_of_hermes",
+      "name": "Messenger of Hermes",
+      "condition": {"type": "workout_count", "workout": "running", "count": 50}
     },
     {
       "id": "wind_of_olympus",
       "name": "Wind of Olympus",
-      "description": "Complete 30 running workouts.",
-      "workout_type": "running",
-      "condition": {"type": "workout_count", "workout": "running", "count": 30}
+      "condition": {"type": "workout_count", "workout": "running", "count": 100}
     },
     {
       "id": "bearer_of_bronze",
       "name": "Bearer of Bronze",
-      "description": "Complete 5 strength workouts.",
-      "workout_type": "strength",
       "condition": {"type": "workout_count", "workout": "strength", "count": 5}
     },
     {
       "id": "disciple_of_heracles",
       "name": "Disciple of Heracles",
-      "description": "Complete 20 strength workouts.",
-      "workout_type": "strength",
       "condition": {"type": "workout_count", "workout": "strength", "count": 20}
     },
     {
-      "id": "bearer_of_the_pack",
+      "id": "strength_of_heracles",
+      "name": "Strength of Heracles",
+      "condition": {"type": "workout_count", "workout": "strength", "count": 60}
+    },
+    {
+      "id": "bearer_of_the_ruck",
       "name": "Bearer of the Pack",
-      "description": "Complete 5 rucking workouts.",
-      "workout_type": "rucking",
       "condition": {"type": "workout_count", "workout": "rucking", "count": 5}
+    },
+    {
+      "id": "roadwarden",
+      "name": "Roadwarden",
+      "condition": {"type": "workout_count", "workout": "rucking", "count": 20}
     },
     {
       "id": "warden_of_the_long_road",
       "name": "Warden of the Long Road",
-      "description": "Complete 20 rucking workouts.",
-      "workout_type": "rucking",
-      "condition": {"type": "workout_count", "workout": "rucking", "count": 20}
+      "condition": {"type": "workout_count", "workout": "rucking", "count": 60}
     },
     {
       "id": "walking_philosopher",
       "name": "Walking Philosopher",
-      "description": "Complete 10 walking workouts.",
-      "workout_type": "walking",
-      "condition": {"type": "workout_count", "workout": "walking", "count": 10}
+      "condition": {"type": "workout_count", "workout": "walking", "count": 5}
+    },
+    {
+      "id": "student_of_socrates",
+      "name": "Student of Socrates",
+      "condition": {"type": "workout_count", "workout": "walking", "count": 30}
     }
   ],
   "estate": [
     {
       "id": "caretaker_of_dirt",
       "name": "Caretaker of Dirt",
-      "description": "Build your first farm.",
       "condition": {"type": "farms_built", "count": 1}
     },
     {
-      "id": "keeper_of_the_grove",
-      "name": "Keeper of the Grove",
-      "description": "Build 3 farms.",
-      "condition": {"type": "farms_built", "count": 3}
+      "id": "keeper_of_the_fields",
+      "name": "Keeper of the Fields",
+      "condition": {"type": "farms_built", "count": 2}
+    },
+    {
+      "id": "guardian_of_the_grove",
+      "name": "Guardian of the Grove",
+      "condition": {"type": "has_farm_type", "farm_type": "olive_grove"}
+    },
+    {
+      "id": "master_of_the_vineyard",
+      "name": "Master of the Vineyard",
+      "condition": {"type": "has_farm_type", "farm_type": "vineyard"}
     },
     {
       "id": "steward_of_the_estate",
       "name": "Steward of the Estate",
-      "description": "Build all 5 farm types.",
-      "condition": {"type": "farms_built", "count": 5}
+      "condition": {"type": "farms_built", "count": 4}
     },
     {
-      "id": "lord_of_the_fields",
-      "name": "Lord of the Fields",
-      "description": "Upgrade any farm to level 3.",
-      "condition": {"type": "farm_level", "level": 3}
+      "id": "lord_of_the_estate",
+      "name": "Lord of the Estate",
+      "condition": {"type": "farms_built", "count": 7}
     }
   ],
   "legendary": [
     {
-      "id": "champion_of_olympus",
-      "name": "Champion of Olympus",
-      "description": "Earn 20 laurels.",
-      "condition": {"type": "laurels", "count": 20}
+      "id": "hero_of_olympus",
+      "name": "Hero of Olympus",
+      "condition": {"type": "laurels", "count": 25}
     },
     {
-      "id": "hero_of_the_prophecy",
-      "name": "Hero of the Prophecy",
-      "description": "Complete 100 workouts.",
-      "condition": {"type": "total_workouts", "count": 100}
+      "id": "champion_of_the_gods",
+      "name": "Champion of the Gods",
+      "condition": {"type": "campaigns_won", "count": 20}
     }
   ],
   "secret": [
     {
-      "id": "wino",
-      "name": "Wino",
-      "description": "Hold 20+ wine for 7 days without selling.",
-      "condition": {"type": "secret", "trigger": "wine_hoarder"}
-    },
-    {
-      "id": "relic_hoarder",
-      "name": "Relic Hoarder",
-      "description": "Inventory reaches 100 items.",
-      "condition": {"type": "secret", "trigger": "inventory_100"}
-    },
-    {
-      "id": "olive_purist",
-      "name": "Olive Purist",
-      "description": "Hold 60+ olives without producing olive oil for 14 days.",
-      "condition": {"type": "secret", "trigger": "olive_purist"}
-    },
-    {
-      "id": "merchants_nightmare",
-      "name": "Merchant's Nightmare",
-      "description": "Hoard goods without selling for 14 days.",
-      "condition": {"type": "secret", "trigger": "hoarder"}
+      "id": "acting_suspiciously_roman",
+      "name": "Acting Suspiciously Roman",
+      "condition": {"type": "secret", "trigger": "14_day_gap"}
     },
     {
       "id": "cardio_bunny",
       "name": "Cardio Bunny",
-      "description": "Only running workouts for 30 days.",
-      "condition": {"type": "secret", "trigger": "cardio_only"}
+      "condition": {"type": "secret", "trigger": "cardio_bunny"}
     },
     {
       "id": "champion_of_chest_day",
       "name": "Champion of Chest Day",
-      "description": "7 consecutive strength workouts with no leg exercises.",
-      "condition": {"type": "secret", "trigger": "chest_day"}
+      "condition": {"type": "secret", "trigger": "champion_of_chest_day"}
     },
     {
-      "id": "acting_suspiciously_roman",
-      "name": "Acting Suspiciously Roman",
-      "description": "No workouts for 14 days.",
-      "condition": {"type": "secret", "trigger": "14_day_gap"}
+      "id": "wino",
+      "name": "Wino",
+      "condition": {"type": "inventory_count", "resource": "wine", "count": 20}
+    },
+    {
+      "id": "relic_hoarder",
+      "name": "Relic Hoarder",
+      "condition": {"type": "relics_held", "count": 10}
+    },
+    {
+      "id": "legs_remain_theoretical",
+      "name": "Whose Legs Remain Theoretical",
+      "condition": {"type": "secret", "trigger": "legs_remain_theoretical"}
     }
   ]
 }

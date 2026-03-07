@@ -100,7 +100,24 @@ class PlayerState:
 
     # ── Relic inventory ──────────────────────────────────────────────────────
     relics: List[str] = field(default_factory=list)      # relic IDs
-    relic_capacity: int = 5
+    relic_capacity: int = 10
+
+    # ── Processing buildings ─────────────────────────────────────────────────
+    processing_buildings: List[str] = field(default_factory=list)  # building IDs
+
+    # ── Villa ────────────────────────────────────────────────────────────────
+    villa_level: int = 1
+
+    # ── Army (Barracks + Campaign) ────────────────────────────────────────────
+    barracks_built: bool = False
+    army: List[str] = field(default_factory=list)        # unit IDs (duplicates allowed)
+    army_limit: int = 10
+    campaigns_won: int = 0
+    army_unlock_suggested: bool = False  # True once Kassandra delivers the narrative trigger
+
+    # ── Active blessings (MISS-4) ─────────────────────────────────────────────
+    # Maps blessing_id → remaining uses (e.g. {"hermes": 1})
+    active_blessings: Dict[str, int] = field(default_factory=dict)
 
     # ── Version for future migrations ────────────────────────────────────────
     version: int = 1

@@ -1142,11 +1142,15 @@ async function initEstate() {
   try {
     estateState = await api("/api/estate/state");
     renderEstateResources();
-    renderEstateGrid();
-    // Load sanctuary, relics, and prophecy preview in parallel
+    renderEstateGridInteractive();
+    // Load all estate sub-systems in parallel
     await Promise.allSettled([
       initSanctuary(),
       initRelics(),
+      initArmy(),
+      initVilla(),
+      initProcessing(),
+      initBlessings(),
       api("/api/estate/prophecy").then(scroll => {
         const previewEl = document.getElementById("prophecy-combined-preview");
         if (previewEl) previewEl.textContent = scroll.combined_title || "Unnamed Mortal";
@@ -1274,7 +1278,7 @@ document.getElementById("simulate-workout-btn")?.addEventListener("click", async
     const res = await api("/api/estate/simulate-workout", { workout_type: type });
     estateState = res.state;
     renderEstateResources();
-    renderEstateGrid();
+    renderEstateGridInteractive();
     (res.events || []).forEach(evt => {
       const t = evt.includes("Farm") || evt.includes("harvest") ? "farm"
               : evt.includes("drachma") || evt.includes("LAUREL")  ? "reward"
@@ -1282,13 +1286,26 @@ document.getElementById("simulate-workout-btn")?.addEventListener("click", async
       pushEstateLog(evt, t);
     });
     toast(`⚔️ ${res.events?.[0] || "Workout logged!"}`);
-    // Refresh sanctuary/relics if sanctuary state may have changed
+    // Refresh sub-systems that may have changed
     initSanctuary();
+    initBlessings();
+    // Show relic find notification if one was discovered
+    if (res.relic_find) {
+      const r = res.relic_find;
+      pushEstateLog(`⚗️ Relic found: ${r.name} (${r.rarity})!`, "reward");
+      await initRelics();
+    }
     // Show creature encounter first (player must decide before narrative event)
     if (res.creature_encounter) {
       showEncounterDialog(res.creature_encounter);
     } else if (res.event) {
       showEventPopup(res.event);
+    }
+    // Check barracks requirements after each workout (laurels/farms may have changed)
+    if (!estateState?.barracks_built) {
+      api("/api/estate/army").then(armyData => {
+        renderBarracksRequirements({ state: estateState });
+      }).catch(() => {});
     }
   } catch (e) {
     toast("Estate error: " + e.message, 4000);
@@ -1398,7 +1415,7 @@ function renderRelics(data) {
   if (!listEl) return;
 
   const relics   = data.inventory || [];
-  const capacity = data.capacity  || 5;
+  const capacity = data.capacity  || 10;
   if (countEl) countEl.textContent = `${relics.length} / ${capacity}`;
 
   if (!relics.length) {
@@ -1628,6 +1645,820 @@ document.getElementById("cancel-prophecy-btn")?.addEventListener("click", closeP
 document.getElementById("prophecy-overlay")?.addEventListener("click", e => {
   if (e.target === e.currentTarget) closeProphecyScroll();
 });
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ARMY + CAMPAIGN SYSTEMS
+// ══════════════════════════════════════════════════════════════════════════════
+
+const UNIT_ICONS = {
+  hoplite:          "⚔️",
+  archer:           "🏹",
+  cavalry:          "🐴",
+  myrmidon_captain: "🛡️",
+};
+
+// ── Army / Barracks ────────────────────────────────────────────────────────────
+
+let _armyData = null;
+
+async function initArmy() {
+  try {
+    _armyData = await api("/api/estate/army");
+    renderArmy(_armyData);
+  } catch (e) {
+    console.error("Army init failed:", e);
+  }
+}
+
+function renderArmy(data) {
+  if (!data) return;
+
+  const lockedEl  = document.getElementById("barracks-locked");
+  const openEl    = document.getElementById("barracks-open");
+  const pillEl    = document.getElementById("army-strength-pill");
+  const countEl   = document.getElementById("army-count");
+  const strEl     = document.getElementById("army-total-strength");
+  const unitListEl = document.getElementById("army-unit-list");
+  const recruitEl = document.getElementById("recruit-unit-list");
+  const campaignsEl = document.getElementById("campaigns-won-preview");
+
+  if (!lockedEl || !openEl) return;
+
+  const built    = data.barracks_built;
+  const units    = data.army          || [];
+  const limit    = data.army_limit    || 10;
+  const strength = data.army_strength || 0;
+  const allUnits = data.all_units     || [];
+  const won      = data.campaigns_won || 0;
+
+  // Toggle barracks state
+  lockedEl.hidden = built;
+  openEl.hidden   = !built;
+
+  if (pillEl) pillEl.textContent = `⚔️ ${strength} str`;
+  if (campaignsEl) campaignsEl.textContent =
+    won === 1 ? "1 victory" : `${won} victories`;
+
+  if (!built) {
+    // Show unlock requirements progress
+    renderBarracksRequirements({ state: estateState });
+    return;
+  }
+
+  if (countEl)  countEl.textContent  = `${units.length} / ${limit}`;
+  if (strEl)    strEl.textContent    = strength;
+
+  // Army unit list (collapsed by type)
+  if (unitListEl) {
+    if (!units.length) {
+      unitListEl.innerHTML = '<p class="dim-msg">No soldiers recruited yet.</p>';
+    } else {
+      unitListEl.innerHTML = units.map(u => {
+        const icon  = UNIT_ICONS[u.id] || "⚔️";
+        const color = RARITY_COLORS[u.rarity] || "var(--text)";
+        return `<div class="unit-card">
+          <div class="unit-card-icon" style="color:${color}">${icon}</div>
+          <div class="unit-card-info">
+            <div class="unit-card-name">${escHtml(u.name)}
+              <span class="unit-card-count">×${u.count}</span>
+            </div>
+            <div class="unit-card-stat">⚔️ ${u.total_strength} strength total</div>
+            <div class="unit-card-flavor">${escHtml(u.description || "")}</div>
+          </div>
+          <button class="btn-ghost-sm unit-disband-btn"
+                  data-id="${escHtml(u.id)}" data-name="${escHtml(u.name)}"
+                  title="Disband one ${escHtml(u.name)}">
+            Disband
+          </button>
+        </div>`;
+      }).join("");
+
+      // Disband handlers
+      unitListEl.querySelectorAll(".unit-disband-btn").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          btn.disabled = true;
+          try {
+            const res = await api("/api/estate/army/disband", { unit_id: btn.dataset.id });
+            estateState = res.state;
+            renderEstateResources();
+            toast(`${btn.dataset.name} disbanded.`);
+            await initArmy();
+          } catch (e) {
+            toast("Disband failed: " + e.message, 4000);
+            btn.disabled = false;
+          }
+        });
+      });
+    }
+  }
+
+  // Recruit panel
+  if (recruitEl) {
+    recruitEl.innerHTML = allUnits.map(u => {
+      const icon  = UNIT_ICONS[u.id] || "⚔️";
+      const color = RARITY_COLORS[u.rarity] || "var(--text)";
+      return `<div class="recruit-card">
+        <div class="recruit-card-icon" style="color:${color}">${icon}</div>
+        <div class="recruit-card-info">
+          <div class="recruit-card-name">${escHtml(u.name)}</div>
+          <div class="recruit-card-stat">⚔️ ${u.strength} str</div>
+          <div class="recruit-card-cost">${escHtml(u.cost_str)}</div>
+        </div>
+        <button class="btn-outline-sm recruit-unit-btn"
+                data-id="${escHtml(u.id)}" data-name="${escHtml(u.name)}">
+          +1
+        </button>
+      </div>`;
+    }).join("");
+
+    recruitEl.querySelectorAll(".recruit-unit-btn").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        btn.disabled = true;
+        try {
+          const res = await api("/api/estate/army/recruit", { unit_id: btn.dataset.id });
+          estateState = res.state;
+          renderEstateResources();
+          toast(`⚔️ ${btn.dataset.name} recruited!`);
+          await initArmy();
+        } catch (e) {
+          toast(e.message, 4000);
+          btn.disabled = false;
+        }
+      });
+    });
+  }
+}
+
+document.getElementById("build-barracks-btn")?.addEventListener("click", async () => {
+  const btn = document.getElementById("build-barracks-btn");
+  btn.disabled = true;
+  try {
+    const res = await api("/api/estate/barracks/build", {});
+    estateState = res.state;
+    renderEstateResources();
+    toast("🏰 Barracks constructed! Soldiers may now be recruited.");
+    await initArmy();
+  } catch (e) {
+    toast(e.message, 4000);
+    btn.disabled = false;
+  }
+});
+
+// ── Campaign Map ───────────────────────────────────────────────────────────────
+
+async function openCampaignMap() {
+  document.getElementById("campaign-overlay").hidden = false;
+  document.getElementById("close-campaign-btn").focus();
+
+  const listEl  = document.getElementById("campaign-region-list");
+  const strengthEl = document.getElementById("campaign-army-strength-display");
+
+  listEl.innerHTML = '<p class="dim-msg">Loading regions…</p>';
+  try {
+    const data = await api("/api/estate/army");
+    _armyData  = data;
+    const strength = data.army_strength || 0;
+    if (strengthEl) strengthEl.textContent = strength;
+    renderCampaignMap(data);
+  } catch (e) {
+    listEl.innerHTML = `<p class="dim-msg">Error: ${escHtml(e.message)}</p>`;
+  }
+}
+
+function renderCampaignMap(data) {
+  const listEl = document.getElementById("campaign-region-list");
+  if (!listEl) return;
+
+  const regions  = data.all_regions || [];
+  const strength = data.army_strength || 0;
+
+  if (!regions.length) {
+    listEl.innerHTML = '<p class="dim-msg">No regions available.</p>';
+    return;
+  }
+
+  listEl.innerHTML = regions.map(r => {
+    const canWin   = strength > r.difficulty;
+    const stateClass = canWin ? "region-card region-winnable" : "region-card region-tough";
+    const indicator  = canWin ? "✅" : "⚠️";
+    return `<div class="${stateClass}">
+      <div class="region-card-header">
+        <div class="region-card-info">
+          <div class="region-card-name">${escHtml(r.name)}</div>
+          <div class="region-card-desc">${escHtml(r.description)}</div>
+        </div>
+        <div class="region-card-difficulty">
+          <span class="region-diff-label">Difficulty</span>
+          <span class="region-diff-val">${r.difficulty}</span>
+          <span class="region-diff-indicator">${indicator}</span>
+        </div>
+      </div>
+      <div class="region-card-rewards">
+        <span>🪙 ${r.reward_drachmae[0]}–${r.reward_drachmae[1]}</span>
+        <span title="Relic chance">⚗️ ${Math.round(r.relic_chance * 100)}%</span>
+        <span title="Creature chance">🐾 ${Math.round(r.creature_chance * 100)}%</span>
+      </div>
+      <button class="btn-primary launch-campaign-btn"
+              data-id="${escHtml(r.id)}" data-name="${escHtml(r.name)}">
+        ⚔️ Launch Campaign
+      </button>
+    </div>`;
+  }).join("");
+
+  listEl.querySelectorAll(".launch-campaign-btn").forEach(btn => {
+    btn.addEventListener("click", () => launchCampaign(btn.dataset.id, btn.dataset.name));
+  });
+}
+
+function closeCampaignMap() {
+  document.getElementById("campaign-overlay").hidden = true;
+}
+
+async function launchCampaign(regionId, regionName) {
+  const btn = document.querySelector(`.launch-campaign-btn[data-id="${regionId}"]`);
+  if (btn) btn.disabled = true;
+  try {
+    const res = await api("/api/estate/campaign/launch", { region_id: regionId });
+    estateState = res.state;
+    renderEstateResources();
+
+    const result = res.result;
+
+    // Log campaign outcome to estate log
+    const logType = result.victory ? "reward" : "system";
+    pushEstateLog(
+      result.victory
+        ? `⚔️ Victory at ${result.region_name}! +${result.drachmae_earned?.toFixed(0)} 🪙`
+        : `💀 Defeat at ${result.region_name}. Units lost: ${result.units_lost?.join(", ")}`,
+      logType
+    );
+
+    if (result.title_unlocked) {
+      pushEstateLog(`🏅 Title unlocked: ${result.title_unlocked}`, "reward");
+      toast(`🏅 ${result.title_unlocked} — legendary title earned!`, 5000);
+    }
+
+    // Update army display + campaign count
+    await initArmy();
+
+    // Add relic feedback to result lines if it was auto-added
+    if (result.relic_reward && !result.relic_reward.not_added) {
+      await initRelics();
+    }
+
+    // Close campaign map first, then show result popup
+    closeCampaignMap();
+
+    // Show campaign result in event popup
+    showEventPopup({
+      type:  "campaign",
+      icon:  result.icon,
+      title: result.title,
+      lines: result.lines,
+    });
+
+    // Show creature encounter dialog if creature found
+    if (res.creature_encounter) {
+      // Queue encounter after event popup is dismissed
+      const origDismiss = document.getElementById("event-dismiss-btn").onclick;
+      document.getElementById("event-dismiss-btn").addEventListener("click", function onDismiss() {
+        document.getElementById("event-dismiss-btn").removeEventListener("click", onDismiss);
+        showEncounterDialog(res.creature_encounter);
+      }, { once: true });
+    }
+
+  } catch (e) {
+    toast("Campaign failed: " + e.message, 4000);
+    if (btn) btn.disabled = false;
+  }
+}
+
+// Campaign dialog event listeners
+document.getElementById("open-campaign-map-btn")?.addEventListener("click", openCampaignMap);
+document.getElementById("close-campaign-btn")?.addEventListener("click", closeCampaignMap);
+document.getElementById("cancel-campaign-btn")?.addEventListener("click", closeCampaignMap);
+document.getElementById("campaign-overlay")?.addEventListener("click", e => {
+  if (e.target === e.currentTarget) closeCampaignMap();
+});
+
+// ── Extend EVENT_TYPE_LABELS for campaign ─────────────────────────────────────
+EVENT_TYPE_LABELS["campaign"] = "campaign";
+
+// ══════════════════════════════════════════════════════════════════════════════
+// VILLA SYSTEM
+// ══════════════════════════════════════════════════════════════════════════════
+
+async function initVilla() {
+  try {
+    const data = await api("/api/estate/villa");
+    renderVilla(data);
+  } catch (e) {
+    console.error("Villa init failed:", e);
+  }
+}
+
+function renderVilla(data) {
+  const bodyEl  = document.getElementById("villa-body");
+  const chipEl  = document.getElementById("villa-level-chip");
+  if (!bodyEl) return;
+
+  const level      = data.villa_level || 1;
+  const maxLevel   = data.max_level   || 3;
+  const canUpgrade = level < maxLevel;  // computed — no explicit field
+  const cost       = data.upgrade_cost || {};
+  const armyLimit  = data.army_limit   || ({ 1: 10, 2: 20, 3: 30 }[level] || 10);
+
+  if (chipEl) chipEl.textContent = `Level ${level}`;
+
+  // Also update barracks requirements if the backend returned them
+  if (data.barracks_unlock) {
+    _renderBarracksRequirementsFromUnlock(data.barracks_unlock);
+  }
+
+  if (!canUpgrade) {
+    bodyEl.innerHTML = `
+      <div class="villa-status-row">
+        <span class="villa-level-badge">🏛️ Level ${level}</span>
+        <span class="sub-text">${level >= maxLevel ? "Fully upgraded" : ""}</span>
+      </div>
+      <p class="sub-text" style="margin-top:6px">Army capacity: ${armyLimit} units</p>`;
+    return;
+  }
+
+  const RESOURCE_ICONS = { drachmae: "🪙", grain: "🌾", wine: "🍷", olives: "🫒", honey: "🍯" };
+  const costParts = Object.entries(cost)
+    .map(([k, v]) => `${RESOURCE_ICONS[k] || ""} ${v} ${k === "drachmae" ? "" : k}`.trim())
+    .join(" · ");
+
+  bodyEl.innerHTML = `
+    <div class="villa-status-row">
+      <span class="villa-level-badge">🏛️ Level ${level}</span>
+      <span class="sub-text">Army capacity: ${armyLimit} units</span>
+    </div>
+    <div class="barracks-cost-row" style="margin-top:8px">
+      <span class="barracks-cost-label">Upgrade to Level ${level + 1}:</span>
+      <span class="barracks-cost-resources">${escHtml(costParts)}</span>
+    </div>
+    <button class="btn-primary" id="upgrade-villa-btn" style="margin-top:10px;width:100%">
+      🏛️ Upgrade Villa → Level ${level + 1}
+    </button>`;
+
+  document.getElementById("upgrade-villa-btn")?.addEventListener("click", async () => {
+    const btn = document.getElementById("upgrade-villa-btn");
+    btn.disabled = true;
+    try {
+      const res = await api("/api/estate/villa/upgrade", {});
+      estateState = res.state;
+      renderEstateResources();
+      toast(`🏛️ Villa upgraded to Level ${res.state.villa_level}!`);
+      await Promise.allSettled([initVilla(), initArmy()]);
+    } catch (e) {
+      toast(e.message, 4000);
+      btn.disabled = false;
+    }
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// PROCESSING BUILDINGS
+// ══════════════════════════════════════════════════════════════════════════════
+
+const PROCESSING_ICONS = {
+  winery:      "🍷",
+  bakery:      "🍞",
+  olive_press: "🫒",
+  meadery:     "🍯",
+};
+
+async function initProcessing() {
+  try {
+    const data = await api("/api/estate/processing");
+    renderProcessing(data);
+  } catch (e) {
+    console.error("Processing init failed:", e);
+  }
+}
+
+function renderProcessing(data) {
+  // endpoint returns { buildings: [...], state: {...} } or bare array
+  const buildings = Array.isArray(data) ? data : (data.buildings || []);
+  const listEl = document.getElementById("processing-list");
+  if (!listEl) return;
+
+  if (!buildings.length) {
+    listEl.innerHTML = '<p class="dim-msg">No processing buildings available.</p>';
+    return;
+  }
+
+  listEl.innerHTML = buildings.map(b => {
+    const icon       = PROCESSING_ICONS[b.id] || "⚗️";
+    const costParts  = Object.entries(b.build_cost || {})
+      .map(([k, v]) => `${k === "drachmae" ? "🪙" : "🌾"} ${v} ${k === "drachmae" ? "" : k}`.trim())
+      .join(" · ");
+
+    if (!b.built) {
+      return `<div class="processing-card">
+        <div class="processing-card-icon">${icon}</div>
+        <div class="processing-card-info">
+          <div class="processing-card-name">${escHtml(b.name)}</div>
+          <div class="processing-card-desc">${escHtml(b.description || "")}</div>
+          <div class="processing-card-cost sub-text">Cost: ${escHtml(costParts)}</div>
+        </div>
+        <button class="btn-outline-sm build-processing-btn"
+                data-id="${escHtml(b.id)}" data-name="${escHtml(b.name)}"
+                ${b.can_afford ? "" : "disabled"}>
+          Build
+        </button>
+      </div>`;
+    }
+
+    // Built — show process control
+    const inputIcon  = { grapes: "🍇", grain: "🌾", olives: "🫒", honey: "🍯" }[b.input] || "📦";
+    const outputIcon = { wine: "🍷", bread: "🍞", olive_oil: "🫒", mead: "🍯" }[b.output] || "📦";
+    const maxBatch   = Math.max(1, Math.floor((b.input_held || 0) / (b.ratio || 2)));
+
+    return `<div class="processing-card processing-card-built">
+      <div class="processing-card-icon">${icon}</div>
+      <div class="processing-card-info">
+        <div class="processing-card-name">${escHtml(b.name)}</div>
+        <div class="processing-card-desc">
+          ${inputIcon} ${b.input_held || 0} ${escHtml(b.input)}
+          → ${outputIcon} ${escHtml(b.output)} (${b.ratio || 2}:1)
+          · You have ${b.output_held || 0} ${escHtml(b.output)}
+        </div>
+      </div>
+      <div class="processing-card-actions">
+        <input type="number" class="processing-amount-input" min="1" max="${maxBatch}"
+               value="1" style="width:52px" data-id="${escHtml(b.id)}">
+        <button class="btn-outline-sm process-goods-btn"
+                data-id="${escHtml(b.id)}" data-name="${escHtml(b.name)}"
+                data-input="${escHtml(b.input)}" data-output="${escHtml(b.output)}"
+                ${maxBatch >= 1 ? "" : "disabled"}>
+          Process
+        </button>
+      </div>
+    </div>`;
+  }).join("");
+
+  // Build handlers
+  listEl.querySelectorAll(".build-processing-btn").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      btn.disabled = true;
+      try {
+        const res = await api("/api/estate/processing/build", { building_id: btn.dataset.id });
+        estateState = res.state;
+        renderEstateResources();
+        toast(`${btn.dataset.name} built!`);
+        await initProcessing();
+      } catch (e) {
+        toast(e.message, 4000);
+        btn.disabled = false;
+      }
+    });
+  });
+
+  // Process handlers
+  listEl.querySelectorAll(".process-goods-btn").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const amtInput = listEl.querySelector(`.processing-amount-input[data-id="${btn.dataset.id}"]`);
+      const amount   = parseInt(amtInput?.value || "1", 10) || 1;
+      btn.disabled = true;
+      try {
+        const res = await api("/api/estate/processing/process",
+          { building_id: btn.dataset.id, amount });
+        estateState = res.state;
+        renderEstateResources();
+        const detail = res.result || {};
+        toast(`⚗️ ${detail.output_produced || amount} ${btn.dataset.output} produced!`);
+        await initProcessing();
+      } catch (e) {
+        toast(e.message, 4000);
+        btn.disabled = false;
+      }
+    });
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// BLESSINGS SYSTEM
+// ══════════════════════════════════════════════════════════════════════════════
+
+async function initBlessings() {
+  try {
+    const data = await api("/api/estate/blessings");
+    renderBlessings(data);
+  } catch (e) {
+    console.error("Blessings init failed:", e);
+  }
+}
+
+function renderBlessings(data) {
+  const listEl  = document.getElementById("blessings-list");
+  const chipEl  = document.getElementById("blessings-laurels-chip");
+  if (!listEl) return;
+
+  const blessings = data.blessings || [];
+  const laurels   = data.laurels   || 0;
+
+  if (chipEl) chipEl.textContent = `🌿 ${laurels} laurel${laurels === 1 ? "" : "s"}`;
+
+  if (!blessings.length) {
+    listEl.innerHTML = '<p class="dim-msg">No blessings available.</p>';
+    return;
+  }
+
+  listEl.innerHTML = blessings.map(b => {
+    // cost field may be cost_laurels or cost
+    const cost       = b.cost_laurels ?? b.cost ?? 1;
+    const remaining  = b.remaining ?? b.uses_remaining ?? 0;
+    const isActive   = b.active || remaining > 0;
+    const canAfford  = laurels >= cost;
+    const activeTag  = isActive ? `<span class="blessing-active-tag">ACTIVE ×${remaining}</span>` : "";
+
+    return `<div class="blessing-card ${isActive ? "blessing-card-active" : ""}">
+      <div class="blessing-card-icon">${escHtml(b.icon || "⭐")}</div>
+      <div class="blessing-card-info">
+        <div class="blessing-card-name">${escHtml(b.name)} ${activeTag}</div>
+        <div class="blessing-card-effect sub-text">${escHtml(b.effect)}</div>
+        <div class="blessing-card-cost sub-text">Cost: 🌿 ${cost} laurel${cost === 1 ? "" : "s"}</div>
+      </div>
+      <button class="btn-outline-sm activate-blessing-btn"
+              data-id="${escHtml(b.id)}" data-name="${escHtml(b.name)}"
+              ${canAfford && !isActive ? "" : "disabled"}>
+        ${isActive ? "Active" : "Invoke"}
+      </button>
+    </div>`;
+  }).join("");
+
+  listEl.querySelectorAll(".activate-blessing-btn").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      btn.disabled = true;
+      try {
+        const res = await api("/api/estate/blessing/activate", { blessing_id: btn.dataset.id });
+        estateState = res.state;
+        renderEstateResources();
+        toast(`🌟 ${btn.dataset.name} invoked!`);
+        await initBlessings();
+      } catch (e) {
+        toast(e.message, 4000);
+        btn.disabled = false;
+      }
+    });
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// FARM BUILD / UPGRADE DIALOGS
+// ══════════════════════════════════════════════════════════════════════════════
+
+let _farmBuildCell = null;   // {col, row} for pending build
+let _farmUpgradeCell = null; // {col, row, farm} for pending upgrade
+
+function showFarmBuildDialog(col, row) {
+  _farmBuildCell = { col, row };
+  document.getElementById("farm-build-title").textContent    = `🌾 Build Farm (${col}, ${row})`;
+  document.getElementById("farm-build-subtitle").textContent = "Choose what to plant on this plot.";
+  document.getElementById("farm-type-list").innerHTML = '<p class="dim-msg">Loading farm types…</p>';
+  document.getElementById("farm-build-overlay").hidden = false;
+
+  api("/api/estate/farm-types").then(resp => {
+    // endpoint returns { farm_types: [...] } or bare array
+    const types  = Array.isArray(resp) ? resp : (resp.farm_types || []);
+    const listEl = document.getElementById("farm-type-list");
+    if (!listEl) return;
+    listEl.innerHTML = types.map(t => {
+      const icon = FARM_ICON[t.id] || t.icon || "🌾";
+      // build_cost may be a plain number (from levels[0]) or object with drachmae key
+      const buildCost = typeof t.build_cost === "number"
+        ? t.build_cost
+        : (t.levels?.[0]?.build_cost ?? t.build_cost?.drachmae ?? 0);
+      const cost      = buildCost ? `🪙 ${buildCost}` : "Free";
+      const canAfford = !estateState || (estateState.drachmae ?? 0) >= buildCost;
+      const produces  = t.resource || t.produces || t.id;
+      return `<div class="farm-type-card">
+        <div class="farm-type-icon">${icon}</div>
+        <div class="farm-type-info">
+          <div class="farm-type-name">${escHtml(t.name)}</div>
+          <div class="farm-type-produce sub-text">Produces: ${escHtml(produces)}</div>
+          <div class="farm-type-cost sub-text">${escHtml(cost)}</div>
+        </div>
+        <button class="btn-outline-sm build-farm-type-btn"
+                data-farm-type="${escHtml(t.id)}" data-name="${escHtml(t.name)}"
+                data-cost="${buildCost}"
+                ${canAfford ? "" : "disabled"}>
+          Build
+        </button>
+      </div>`;
+    }).join("");
+
+    listEl.querySelectorAll(".build-farm-type-btn").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        if (!_farmBuildCell) return;
+        btn.disabled = true;
+        try {
+          const res = await api("/api/estate/farm/build", {
+            farm_type: btn.dataset.farmType,
+            col: _farmBuildCell.col,
+            row: _farmBuildCell.row,
+          });
+          estateState = res.state;
+          renderEstateResources();
+          renderEstateGridInteractive();
+          toast(`🌾 ${btn.dataset.name} planted!`);
+          hideFarmBuildDialog();
+        } catch (e) {
+          toast(e.message, 4000);
+          btn.disabled = false;
+        }
+      });
+    });
+  }).catch(e => {
+    document.getElementById("farm-type-list").innerHTML =
+      `<p class="dim-msg">Error: ${escHtml(e.message)}</p>`;
+  });
+}
+
+function hideFarmBuildDialog() {
+  document.getElementById("farm-build-overlay").hidden = true;
+  _farmBuildCell = null;
+}
+
+function showFarmUpgradeDialog(col, row, farm) {
+  _farmUpgradeCell = { col, row, farm };
+  const upgradeEl = document.getElementById("farm-upgrade-body");
+  const icon      = FARM_ICON[farm.farm_type] || "🌾";
+  const level     = farm.level || 1;
+  const upgCost   = farm.upgrade_cost || { drachmae: 150 };
+  const costStr   = Object.entries(upgCost)
+    .map(([k, v]) => `${k === "drachmae" ? "🪙" : ""} ${v} ${k === "drachmae" ? "" : k}`.trim())
+    .join(" · ");
+  const canAfford = !estateState || (estateState.drachmae ?? 0) >= (upgCost.drachmae ?? 0);
+
+  document.getElementById("farm-upgrade-title").textContent = `⬆️ Upgrade ${farm.farm_type?.replace("_", " ")}`;
+
+  if (upgradeEl) {
+    upgradeEl.innerHTML = level >= 3
+      ? `<p class="sub-text">This farm is already at maximum level (3).</p>`
+      : `<p class="sub-text">${icon} Level ${level} → Level ${level + 1}</p>
+         <div class="barracks-cost-row" style="margin-top:8px">
+           <span class="barracks-cost-label">Upgrade cost:</span>
+           <span class="barracks-cost-resources">${escHtml(costStr)}</span>
+         </div>`;
+  }
+
+  const confirmBtn = document.getElementById("confirm-farm-upgrade-btn");
+  if (confirmBtn) confirmBtn.disabled = level >= 3 || !canAfford;
+
+  document.getElementById("farm-upgrade-overlay").hidden = false;
+}
+
+function hideFarmUpgradeDialog() {
+  document.getElementById("farm-upgrade-overlay").hidden = true;
+  _farmUpgradeCell = null;
+}
+
+document.getElementById("confirm-farm-upgrade-btn")?.addEventListener("click", async () => {
+  if (!_farmUpgradeCell) return;
+  const btn = document.getElementById("confirm-farm-upgrade-btn");
+  btn.disabled = true;
+  try {
+    const res = await api("/api/estate/farm/upgrade", {
+      col: _farmUpgradeCell.col,
+      row: _farmUpgradeCell.row,
+    });
+    estateState = res.state;
+    renderEstateResources();
+    renderEstateGrid();
+    toast(`⬆️ Farm upgraded to Level ${(_farmUpgradeCell.farm.level || 1) + 1}!`);
+    hideFarmUpgradeDialog();
+  } catch (e) {
+    toast(e.message, 4000);
+    btn.disabled = false;
+  }
+});
+
+document.getElementById("close-farm-build-btn")?.addEventListener("click", hideFarmBuildDialog);
+document.getElementById("cancel-farm-build-btn")?.addEventListener("click", hideFarmBuildDialog);
+document.getElementById("farm-build-overlay")?.addEventListener("click", e => {
+  if (e.target === e.currentTarget) hideFarmBuildDialog();
+});
+document.getElementById("close-farm-upgrade-btn")?.addEventListener("click", hideFarmUpgradeDialog);
+document.getElementById("cancel-farm-upgrade-btn")?.addEventListener("click", hideFarmUpgradeDialog);
+document.getElementById("farm-upgrade-overlay")?.addEventListener("click", e => {
+  if (e.target === e.currentTarget) hideFarmUpgradeDialog();
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// BARRACKS REQUIREMENTS DISPLAY
+// ══════════════════════════════════════════════════════════════════════════════
+
+// Called from renderVilla when villa data includes barracks_unlock object
+function _renderBarracksRequirementsFromUnlock(unlock) {
+  const el = document.getElementById("barracks-requirements");
+  if (!el || !unlock) return;
+
+  const reqs = [
+    {
+      label:   `Earn ${unlock.laurels_needed} laurels`,
+      met:     unlock.laurels_have >= unlock.laurels_needed,
+      current: `${unlock.laurels_have} / ${unlock.laurels_needed}`,
+    },
+    {
+      label:   `Build ${unlock.farms_needed} farms`,
+      met:     unlock.farms_have >= unlock.farms_needed,
+      current: `${unlock.farms_have} / ${unlock.farms_needed}`,
+    },
+    {
+      label:   `Villa Level ${unlock.villa_level_needed}`,
+      met:     unlock.villa_have >= unlock.villa_level_needed,
+      current: `Lv ${unlock.villa_have}`,
+    },
+  ];
+
+  el.innerHTML = reqs.map(r =>
+    `<div class="barracks-req-row ${r.met ? "req-met" : "req-unmet"}">
+      <span class="barracks-req-icon">${r.met ? "✅" : "⬜"}</span>
+      <span class="barracks-req-label">${escHtml(r.label)}</span>
+      <span class="barracks-req-val">${escHtml(r.current)}</span>
+    </div>`
+  ).join("");
+}
+
+// Fallback version using estateState directly (called from renderArmy)
+function renderBarracksRequirements(data) {
+  // If villa data already provided richer unlock info, prefer that
+  const el = document.getElementById("barracks-requirements");
+  if (!el) return;
+
+  const laurels    = estateState?.laurels       ?? 0;
+  const farms      = estateState?.farms?.length ?? 0;
+  const villaLevel = estateState?.villa_level   ?? 1;
+
+  const reqs = [
+    { label: "Earn 3 laurels", met: laurels    >= 3, current: `${laurels} / 3`    },
+    { label: "Build 3 farms",  met: farms      >= 3, current: `${farms} / 3`      },
+    { label: "Villa Level 2",  met: villaLevel >= 2, current: `Lv ${villaLevel}`  },
+  ];
+
+  el.innerHTML = reqs.map(r =>
+    `<div class="barracks-req-row ${r.met ? "req-met" : "req-unmet"}">
+      <span class="barracks-req-icon">${r.met ? "✅" : "⬜"}</span>
+      <span class="barracks-req-label">${escHtml(r.label)}</span>
+      <span class="barracks-req-val">${escHtml(r.current)}</span>
+    </div>`
+  ).join("");
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ENHANCED ESTATE GRID (clickable tiles)
+// ══════════════════════════════════════════════════════════════════════════════
+
+function renderEstateGridInteractive() {
+  const el = document.getElementById("estate-grid");
+  if (!el || !estateState) return;
+  const farmMap = {};
+  (estateState.farms || []).forEach(f => { farmMap[`${f.col},${f.row}`] = f; });
+  let html = '<div class="estate-grid-inner">';
+  for (let row = 0; row < ESTATE_ROWS; row++) {
+    for (let col = 0; col < ESTATE_COLS; col++) {
+      const farm  = farmMap[`${col},${row}`];
+      const type  = farm ? farm.farm_type : "empty";
+      const icon  = farm ? (FARM_ICON[type] || "🟩") : "＋";
+      const lvl   = farm ? `L${farm.level || 1}` : "";
+      const bg    = FARM_COLOR[type] || FARM_COLOR.empty;
+      const title = farm
+        ? `${type.replace(/_/g, " ")} (Level ${farm.level || 1}) — click to upgrade`
+        : "Empty plot — click to build";
+      html += `<div class="estate-tile estate-tile-interactive"
+                    style="background:${bg}"
+                    title="${title}"
+                    data-col="${col}" data-row="${row}"
+                    data-farm-type="${farm ? type : ""}">
+        <span class="estate-tile-icon">${icon}</span>
+        <span class="estate-tile-lvl">${lvl}</span>
+      </div>`;
+    }
+  }
+  html += "</div>";
+  el.innerHTML = html;
+
+  // Attach click handlers
+  el.querySelectorAll(".estate-tile-interactive").forEach(tile => {
+    tile.addEventListener("click", () => {
+      const col      = parseInt(tile.dataset.col, 10);
+      const row      = parseInt(tile.dataset.row, 10);
+      const farmType = tile.dataset.farmType;
+      if (farmType) {
+        // Occupied — upgrade dialog
+        const farm = farmMap[`${col},${row}`];
+        if (farm) showFarmUpgradeDialog(col, row, farm);
+      } else {
+        // Empty — build dialog
+        showFarmBuildDialog(col, row);
+      }
+    });
+  });
+}
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 window.addEventListener("load", () => { refresh(); initEstate(); });

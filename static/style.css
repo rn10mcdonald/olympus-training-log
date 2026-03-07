@@ -1960,3 +1960,578 @@ body {
   margin-top: -4px;
 }
 .encounter-skip-btn:hover { color: var(--text); }
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   BARRACKS + ARMY SYSTEM
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+.barracks-cost-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(201,176,55,0.06);
+  border: 1px solid rgba(201,176,55,0.16);
+  border-radius: 8px;
+  padding: 8px 12px;
+  flex-wrap: wrap;
+}
+
+.barracks-cost-label {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  font-family: var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.barracks-cost-resources {
+  font-size: 0.85rem;
+  color: var(--gold);
+  font-family: var(--mono);
+}
+
+/* Army stats row */
+.army-stats-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.army-stat-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: var(--surface-hi);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 14px;
+  flex: 1;
+}
+
+.army-stat-label {
+  font-size: 0.68rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-family: var(--mono);
+}
+
+.army-stat-val {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--gold);
+  margin-top: 2px;
+}
+
+/* Unit list (current army) */
+.unit-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.unit-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: var(--surface-hi);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.unit-card-icon {
+  font-size: 1.6rem;
+  line-height: 1;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.unit-card-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.unit-card-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.unit-card-count {
+  font-size: 0.80rem;
+  color: var(--text-dim);
+  margin-left: 6px;
+}
+
+.unit-card-stat {
+  font-size: 0.78rem;
+  color: var(--gold);
+  font-family: var(--mono);
+}
+
+.unit-card-flavor {
+  font-size: 0.74rem;
+  color: var(--text-dim);
+  font-style: italic;
+  margin-top: 1px;
+}
+
+/* Recruit section */
+.recruit-section {
+  margin-top: 16px;
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+}
+
+.recruit-section-header {
+  font-size: 0.82rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  font-family: var(--mono);
+  margin-bottom: 10px;
+}
+
+.recruit-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.recruit-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--surface-hi);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 9px 12px;
+}
+
+.recruit-card-icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.recruit-card-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.recruit-card-name {
+  font-size: 0.90rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.recruit-card-stat {
+  font-size: 0.75rem;
+  color: var(--gold);
+  font-family: var(--mono);
+}
+
+.recruit-card-cost {
+  font-size: 0.73rem;
+  color: var(--text-dim);
+  font-family: var(--mono);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   CAMPAIGN MAP DIALOG
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+.campaign-dialog {
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.campaign-army-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(201,176,55,0.07);
+  border: 1px solid rgba(201,176,55,0.18);
+  border-radius: 10px;
+  padding: 10px 16px;
+  margin-bottom: 8px;
+}
+
+.campaign-army-icon {
+  font-size: 1.6rem;
+  flex-shrink: 0;
+}
+
+.campaign-army-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.campaign-army-label {
+  font-size: 0.70rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-family: var(--mono);
+}
+
+.campaign-army-val {
+  font-size: 1.3rem;
+  color: var(--gold);
+}
+
+.campaign-cost-note {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  font-family: var(--mono);
+  margin-bottom: 12px;
+}
+
+.campaign-region-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  flex: 1;
+  padding-right: 2px;
+}
+
+.region-card {
+  background: var(--surface-hi);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: border-color 0.2s;
+}
+
+.region-card.region-winnable {
+  border-color: rgba(70,185,70,0.35);
+}
+
+.region-card.region-tough {
+  border-color: rgba(220,80,80,0.25);
+}
+
+.region-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.region-card-info {
+  flex: 1;
+}
+
+.region-card-name {
+  font-size: 1.0rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.region-card-desc {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  font-style: italic;
+  margin-top: 3px;
+  line-height: 1.4;
+}
+
+.region-card-difficulty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.region-diff-label {
+  font-size: 0.65rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-family: var(--mono);
+}
+
+.region-diff-val {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.region-diff-indicator {
+  font-size: 1rem;
+}
+
+.region-card-rewards {
+  display: flex;
+  gap: 14px;
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  font-family: var(--mono);
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+}
+
+.region-card-rewards span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.launch-campaign-btn {
+  width: 100%;
+  justify-content: center;
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   VILLA SYSTEM
+   ════════════════════════════════════════════════════════════════════════════ */
+
+.villa-status-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.villa-level-badge {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--gold);
+  font-family: var(--mono);
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   PROCESSING BUILDINGS
+   ════════════════════════════════════════════════════════════════════════════ */
+
+.processing-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.processing-card:last-child { border-bottom: none; }
+
+.processing-card-built {
+  flex-wrap: wrap;
+}
+
+.processing-card-icon {
+  font-size: 1.8rem;
+  flex-shrink: 0;
+  width: 36px;
+  text-align: center;
+}
+
+.processing-card-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.processing-card-name {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.processing-card-desc {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  margin-top: 2px;
+  font-family: var(--mono);
+}
+
+.processing-card-cost {
+  margin-top: 2px;
+}
+
+.processing-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.processing-amount-input {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  padding: 4px 6px;
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   BLESSINGS SYSTEM
+   ════════════════════════════════════════════════════════════════════════════ */
+
+.blessing-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.blessing-card:last-child { border-bottom: none; }
+
+.blessing-card-active {
+  background: rgba(212, 175, 55, 0.06);
+  border-radius: 8px;
+  padding: 10px 8px;
+  margin: 0 -8px;
+}
+
+.blessing-card-icon {
+  font-size: 1.8rem;
+  flex-shrink: 0;
+  width: 36px;
+  text-align: center;
+}
+
+.blessing-card-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.blessing-card-name {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.blessing-active-tag {
+  font-size: 0.65rem;
+  font-family: var(--mono);
+  color: var(--gold);
+  background: rgba(212, 175, 55, 0.15);
+  border: 1px solid var(--gold);
+  border-radius: 4px;
+  padding: 1px 5px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.blessing-card-effect {
+  margin-top: 2px;
+}
+
+.blessing-card-cost {
+  margin-top: 2px;
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   FARM BUILD DIALOG
+   ════════════════════════════════════════════════════════════════════════════ */
+
+.farm-type-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.farm-type-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.farm-type-card:last-child { border-bottom: none; }
+
+.farm-type-icon {
+  font-size: 1.8rem;
+  flex-shrink: 0;
+  width: 36px;
+  text-align: center;
+}
+
+.farm-type-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.farm-type-name {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.farm-type-produce,
+.farm-type-cost {
+  margin-top: 2px;
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   ESTATE GRID — INTERACTIVE
+   ════════════════════════════════════════════════════════════════════════════ */
+
+.estate-tile-interactive {
+  cursor: pointer;
+  transition: filter 0.15s, transform 0.1s;
+}
+
+.estate-tile-interactive:hover {
+  filter: brightness(1.35);
+  transform: scale(1.07);
+  z-index: 2;
+  position: relative;
+}
+
+.estate-tile-interactive:active {
+  transform: scale(0.97);
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   BARRACKS REQUIREMENTS
+   ════════════════════════════════════════════════════════════════════════════ */
+
+.barracks-req-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 0.82rem;
+}
+
+.barracks-req-icon {
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.barracks-req-label {
+  flex: 1;
+  color: var(--text-dim);
+}
+
+.req-met .barracks-req-label {
+  color: var(--success);
+}
+
+.barracks-req-val {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  flex-shrink: 0;
+}
+
+.req-met .barracks-req-val {
+  color: var(--success);
+}

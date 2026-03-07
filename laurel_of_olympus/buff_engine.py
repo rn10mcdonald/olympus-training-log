@@ -28,10 +28,15 @@ from laurel_of_olympus import creature_engine, relic_engine
 
 def get_all_buffs(state: PlayerState) -> dict:
     """
-    Merge sanctuary creature buffs and relic buffs.
+    Merge sanctuary creature buffs, relic buffs, and active blessings.
 
     For multiplier keys: buffs multiply together.
     For additive keys ("event_chance", "laurel_bonus"): values sum.
+
+    Active blessing buff keys:
+        "blessing_hermes"  → workout_running multiplier (+30%)
+        "blessing_demeter" → all_farms multiplier (+50%)
+        "blessing_ares"    → army_strength multiplier (+50%)
     """
     c_buffs = creature_engine.get_sanctuary_buffs(state)
     r_buffs = relic_engine.get_relic_buffs(state)
@@ -42,6 +47,18 @@ def get_all_buffs(state: PlayerState) -> dict:
             merged[key] = merged.get(key, 0) + val
         else:
             merged[key] = merged.get(key, 1.0) * val
+
+    # Apply active blessings (MISS-4)
+    active = getattr(state, "active_blessings", {}) or {}
+    if active.get("hermes", 0) > 0:
+        merged["workout_running"] = merged.get("workout_running", 1.0) * 1.30
+        merged["blessing_hermes"] = True   # flag for simulate-workout to consume
+    if active.get("demeter", 0) > 0:
+        merged["all_farms"] = merged.get("all_farms", 1.0) * 1.50
+        merged["blessing_demeter"] = True  # flag for farm production to consume
+    if active.get("ares", 0) > 0:
+        merged["army_strength"] = merged.get("army_strength", 1.0) * 1.50
+        merged["blessing_ares"] = True     # flag for campaign to consume
 
     return merged
 
@@ -58,9 +75,16 @@ def apply_farm_buff(buffs: dict, farm_type: str, base_amount: int) -> int:
 
 
 def apply_workout_buff(buffs: dict, workout_type: str, base_reward: float) -> float:
-    """Scale a workout drachmae reward by the relevant workout multiplier."""
-    mult = buffs.get(f"workout_{workout_type}", 1.0)
-    return round(base_reward * mult, 2)
+    """
+    Scale a workout drachmae reward by the relevant workout multiplier.
+
+    Applies both the type-specific multiplier (e.g. "workout_running") and the
+    all-workout multiplier ("workout_all") from drachmae_gain / all_rewards buffs.
+    Both are combined multiplicatively.
+    """
+    type_mult = buffs.get(f"workout_{workout_type}", 1.0)
+    all_mult  = buffs.get("workout_all", 1.0)
+    return round(base_reward * type_mult * all_mult, 2)
 
 
 def effective_event_chance(buffs: dict, base_chance: float) -> float:

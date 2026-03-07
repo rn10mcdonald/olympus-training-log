@@ -1,0 +1,61 @@
+{
+  "army_limits": {
+    "barracks_level_1": 10,
+    "villa_level_3": 20,
+    "temple_future": 30
+  },
+
+  "units": [
+    {
+      "id": "hoplite",
+      "name": "Hoplite",
+      "rarity": "common",
+      "strength": 10,
+      "cost": {
+        "drachmae": 120,
+        "grain": 8
+      },
+      "description": "The backbone of every Greek army.",
+      "sprite": "hoplite_idle.png"
+    },
+    {
+      "id": "archer",
+      "name": "Archer",
+      "rarity": "common",
+      "strength": 12,
+      "cost": {
+        "drachmae": 140,
+        "grain": 5,
+        "olive_oil": 5
+      },
+      "description": "Ranged support that softens enemy ranks.",
+      "sprite": "archer_idle.png"
+    },
+    {
+      "id": "cavalry",
+      "name": "Cavalry",
+      "rarity": "rare",
+      "strength": 18,
+      "cost": {
+        "drachmae": 220,
+        "grain": 10,
+        "wine": 4
+      },
+      "description": "Fast moving shock troops.",
+      "sprite": "cavalry_idle.png"
+    },
+    {
+      "id": "myrmidon_captain",
+      "name": "Myrmidon Captain",
+      "rarity": "epic",
+      "strength": 25,
+      "cost": {
+        "drachmae": 300,
+        "grain": 15,
+        "wine": 5
+      },
+      "description": "Elite warriors rumored to serve Achilles.",
+      "sprite": "myrmidon_captain_idle.png"
+    }
+  ]
+}
