@@ -135,11 +135,18 @@ def _build_philosopher() -> dict:
 
 
 def _build_rare() -> dict:
+    # DEV-4: Use rare_event_lines, NOT kassandra_laugh_event
+    # kassandra_laugh_event is reserved for the actual Kassandra Break ultra-rare
+    lines = _pick(_FLAVOR.get("rare_event_lines", [
+        "The air shifts strangely about the estate.",
+        "A raven circles the hill twice, then departs.",
+        "The scroll shivers in your hand, as if something passes nearby.",
+    ]), 2)
     return {
         "type":  "rare",
         "title": "Something Unusual Occurs",
         "icon":  "✨",
-        "lines": list(_FLAVOR["kassandra_laugh_event"]),
+        "lines": lines,
     }
 
 

@@ -74,6 +74,19 @@ _VICTORY_LINES: List[str] = _FLAVOR.get("victory_lines", [
 
 BARRACKS_COST: Dict[str, int] = {"drachmae": 600, "grain": 40, "wine": 10}
 
+# Villa upgrade costs per level (key = resulting level)
+VILLA_UPGRADE_COSTS: Dict[int, Dict[str, int]] = {
+    2: {"drachmae": 400, "grain": 20, "wine": 5},
+    3: {"drachmae": 800, "grain": 40, "wine": 15},
+}
+# Army limit per villa level (from army_units.json army_limits)
+_VILLA_ARMY_LIMITS: Dict[int, int] = {
+    1: 10,
+    2: _ARMY_LIMITS.get("villa_level_3", 20),  # 20
+    3: _ARMY_LIMITS.get("temple_future", 30),  # 30
+}
+
+
 UNIT_ICONS: Dict[str, str] = {
     "hoplite":          "⚔️",
     "archer":           "🏹",
@@ -115,10 +128,28 @@ def build_barracks(state: PlayerState) -> Tuple[bool, str]:
     """
     Construct a Barracks on the estate.
     Cost: 600 drachmae + 40 grain + 10 wine.
+    Unlock requirements: 3 laurels, level 2 villa, at least 3 farms.
     Returns (success, message).
     """
     if state.barracks_built:
         return False, "The Barracks is already standing."
+
+    # Design-doc unlock requirements
+    if state.laurels < 3:
+        return False, (
+            f"The Oracle requires 3 laurels before you may raise an army "
+            f"(you have {state.laurels})."
+        )
+    if len(state.farms) < 3:
+        return False, (
+            f"Your estate needs at least 3 farms to support an army "
+            f"(you have {len(state.farms)})."
+        )
+    if getattr(state, "villa_level", 1) < 2:
+        return False, (
+            "You must upgrade your Villa to level 2 before building a Barracks."
+        )
+
     # Resource checks
     if state.drachmae < BARRACKS_COST["drachmae"]:
         return False, (
@@ -135,6 +166,7 @@ def build_barracks(state: PlayerState) -> Tuple[bool, str]:
             f"Not enough wine. Need {BARRACKS_COST['wine']} "
             f"(have {state.wine})."
         )
+
     # Deduct cost
     state.drachmae  = round(state.drachmae - BARRACKS_COST["drachmae"], 2)
     state.grain    -= BARRACKS_COST["grain"]
@@ -142,6 +174,62 @@ def build_barracks(state: PlayerState) -> Tuple[bool, str]:
     state.barracks_built = True
     state.army_limit = _ARMY_LIMITS["barracks_level_1"]  # 10
     return True, "Barracks constructed. Soldiers may now be recruited."
+
+
+def upgrade_villa(state: PlayerState) -> Tuple[bool, str]:
+    """
+    Upgrade the Villa to the next level.
+    Level 1 → 2: 400 dr + 20 grain + 5 wine
+    Level 2 → 3: 800 dr + 40 grain + 15 wine
+    Returns (success, message).
+    """
+    current = getattr(state, "villa_level", 1)
+    next_level = current + 1
+    if next_level not in VILLA_UPGRADE_COSTS:
+        return False, "Your Villa is already at maximum level."
+
+    cost = VILLA_UPGRADE_COSTS[next_level]
+    dr_cost    = cost.get("drachmae", 0)
+    grain_cost = cost.get("grain", 0)
+    wine_cost  = cost.get("wine", 0)
+
+    if state.drachmae < dr_cost:
+        return False, f"Need {dr_cost:.0f} drachmae (have {state.drachmae:.0f})."
+    if state.grain < grain_cost:
+        return False, f"Need {grain_cost} grain (have {state.grain})."
+    if state.wine < wine_cost:
+        return False, f"Need {wine_cost} wine (have {state.wine})."
+
+    state.drachmae -= dr_cost
+    state.grain    -= grain_cost
+    state.wine     -= wine_cost
+    state.villa_level = next_level
+
+    # Expand army limit if barracks already built
+    if state.barracks_built:
+        state.army_limit = _VILLA_ARMY_LIMITS.get(next_level, state.army_limit)
+
+    return True, f"🏛️ Villa upgraded to level {next_level}!"
+
+
+def check_army_unlock_hint(state: PlayerState) -> bool:
+    """
+    Returns True (once) if the player just hit all three army unlock conditions
+    and the narrative hint has not yet been delivered.
+    Sets state.army_unlock_suggested = True when triggered.
+    """
+    if getattr(state, "army_unlock_suggested", False):
+        return False
+    if state.barracks_built:
+        return False
+    if (
+        state.laurels >= 3
+        and len(state.farms) >= 3
+        and getattr(state, "villa_level", 1) >= 2
+    ):
+        state.army_unlock_suggested = True
+        return True
+    return False
 
 
 # ---------------------------------------------------------------------------

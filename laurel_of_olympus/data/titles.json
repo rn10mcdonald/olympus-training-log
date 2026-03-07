@@ -3,115 +3,160 @@
     {
       "id": "consistent_mortal",
       "name": "Consistent Mortal",
-      "condition": "complete 6 workouts within 14 days"
+      "condition": {"type": "laurels", "count": 1}
     },
     {
       "id": "persistent_hero",
       "name": "Persistent Hero",
-      "condition": "earn 5 laurels"
+      "condition": {"type": "laurels", "count": 5}
     },
     {
       "id": "relentless_champion",
       "name": "Relentless Champion",
-      "condition": "earn 10 laurels"
+      "condition": {"type": "laurels", "count": 10}
     },
     {
       "id": "discipline_of_olympus",
       "name": "Disciple of Olympus",
-      "condition": "earn 20 laurels"
+      "condition": {"type": "laurels", "count": 20}
     }
   ],
   "workout": [
     {
-      "id": "runner_of_hermes",
-      "name": "Runner of Hermes",
-      "condition": "complete 30 runs"
+      "id": "jogging_mortal",
+      "name": "Jogging Mortal",
+      "condition": {"type": "workout_count", "workout": "running", "count": 5}
     },
     {
-      "id": "bearer_of_the_ruck",
-      "name": "Bearer of the Pack",
-      "condition": "complete 30 rucks"
+      "id": "runner_of_hermes",
+      "name": "Runner of Hermes",
+      "condition": {"type": "workout_count", "workout": "running", "count": 20}
+    },
+    {
+      "id": "messenger_of_hermes",
+      "name": "Messenger of Hermes",
+      "condition": {"type": "workout_count", "workout": "running", "count": 50}
+    },
+    {
+      "id": "wind_of_olympus",
+      "name": "Wind of Olympus",
+      "condition": {"type": "workout_count", "workout": "running", "count": 100}
+    },
+    {
+      "id": "bearer_of_bronze",
+      "name": "Bearer of Bronze",
+      "condition": {"type": "workout_count", "workout": "strength", "count": 5}
     },
     {
       "id": "disciple_of_heracles",
       "name": "Disciple of Heracles",
-      "condition": "complete 30 strength workouts"
+      "condition": {"type": "workout_count", "workout": "strength", "count": 20}
     },
     {
-      "id": "walker_of_the_hills",
-      "name": "Walker of the Hills",
-      "condition": "complete 30 walks"
+      "id": "strength_of_heracles",
+      "name": "Strength of Heracles",
+      "condition": {"type": "workout_count", "workout": "strength", "count": 60}
+    },
+    {
+      "id": "bearer_of_the_ruck",
+      "name": "Bearer of the Pack",
+      "condition": {"type": "workout_count", "workout": "rucking", "count": 5}
+    },
+    {
+      "id": "roadwarden",
+      "name": "Roadwarden",
+      "condition": {"type": "workout_count", "workout": "rucking", "count": 20}
+    },
+    {
+      "id": "warden_of_the_long_road",
+      "name": "Warden of the Long Road",
+      "condition": {"type": "workout_count", "workout": "rucking", "count": 60}
+    },
+    {
+      "id": "walking_philosopher",
+      "name": "Walking Philosopher",
+      "condition": {"type": "workout_count", "workout": "walking", "count": 5}
+    },
+    {
+      "id": "student_of_socrates",
+      "name": "Student of Socrates",
+      "condition": {"type": "workout_count", "workout": "walking", "count": 30}
     }
   ],
   "estate": [
     {
-      "id": "keeper_of_the_fields",
-      "name": "Keeper of the Fields",
-      "condition": "build 2 farms"
+      "id": "caretaker_of_dirt",
+      "name": "Caretaker of Dirt",
+      "condition": {"type": "farms_built", "count": 1}
     },
     {
-      "id": "master_of_the_vineyard",
-      "name": "Master of the Vineyard",
-      "condition": "own a vineyard and produce wine"
+      "id": "keeper_of_the_fields",
+      "name": "Keeper of the Fields",
+      "condition": {"type": "farms_built", "count": 2}
     },
     {
       "id": "guardian_of_the_grove",
       "name": "Guardian of the Grove",
-      "condition": "own an olive grove"
+      "condition": {"type": "has_farm_type", "farm_type": "olive_grove"}
+    },
+    {
+      "id": "master_of_the_vineyard",
+      "name": "Master of the Vineyard",
+      "condition": {"type": "has_farm_type", "farm_type": "vineyard"}
+    },
+    {
+      "id": "steward_of_the_estate",
+      "name": "Steward of the Estate",
+      "condition": {"type": "farms_built", "count": 4}
     },
     {
       "id": "lord_of_the_estate",
       "name": "Lord of the Estate",
-      "condition": "build 5 farm structures"
+      "condition": {"type": "farms_built", "count": 7}
     }
   ],
   "legendary": [
     {
-      "id": "favorite_of_kassandra",
-      "name": "Favorite of Kassandra",
-      "condition": "trigger the Kassandra Breaks Composure event"
-    },
-    {
       "id": "hero_of_olympus",
       "name": "Hero of Olympus",
-      "condition": "reach 25 laurels"
+      "condition": {"type": "laurels", "count": 25}
     },
     {
       "id": "champion_of_the_gods",
       "name": "Champion of the Gods",
-      "condition": "win 20 campaigns"
+      "condition": {"type": "campaigns_won", "count": 20}
     }
   ],
   "secret": [
     {
+      "id": "acting_suspiciously_roman",
+      "name": "Acting Suspiciously Roman",
+      "condition": {"type": "secret", "trigger": "14_day_gap"}
+    },
+    {
       "id": "cardio_bunny",
       "name": "Cardio Bunny",
-      "condition": "only running workouts for 30 days"
+      "condition": {"type": "secret", "trigger": "cardio_bunny"}
     },
     {
       "id": "champion_of_chest_day",
       "name": "Champion of Chest Day",
-      "condition": "7 strength workouts with no leg exercises"
+      "condition": {"type": "secret", "trigger": "champion_of_chest_day"}
     },
     {
       "id": "wino",
       "name": "Wino",
-      "condition": "hold 20 wine in inventory for 7 days"
+      "condition": {"type": "inventory_count", "resource": "wine", "count": 20}
     },
     {
       "id": "relic_hoarder",
       "name": "Relic Hoarder",
-      "condition": "hold 10 relics"
-    },
-    {
-      "id": "acting_suspiciously_roman",
-      "name": "Acting Suspiciously Roman",
-      "condition": "no workouts for 14 days"
+      "condition": {"type": "relics_held", "count": 10}
     },
     {
       "id": "legs_remain_theoretical",
       "name": "Whose Legs Remain Theoretical",
-      "condition": "strength workouts with no leg movements for 30 days"
+      "condition": {"type": "secret", "trigger": "legs_remain_theoretical"}
     }
   ]
 }

@@ -39,7 +39,8 @@ for _cat, _items in _TITLES_RAW.items():
     for _t in _items:
         _ALL_TITLES[_t["id"]] = {**_t, "category": _cat}
 
-# Extra title not in titles.json — awarded by oracle_engine's rare event
+# Extra title not in titles.json — awarded externally by oracle_engine / app.py
+# Injected into the Prophecy Scroll legendary section for display.
 _EXTRA_TITLES: Dict[str, dict] = {
     "favorite_of_kassandra": {
         "id":        "favorite_of_kassandra",
@@ -61,11 +62,11 @@ _CATEGORY_LABELS: Dict[str, str] = {
 # Oracle phase labels (mirrors oracle_engine._PHASES)
 _ORACLE_PHASE_NAMES: Dict[int, str] = {
     0: "Stranger",
-    1: "The Oracle Sees You",
-    2: "Familiar Mortal",
-    3: "Favored Mortal",
-    4: "Kassandra Notices",
-    5: "Kassandra, Ally",
+    1: "The Oracle of Delphi",
+    2: "Irritated Oracle of Delphi",
+    3: "Irritated Oracle of Delphi",
+    4: "Maybe Impressed Oracle of Delphi",
+    5: "Kassandra",
 }
 
 
@@ -102,14 +103,32 @@ def _evaluate_condition(state: PlayerState, cond: dict) -> bool:
         required = cond.get("level", 9999)
         return any(f.get("level", 1) >= required for f in state.farms)
 
+    if ctype == "has_farm_type":
+        farm_type = cond.get("farm_type", "")
+        return any(f.get("farm_type") == farm_type for f in state.farms)
+
+    if ctype == "relics_held":
+        return len(state.relics) >= cond.get("count", 9999)
+
+    if ctype == "inventory_count":
+        resource = cond.get("resource", "")
+        return getattr(state, resource, 0) >= cond.get("count", 9999)
+
+    if ctype == "campaigns_won":
+        return getattr(state, "campaigns_won", 0) >= cond.get("count", 9999)
+
     if ctype == "secret":
         trigger = cond.get("trigger", "")
         if trigger == "14_day_gap":
-            return _days_since_last_workout(state) >= 14
+            # Must have worked out before, then gone 14 days without
+            return bool(state.last_workout_date) and _days_since_last_workout(state) >= 14
         if trigger == "kassandra_break":
-            # This is set externally by oracle_engine / app.py
+            # Set externally by oracle_engine / app.py
             return "favorite_of_kassandra" in state.titles_unlocked
-        # Other secret triggers not yet implemented
+        # cardio_bunny, champion_of_chest_day, legs_remain_theoretical
+        # require additional workout-level tracking — set externally when triggered
+        if trigger in state.titles_unlocked:
+            return True
         return False
 
     return False
@@ -118,28 +137,33 @@ def _evaluate_condition(state: PlayerState, cond: dict) -> bool:
 # ---------------------------------------------------------------------------
 # Tier ordering within each category (for combined title display)
 # highest-tier first — matches descending difficulty
+# Synced with IDs in data/titles.json
 # ---------------------------------------------------------------------------
 _CATEGORY_TIER_ORDER: Dict[str, List[str]] = {
     "consistency": [
-        "laureled_champion", "favored_of_the_fates", "persistent_hero",
-        "disciplined_mortal", "occasionally_motivated",
+        "discipline_of_olympus", "relentless_champion",
+        "persistent_hero", "consistent_mortal",
     ],
     "workout": [
-        "wind_of_olympus", "runner_of_hermes", "jogging_mortal",
-        "warden_of_the_long_road", "bearer_of_the_pack",
-        "disciple_of_heracles", "bearer_of_bronze",
-        "walking_philosopher",
+        # Running (highest first)
+        "wind_of_olympus", "messenger_of_hermes", "runner_of_hermes", "jogging_mortal",
+        # Strength
+        "strength_of_heracles", "disciple_of_heracles", "bearer_of_bronze",
+        # Rucking
+        "warden_of_the_long_road", "roadwarden", "bearer_of_the_ruck",
+        # Walking
+        "student_of_socrates", "walking_philosopher",
     ],
     "estate": [
-        "lord_of_the_fields", "steward_of_the_estate",
-        "keeper_of_the_grove", "caretaker_of_dirt",
+        "lord_of_the_estate", "steward_of_the_estate", "master_of_the_vineyard",
+        "guardian_of_the_grove", "keeper_of_the_fields", "caretaker_of_dirt",
     ],
     "legendary": [
-        "hero_of_the_prophecy", "champion_of_olympus", "favorite_of_kassandra",
+        "hero_of_olympus", "champion_of_the_gods", "favorite_of_kassandra",
     ],
     "secret": [
         "acting_suspiciously_roman", "cardio_bunny", "champion_of_chest_day",
-        "wino", "relic_hoarder", "olive_purist", "merchants_nightmare",
+        "wino", "relic_hoarder", "legs_remain_theoretical",
     ],
 }
 
@@ -248,17 +272,41 @@ def _condition_to_string(cond: Any) -> str:
     if ctype == "laurels":
         return f"Earn {cond['count']} laurel{'s' if cond['count'] != 1 else ''}"
     if ctype == "workout_count":
-        return f"Complete {cond['count']} {cond.get('workout', '')} sessions"
+        wt = cond.get("workout", "")
+        labels = {
+            "running": "runs", "rucking": "rucks",
+            "strength": "strength workouts", "walking": "walks",
+        }
+        return f"Complete {cond['count']} {labels.get(wt, wt + ' sessions')}"
     if ctype == "farms_built":
         return f"Build {cond['count']} farm{'s' if cond['count'] != 1 else ''}"
     if ctype == "farm_level":
         return f"Upgrade any farm to level {cond['level']}"
+    if ctype == "has_farm_type":
+        names = {
+            "grain_field": "a Grain Field", "vineyard": "a Vineyard",
+            "olive_grove": "an Olive Grove", "apiary": "an Apiary",
+            "herb_garden": "a Herb Garden",
+        }
+        return f"Own {names.get(cond.get('farm_type', ''), cond.get('farm_type', ''))}"
+    if ctype == "relics_held":
+        return f"Hold {cond['count']} relics simultaneously"
+    if ctype == "inventory_count":
+        return f"Have {cond['count']} {cond.get('resource', 'resource')} in inventory"
+    if ctype == "campaigns_won":
+        return f"Win {cond['count']} campaign{'s' if cond['count'] != 1 else ''}"
     if ctype == "secret":
         trigger = cond.get("trigger", "")
         if trigger == "14_day_gap":
             return "Go 14 days without a workout"
         if trigger == "kassandra_break":
             return "Witness Kassandra break composure"
+        if trigger == "cardio_bunny":
+            return "Only run for 30 days straight"
+        if trigger == "champion_of_chest_day":
+            return "7 strength workouts with no leg exercises"
+        if trigger == "legs_remain_theoretical":
+            return "30 days of strength with no leg movements"
         return "Secret unlock condition"
     return "???"
 

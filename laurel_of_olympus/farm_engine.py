@@ -1,11 +1,22 @@
 """
-farm_engine.py – Daily farm resource production.
+farm_engine.py – Farm construction, upgrading, and daily resource production.
 
 Key rule (balance_table.txt):
     Farms produce ONCE per day when the player completes their FIRST workout.
     Additional workouts on the same day do NOT trigger additional production.
 
 Public API:
+    get_all_farm_types() -> list[dict]
+        Return all farm type definitions from farms.json.
+
+    build_farm(state, farm_type, col, row) -> (bool, str)
+        Construct a new farm on the estate grid.
+        Deducts the build_cost from state.drachmae.
+
+    upgrade_farm(state, col, row) -> (bool, str)
+        Upgrade an existing farm tile to the next level.
+        Deducts the upgrade_cost from state.drachmae.
+
     produce_farms(state, buffs=None) -> list[str]
         Checks whether production should run today, runs it if so,
         returns list of event strings.
@@ -16,9 +27,18 @@ Public API:
 from __future__ import annotations
 
 import datetime as dt
-from typing import Dict, List, Optional
+import json
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple
 
 from laurel_of_olympus.game_state import PlayerState
+
+# ---------------------------------------------------------------------------
+# Load farms.json for build / upgrade costs
+# ---------------------------------------------------------------------------
+_DATA_DIR = Path(__file__).parent / "data"
+_FARMS_RAW: List[dict] = json.loads((_DATA_DIR / "farms.json").read_text())
+_FARM_TYPE_MAP: Dict[str, dict] = {f["id"]: f for f in _FARMS_RAW}
 
 # ---------------------------------------------------------------------------
 # Production tables (balance_table.txt)
@@ -105,3 +125,90 @@ def produce_farms(state: PlayerState, buffs: Optional[dict] = None) -> List[str]
         events.append("[Farm harvest] No farms built yet.")
 
     return events
+
+
+# ---------------------------------------------------------------------------
+# Farm construction and upgrading
+# ---------------------------------------------------------------------------
+
+def get_all_farm_types() -> List[dict]:
+    """Return all farm type definitions from farms.json."""
+    return list(_FARMS_RAW)
+
+
+def build_farm(
+    state: PlayerState, farm_type: str, col: int, row: int
+) -> Tuple[bool, str]:
+    """
+    Construct a new farm on the estate grid.
+    Deducts the build_cost (drachmae) from state.drachmae.
+    Returns (success, message).
+    """
+    farm_def = _FARM_TYPE_MAP.get(farm_type)
+    if not farm_def:
+        return False, f"Unknown farm type: {farm_type}"
+
+    # Prevent duplicate tiles at the same grid position
+    for f in state.farms:
+        if f.get("col") == col and f.get("row") == row:
+            return False, "That plot is already occupied."
+
+    build_cost = farm_def["levels"][0]["build_cost"]
+    if build_cost is None:
+        return False, f"Cannot build {farm_def['name']} directly."
+
+    if state.drachmae < build_cost:
+        return False, (
+            f"Need {build_cost} drachmae to build a {farm_def['name']} "
+            f"(have {state.drachmae:.0f})."
+        )
+
+    state.drachmae = round(state.drachmae - build_cost, 2)
+    state.farms.append({
+        "farm_type": farm_type,
+        "level":     1,
+        "col":       col,
+        "row":       row,
+    })
+    return True, f"{farm_def['icon']} {farm_def['name']} built!"
+
+
+def upgrade_farm(
+    state: PlayerState, col: int, row: int
+) -> Tuple[bool, str]:
+    """
+    Upgrade the farm at (col, row) to the next level.
+    Deducts the upgrade_cost (drachmae) from state.drachmae.
+    Returns (success, message).
+    """
+    # Find the farm at this position
+    target = next(
+        (f for f in state.farms if f.get("col") == col and f.get("row") == row),
+        None,
+    )
+    if target is None:
+        return False, "No farm found at that location."
+
+    farm_def = _FARM_TYPE_MAP.get(target["farm_type"])
+    if not farm_def:
+        return False, "Unknown farm type."
+
+    current_level = target.get("level", 1)
+    if current_level >= 3:
+        return False, f"{farm_def['name']} is already at maximum level."
+
+    next_level_def = farm_def["levels"][current_level]  # index = current level (0-based)
+    upgrade_cost = next_level_def.get("upgrade_cost")
+    if upgrade_cost is None:
+        return False, "No upgrade available for this farm."
+
+    if state.drachmae < upgrade_cost:
+        return False, (
+            f"Need {upgrade_cost} drachmae to upgrade (have {state.drachmae:.0f})."
+        )
+
+    state.drachmae = round(state.drachmae - upgrade_cost, 2)
+    target["level"] = current_level + 1
+    return True, (
+        f"{farm_def['icon']} {farm_def['name']} upgraded to level {target['level']}!"
+    )
