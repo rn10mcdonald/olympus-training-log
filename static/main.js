@@ -422,13 +422,23 @@ function renderWalkSection(state) {
 // ── Vault section ─────────────────────────────────────────────────────────────
 function renderVaultSection(state) {
   const badges    = state.badges || [];
-  const trophies  = [...badges].filter(b => b.type === "monster").reverse();
   const laurels   = [...badges].filter(b => b.type === "laurel").reverse();
   const postcards = [...badges].filter(b => b.type === "ruck_quest").reverse();
 
-  document.getElementById("trophies-list").innerHTML = trophies.length
-    ? trophies.map(b => badgeCardHtml(b)).join("")
-    : `<div class="empty-msg">Complete a 6-session cycle to earn your first trophy.</div>`;
+  // Monster trophies: load from estate trophy system (has buff data)
+  api("/api/estate/trophies").then(data => {
+    const trophies = (data.trophies || []).slice().reverse();
+    document.getElementById("trophies-list").innerHTML = trophies.length
+      ? trophies.map(t => trophyCardHtml(t)).join("")
+      : `<div class="empty-msg">Complete a 6-session cycle to earn your first trophy.</div>`;
+    renderTrophyBuffsSummary(data.buff_summary || []);
+  }).catch(() => {
+    // Fallback: legacy badges if estate API unavailable
+    const legacyTrophies = [...badges].filter(b => b.type === "monster").reverse();
+    document.getElementById("trophies-list").innerHTML = legacyTrophies.length
+      ? legacyTrophies.map(b => badgeCardHtml(b)).join("")
+      : `<div class="empty-msg">Complete a 6-session cycle to earn your first trophy.</div>`;
+  });
 
   document.getElementById("laurels-list").innerHTML = laurels.length
     ? laurels.map(b => badgeCardHtml(b)).join("")
@@ -437,6 +447,51 @@ function renderVaultSection(state) {
   document.getElementById("vault-postcards").innerHTML = postcards.length
     ? postcards.map(b => postcardHtml(b)).join("")
     : `<div class="empty-msg">Unlock waypoints by covering journey miles.</div>`;
+}
+
+// Render the stacked trophy buff summary chips above the grid
+function renderTrophyBuffsSummary(buffSummary) {
+  const el = document.getElementById("trophy-buffs-summary");
+  if (!el) return;
+  if (!buffSummary || buffSummary.length === 0) {
+    el.innerHTML = "";
+    return;
+  }
+  const BUFF_ICONS = {
+    drachmae_gain:     "🪙",
+    strength_rewards:  "💪",
+    farm_production:   "🌾",
+    creature_chance:   "🦅",
+    campaign_strength: "⚔️",
+    relic_chance:      "⚗️",
+  };
+  el.innerHTML = buffSummary.map(b => {
+    const icon = BUFF_ICONS[b.buff_type] || "✨";
+    return `<span class="trophy-buff-chip">
+      <span class="trophy-buff-chip-icon">${icon}</span>
+      ${escHtml(b.label)}
+    </span>`;
+  }).join("");
+}
+
+// Trophy card with buff label and rarity indicator
+function trophyCardHtml(t) {
+  const rarityColour = t.rarity_colour || "#a0a0a0";
+  const buffLabel    = t.buff_label    || "";
+  const emoji        = t.emoji         || "🏆";
+  const date         = t.date_earned   || "";
+  const rarity       = t.rarity_label  || (t.rarity || "").replace(/^./, c => c.toUpperCase());
+  return `
+    <div class="badge-card">
+      <div class="badge-emoji">${emoji}</div>
+      <div class="badge-name">${escHtml(t.name || "")}</div>
+      <div class="trophy-buff-label">${escHtml(buffLabel)}</div>
+      <div class="badge-date" style="display:flex;align-items:center;gap:4px;justify-content:center">
+        <span class="trophy-rarity-dot" style="background:${rarityColour}"></span>
+        ${escHtml(rarity)}
+      </div>
+      <div class="badge-date">${date}</div>
+    </div>`;
 }
 
 function badgeCardHtml(b) {
@@ -1148,6 +1203,600 @@ async function initEstate() {
       initSanctuary(),
       initRelics(),
       initArmy(),
+      initVilla(),
+      initProcessing(),
+      initBlessings(),
+      api("/api/estate/prophecy").then(scroll => {
+        const previewEl = document.getElementById("prophecy-combined-preview");
+        if (previewEl) previewEl.textContent = scroll.combined_title || "Unnamed Mortal";
+      }),
+    ]);
+  } catch (e) {
+    console.error("Estate init failed:", e);
+  }
+}
+
+function renderEstateResources() {
+  const el = document.getElementById("estate-resources");
+  if (!el || !estateState) return;
+  const drachEl = document.getElementById("estate-drachma-pill");
+  if (drachEl) drachEl.textContent = `🪙 ${(estateState.drachmae ?? 0).toFixed(2)}`;
+  el.innerHTML = ESTATE_RES.map(r => {
+    const val = estateState[r.key] ?? 0;
+    return `<div class="estate-res-pill">
+      <span class="estate-res-icon">${r.icon}</span>
+      <span class="estate-res-val">${val}</span>
+      <span class="estate-res-lbl">${r.label}</span>
+    </div>`;
+  }).join("");
+}
+
+function renderEstateGrid() {
+  const el = document.getElementById("estate-grid");
+  if (!el || !estateState) return;
+  const farmMap = {};
+  (estateState.farms || []).forEach(f => { farmMap[`${f.col},${f.row}`] = f; });
+  let html = '<div class="estate-grid-inner">';
+  for (let row = 0; row < ESTATE_ROWS; row++) {
+    for (let col = 0; col < ESTATE_COLS; col++) {
+      const farm  = farmMap[`${col},${row}`];
+      const type  = farm ? farm.farm_type : "empty";
+      const icon  = farm ? (FARM_ICON[type] || "🟩") : "";
+      const lvl   = farm ? `L${farm.level || 1}` : "";
+      const bg    = FARM_COLOR[type] || FARM_COLOR.empty;
+      html += `<div class="estate-tile" style="background:${bg}" title="${type}">
+        <span class="estate-tile-icon">${icon}</span>
+        <span class="estate-tile-lvl">${lvl}</span>
+      </div>`;
+    }
+  }
+  html += "</div>";
+  el.innerHTML = html;
+}
+
+function pushEstateLog(text, type = "system") {
+  const time = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  estateLog.unshift({ text, type, time });
+  if (estateLog.length > 60) estateLog.pop();
+  renderEstateLog();
+}
+
+function renderEstateLog() {
+  const el = document.getElementById("estate-event-log");
+  if (!el) return;
+  if (!estateLog.length) {
+    el.innerHTML = '<p class="dim-msg">Log a workout to see events.</p>';
+    return;
+  }
+  const COLOR = { reward: "var(--gold)", farm: "var(--success)", system: "var(--accent)" };
+  el.innerHTML = estateLog.map(e =>
+    `<div class="estate-log-row" style="color:${COLOR[e.type] || COLOR.system}">
+      <span class="estate-log-time">${e.time}</span>
+      <span>${escHtml(e.text)}</span>
+    </div>`
+  ).join("");
+}
+
+// ── Estate Event Popup ────────────────────────────────────────────────────────
+
+const EVENT_TYPE_LABELS = {
+  oracle:      "oracle",
+  creature:    "encounter",
+  merchant:    "merchant",
+  philosopher: "philosophy",
+  rare:        "rare event",
+};
+
+function showEventPopup(event) {
+  if (!event) return;
+
+  document.getElementById("event-icon").textContent       = event.icon  || "✨";
+  document.getElementById("event-title").textContent      = event.title || "Something happens…";
+  document.getElementById("event-type-badge").textContent = EVENT_TYPE_LABELS[event.type] || event.type;
+
+  const linesEl = document.getElementById("event-lines");
+  linesEl.innerHTML = (event.lines || [])
+    .map(l => `<p class="event-line">${escHtml(l)}</p>`)
+    .join("");
+
+  const cardEl = document.getElementById("event-creature-card");
+  if (event.creature) {
+    document.getElementById("event-creature-rarity").textContent = event.creature.rarity;
+    document.getElementById("event-creature-name").textContent   = event.creature.name;
+    cardEl.hidden = false;
+  } else {
+    cardEl.hidden = true;
+  }
+
+  const overlay = document.getElementById("event-overlay");
+  overlay.hidden = false;
+  document.getElementById("event-dismiss-btn").focus();
+}
+
+function hideEventPopup() {
+  document.getElementById("event-overlay").hidden = true;
+}
+
+// Show a temporary trophy award banner in the estate log area
+function showTrophyAwardBanner(trophy) {
+  const RARITY_COLOURS = {
+    common:    "#a0a0a0",
+    uncommon:  "#4fc35a",
+    rare:      "#4a9eff",
+    epic:      "#b44aff",
+    legendary: "#ffd700",
+  };
+  const colour  = RARITY_COLOURS[trophy.rarity] || "#a0a0a0";
+  const rarity  = (trophy.rarity || "").replace(/^./, c => c.toUpperCase());
+  const buffLbl = trophy.buff_label || trophy.buff_type || "";
+
+  const banner = document.createElement("div");
+  banner.className = "trophy-award-banner";
+  banner.innerHTML = `
+    <div class="trophy-award-emoji">${trophy.emoji || "🏆"}</div>
+    <div class="trophy-award-info">
+      <div class="trophy-award-name">⚔️ Monster Slain! ${escHtml(trophy.name)}</div>
+      <div class="trophy-award-buff">${escHtml(buffLbl)}</div>
+      <div class="trophy-award-rarity" style="color:${colour}">${escHtml(rarity)}</div>
+    </div>`;
+
+  // Insert at top of estate log, or after estate resources
+  const logEl = document.getElementById("estate-log");
+  if (logEl) {
+    logEl.prepend(banner);
+  } else {
+    const resEl = document.querySelector(".estate-resources, #estate-resources");
+    if (resEl) resEl.after(banner);
+  }
+  // Auto-remove after 8s
+  setTimeout(() => banner.remove(), 8000);
+}
+
+document.getElementById("event-dismiss-btn").addEventListener("click", hideEventPopup);
+document.getElementById("event-overlay").addEventListener("click", e => {
+  if (e.target === e.currentTarget) hideEventPopup();
+});
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape") hideEventPopup();
+});
+
+document.getElementById("simulate-workout-btn")?.addEventListener("click", async () => {
+  const btn  = document.getElementById("simulate-workout-btn");
+  const type = document.getElementById("estate-workout-type")?.value || "strength";
+  btn.disabled = true;
+  try {
+    const res = await api("/api/estate/simulate-workout", { workout_type: type });
+    estateState = res.state;
+    renderEstateResources();
+    renderEstateGridInteractive();
+    (res.events || []).forEach(evt => {
+      const t = evt.includes("Farm") || evt.includes("harvest") ? "farm"
+              : evt.includes("drachma") || evt.includes("LAUREL")  ? "reward"
+              : "system";
+      pushEstateLog(evt, t);
+    });
+    toast(`⚔️ ${res.events?.[0] || "Workout logged!"}`);
+    // Refresh sub-systems that may have changed
+    initSanctuary();
+    initBlessings();
+    // Show relic find notification if one was discovered
+    if (res.relic_find) {
+      const r = res.relic_find;
+      pushEstateLog(`⚗️ Relic found: ${r.name} (${r.rarity})!`, "reward");
+      await initRelics();
+    }
+    // Show trophy award notification if a microcycle was completed
+    if (res.trophy_award) {
+      const t = res.trophy_award;
+      pushEstateLog(`⚔️ Trophy earned: ${t.emoji} ${t.name} — ${t.buff_label || ""}`, "reward");
+      showTrophyAwardBanner(t);
+      // Refresh vault trophy list + buff summary
+      renderVaultSection(appState || {});
+    }
+    // Show creature encounter first (player must decide before narrative event)
+    if (res.creature_encounter) {
+      showEncounterDialog(res.creature_encounter);
+    } else if (res.event) {
+      showEventPopup(res.event);
+    }
+    // Check barracks requirements after each workout (laurels/farms may have changed)
+    if (!estateState?.barracks_built) {
+      api("/api/estate/army").then(armyData => {
+        renderBarracksRequirements({ state: estateState });
+      }).catch(() => {});
+    }
+  } catch (e) {
+    toast("Estate error: " + e.message, 4000);
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// SANCTUARY + RELICS
+// ══════════════════════════════════════════════════════════════════════════════
+
+const RARITY_ICONS = {
+  common:    "🌿",
+  rare:      "⚡",
+  epic:      "🔥",
+  legendary: "✨",
+};
+
+const RARITY_COLORS = {
+  common:    "var(--success)",
+  rare:      "var(--accent)",
+  epic:      "#e06c1a",
+  legendary: "var(--gold)",
+};
+
+// ── Sanctuary ─────────────────────────────────────────────────────────────────
+
+async function initSanctuary() {
+  try {
+    const data = await api("/api/estate/sanctuary");
+    renderSanctuary(data);
+  } catch (e) {
+    console.error("Sanctuary init failed:", e);
+  }
+}
+
+function renderSanctuary(data) {
+  const listEl  = document.getElementById("sanctuary-list");
+  const countEl = document.getElementById("sanctuary-count");
+  if (!listEl) return;
+
+  const creatures = data.sanctuary || [];
+  const capacity  = data.capacity  || 3;
+  if (countEl) countEl.textContent = `${creatures.length} / ${capacity}`;
+
+  if (!creatures.length) {
+    listEl.innerHTML = '<p class="dim-msg">No creatures recruited yet. Complete outdoor workouts to encounter them.</p>';
+    return;
+  }
+
+  listEl.innerHTML = creatures.map(c => {
+    const rarityColor = RARITY_COLORS[c.rarity] || "var(--text)";
+    const icon        = c.icon || RARITY_ICONS[c.rarity] || "🐾";
+    return `<div class="creature-card">
+      <div class="creature-card-icon" style="color:${rarityColor}">${icon}</div>
+      <div class="creature-card-info">
+        <div class="creature-card-name">${escHtml(c.name)}</div>
+        <div class="creature-card-buff">✨ ${escHtml(c.buff_label || "Passive buff")}</div>
+        <div class="creature-card-flavor">${escHtml(c.flavor || "")}</div>
+      </div>
+      <button class="btn-ghost-sm creature-release-btn"
+              data-id="${escHtml(c.id)}"
+              data-name="${escHtml(c.name)}"
+              data-reward="${c.release_reward || 5}"
+              title="Release — earn ${c.release_reward || 5} 🪙">
+        ⚡ Release
+      </button>
+    </div>`;
+  }).join("");
+
+  // Release handlers
+  listEl.querySelectorAll(".creature-release-btn").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const cid    = btn.dataset.id;
+      const name   = btn.dataset.name;
+      const reward = btn.dataset.reward;
+      btn.disabled = true;
+      try {
+        const res = await api("/api/estate/creature/release", { creature_id: cid });
+        estateState = res.state;
+        renderEstateResources();
+        toast(`${name} released — +${reward} 🪙`);
+        await initSanctuary();
+      } catch (e) {
+        toast("Release failed: " + e.message, 4000);
+        btn.disabled = false;
+      }
+    });
+  });
+}
+
+// ── Relic Inventory ───────────────────────────────────────────────────────────
+
+async function initRelics() {
+  try {
+    const data = await api("/api/estate/relics");
+    renderRelics(data);
+  } catch (e) {
+    console.error("Relics init failed:", e);
+  }
+}
+
+function renderRelics(data) {
+  const listEl  = document.getElementById("relics-list");
+  const countEl = document.getElementById("relics-count");
+  if (!listEl) return;
+
+  const relics   = data.inventory || [];
+  const capacity = data.capacity  || 10;
+  if (countEl) countEl.textContent = `${relics.length} / ${capacity}`;
+
+  if (!relics.length) {
+    listEl.innerHTML = '<p class="dim-msg">No relics acquired yet. They are found through events and campaigns.</p>';
+    return;
+  }
+
+  listEl.innerHTML = relics.map(r => {
+    const rarityColor = RARITY_COLORS[r.rarity] || "var(--text)";
+    const icon        = r.icon || "🔮";
+    return `<div class="relic-card">
+      <div class="relic-card-icon" style="color:${rarityColor}">${icon}</div>
+      <div class="relic-card-info">
+        <div class="relic-card-name">${escHtml(r.name)}</div>
+        <div class="relic-card-buff">✨ ${escHtml(r.buff_label || "Passive buff")}</div>
+        <div class="relic-card-flavor">${escHtml(r.flavor || "")}</div>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+// ── Creature Encounter Dialog ─────────────────────────────────────────────────
+
+let _pendingEncounter = null;
+
+function showEncounterDialog(creature) {
+  if (!creature) return;
+  _pendingEncounter = creature;
+
+  const rarity      = creature.rarity || "common";
+  const rarityColor = RARITY_COLORS[rarity] || "var(--text)";
+
+  document.getElementById("encounter-rarity-badge").textContent        = rarity;
+  document.getElementById("encounter-rarity-badge").style.color        = rarityColor;
+  document.getElementById("encounter-rarity-badge").style.borderColor  = rarityColor;
+  document.getElementById("encounter-icon").textContent                = creature.icon || RARITY_ICONS[rarity] || "🐾";
+  document.getElementById("encounter-creature-name").textContent       = creature.name || "A Creature";
+  document.getElementById("encounter-description").textContent         = creature.description || "";
+  document.getElementById("encounter-buff-label").textContent          = creature.buff_label || "Passive buff";
+  document.getElementById("encounter-flavor").textContent              = creature.flavor ? `"${creature.flavor}"` : "";
+  document.getElementById("encounter-release-reward").textContent      = `(+${creature.release_reward || 5} 🪙)`;
+
+  const recruitBtn = document.getElementById("encounter-recruit-btn");
+  // Disable recruit if sanctuary is full (check estateState)
+  if (estateState) {
+    const sanctuary = estateState.sanctuary || [];
+    const cap       = estateState.sanctuary_capacity || 3;
+    if (sanctuary.length >= cap) {
+      recruitBtn.disabled = true;
+      recruitBtn.title    = "Sanctuary is full";
+    } else {
+      recruitBtn.disabled = false;
+      recruitBtn.title    = "";
+    }
+  }
+
+  document.getElementById("encounter-overlay").hidden = false;
+  recruitBtn.focus();
+}
+
+function hideEncounterDialog() {
+  document.getElementById("encounter-overlay").hidden = true;
+  _pendingEncounter = null;
+}
+
+document.getElementById("encounter-recruit-btn")?.addEventListener("click", async () => {
+  if (!_pendingEncounter) return;
+  const btn = document.getElementById("encounter-recruit-btn");
+  btn.disabled = true;
+  try {
+    const res = await api("/api/estate/creature/recruit", { creature_id: _pendingEncounter.id });
+    estateState = res.state;
+    renderEstateResources();
+    toast(`🏛️ ${_pendingEncounter.name} welcomed into the sanctuary!`);
+    hideEncounterDialog();
+    await initSanctuary();
+  } catch (e) {
+    toast(e.message, 4000);
+    btn.disabled = false;
+  }
+});
+
+document.getElementById("encounter-release-btn")?.addEventListener("click", async () => {
+  if (!_pendingEncounter) return;
+  // Creature was encountered but not yet recruited — award release reward
+  const reward = _pendingEncounter.release_reward || 5;
+  try {
+    // Add temporarily then release so the server awards coins cleanly
+    await api("/api/estate/creature/recruit",  { creature_id: _pendingEncounter.id }).catch(() => {});
+    const res = await api("/api/estate/creature/release", { creature_id: _pendingEncounter.id });
+    if (res?.state) {
+      estateState = res.state;
+      renderEstateResources();
+    }
+  } catch (_) { /* non-fatal — coins already logged */ }
+  toast(`⚡ ${_pendingEncounter.name} released — +${reward} 🪙`);
+  hideEncounterDialog();
+});
+
+document.getElementById("encounter-skip-btn")?.addEventListener("click", hideEncounterDialog);
+document.getElementById("encounter-overlay")?.addEventListener("click", e => {
+  if (e.target === e.currentTarget) hideEncounterDialog();
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// PROPHECY SCROLL
+// ══════════════════════════════════════════════════════════════════════════════
+
+const CATEGORY_ICONS = {
+  consistency: "⏳",
+  workout:     "⚔️",
+  estate:      "🌾",
+  legendary:   "✨",
+  secret:      "🔒",
+};
+
+// Categories whose unearned titles are hidden (name + condition masked)
+const HIDDEN_CATEGORIES = new Set(["legendary", "secret"]);
+
+async function openProphecyScroll() {
+  const overlay = document.getElementById("prophecy-overlay");
+  overlay.hidden = false;
+  document.getElementById("close-prophecy-btn").focus();
+
+  // Show loading state
+  document.getElementById("prophecy-dialog-title").textContent = "Loading…";
+  document.getElementById("prophecy-categories").innerHTML =
+    '<p class="dim-msg" style="padding:12px">Consulting the fates…</p>';
+
+  try {
+    const scroll = await api("/api/estate/prophecy");
+    renderProphecyScroll(scroll);
+
+    // Also update the estate state so laurels + titles reflect backend state
+    if (estateState) {
+      estateState.laurels         = scroll.laurels;
+      estateState.oracle_phase    = scroll.oracle_phase;
+      estateState.oracle_visits   = scroll.oracle_visits;
+      estateState.titles_unlocked = (scroll.titles_by_category || [])
+        .flatMap(c => c.titles.filter(t => t.unlocked).map(t => t.id));
+      renderEstateResources();
+    }
+
+    // Update the preview chip in the estate card
+    const previewEl = document.getElementById("prophecy-combined-preview");
+    if (previewEl) previewEl.textContent = scroll.combined_title || "Unnamed Mortal";
+
+  } catch (err) {
+    toast("Prophecy error: " + err.message, 4000);
+    overlay.hidden = true;
+  }
+}
+
+function renderProphecyScroll(scroll) {
+  // Title
+  const combined = scroll.combined_title || "Unnamed Mortal";
+  document.getElementById("prophecy-dialog-title").textContent = combined;
+
+  // Oracle bar
+  document.getElementById("prophecy-oracle-phase-name").textContent =
+    scroll.oracle_phase_name || "Stranger";
+  document.getElementById("prophecy-oracle-visits").textContent =
+    `${scroll.oracle_visits || 0} visit${scroll.oracle_visits === 1 ? "" : "s"}`;
+
+  // Laurels
+  document.getElementById("prophecy-laurels").textContent = scroll.laurels ?? 0;
+
+  // Categories
+  const catsEl = document.getElementById("prophecy-categories");
+  if (!scroll.titles_by_category || !scroll.titles_by_category.length) {
+    catsEl.innerHTML = '<p class="dim-msg">No titles data.</p>';
+    return;
+  }
+
+  catsEl.innerHTML = scroll.titles_by_category.map(cat => {
+    const icon       = CATEGORY_ICONS[cat.category] || "📜";
+    const unlockedN  = cat.titles.filter(t => t.unlocked).length;
+    const total      = cat.titles.length;
+
+    const isHiddenCat = HIDDEN_CATEGORIES.has(cat.category);
+
+    const itemsHtml = cat.titles.map(t => {
+      if (!t.unlocked && isHiddenCat) {
+        // Mask unearned legendary / secret titles completely
+        return `<li class="prophecy-title-item prophecy-title-hidden">
+          <div class="prophecy-title-check"></div>
+          <div class="prophecy-title-info">
+            <span class="prophecy-title-name prophecy-title-redacted">??? Unknown Title</span>
+            <span class="prophecy-title-condition prophecy-title-redacted">Complete hidden deeds to reveal</span>
+          </div>
+        </li>`;
+      }
+      const cls   = t.unlocked ? "prophecy-title-item unlocked" : "prophecy-title-item";
+      const check = t.unlocked ? "✓" : "";
+      return `<li class="${cls}">
+        <div class="prophecy-title-check">${check}</div>
+        <div class="prophecy-title-info">
+          <span class="prophecy-title-name">${escHtml(t.name)}</span>
+          <span class="prophecy-title-condition">${escHtml(t.condition)}</span>
+        </div>
+      </li>`;
+    }).join("");
+
+    // For hidden categories, only show unlocked count (not total — keep mysteries mysterious)
+    const countLabel = isHiddenCat
+      ? (unlockedN > 0 ? `${unlockedN} revealed` : "none revealed")
+      : `${unlockedN} / ${total}`;
+
+    return `<div class="prophecy-cat">
+      <div class="prophecy-cat-header">
+        <span class="prophecy-cat-name">${icon} ${escHtml(cat.label)}</span>
+        <span class="prophecy-cat-count">${countLabel}</span>
+      </div>
+      <ul class="prophecy-title-list">${itemsHtml}</ul>
+    </div>`;
+  }).join("");
+}
+
+function closeProphecyScroll() {
+  document.getElementById("prophecy-overlay").hidden = true;
+}
+
+// Prophecy scroll event listeners
+document.getElementById("open-prophecy-btn")?.addEventListener("click", openProphecyScroll);
+document.getElementById("close-prophecy-btn")?.addEventListener("click", closeProphecyScroll);
+document.getElementById("cancel-prophecy-btn")?.addEventListener("click", closeProphecyScroll);
+document.getElementById("prophecy-overlay")?.addEventListener("click", e => {
+  if (e.target === e.currentTarget) closeProphecyScroll();
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ARMY + CAMPAIGN SYSTEMS
+// ══════════════════════════════════════════════════════════════════════════════
+
+const UNIT_ICONS = {
+  hoplite:          "⚔️",
+  archer:           "🏹",
+  cavalry:          "🐴",
+  myrmidon_captain: "🛡️",
+};
+
+// ── Army / Barracks ────────────────────────────────────────────────────────────
+
+let _armyData = null;
+
+async function initArmy() {
+  try {
+    _armyData = await api("/api/estate/army");
+    renderArmy(_armyData);
+  } catch (e) {
+    console.error("Army init failed:", e);
+  }
+}
+
+function renderArmy(data) {
+  if (!data) return;
+
+  const lockedEl  = document.getElementById("barracks-locked");
+  const openEl    = document.getElementById("barracks-open");
+  const pillEl    = document.getElementById("army-strength-pill");
+  const countEl   = document.getElementById("army-count");
+  const strEl     = document.getElementById("army-total-strength");
+  const unitListEl = document.getElementById("army-unit-list");
+  const recruitEl = document.getElementById("recruit-unit-list");
+  const campaignsEl = document.getElementById("campaigns-won-preview");
+
+  if (!lockedEl || !openEl) return;
+
+  const built    = data.barracks_built;
+  const units    = data.army          || [];
+  const limit    = data.army_limit    || 10;
+  const strength = data.army_strength || 0;
+  const allUnits = data.all_units     || [];
+  const won      = data.campaigns_won || 0;
+
+  // Toggle barracks state
+  lockedEl.hidden = built;
+  openEl.hidden   = !built;
+
+  if (pillEl) pillEl.textContent = `⚔️ ${strength} str`;
+  if (campaignsEl) campaignsEl.textContent =
+    won === 1 ? "1 victory" : `${won} victories`;
+
   if (!built) {
     // Show unlock requirements progress
     renderBarracksRequirements({ state: estateState });

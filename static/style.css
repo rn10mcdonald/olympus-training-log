@@ -2535,3 +2535,98 @@ body {
 .req-met .barracks-req-val {
   color: var(--success);
 }
+
+/* ── Trophy Passive Buffs ──────────────────────────────────────────────────── */
+
+/* Stacked bonus summary bar above the trophy grid */
+.trophy-buffs-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.trophy-buff-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(212, 175, 55, 0.12);
+  border: 1px solid rgba(212, 175, 55, 0.35);
+  border-radius: 20px;
+  padding: 3px 10px;
+  font-size: 0.75rem;
+  color: var(--gold);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.trophy-buff-chip-icon {
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+/* Buff label shown on each individual trophy card */
+.trophy-buff-label {
+  font-size: 0.7rem;
+  color: var(--gold);
+  margin-top: 3px;
+  opacity: 0.9;
+  line-height: 1.3;
+}
+
+/* Rarity colour dot on trophy cards */
+.trophy-rarity-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 3px;
+  flex-shrink: 0;
+}
+
+/* Trophy popup / award notification */
+.trophy-award-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(212, 175, 55, 0.15);
+  border: 1px solid rgba(212, 175, 55, 0.5);
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-top: 8px;
+  animation: trophy-pop 0.4s ease;
+}
+
+@keyframes trophy-pop {
+  0%   { transform: scale(0.85); opacity: 0; }
+  60%  { transform: scale(1.04); }
+  100% { transform: scale(1);    opacity: 1; }
+}
+
+.trophy-award-emoji {
+  font-size: 1.8rem;
+  line-height: 1;
+}
+
+.trophy-award-info {
+  flex: 1;
+}
+
+.trophy-award-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--gold);
+}
+
+.trophy-award-buff {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+
+.trophy-award-rarity {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}

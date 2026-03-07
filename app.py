@@ -6,7 +6,7 @@ from laurel_of_olympus import game_state as gs
 from laurel_of_olympus import workout_engine, farm_engine, event_engine
 from laurel_of_olympus import oracle_engine, title_engine
 from laurel_of_olympus import creature_engine, relic_engine, buff_engine
-from laurel_of_olympus import army_engine, processing_engine
+from laurel_of_olympus import army_engine, processing_engine, trophy_engine
 
 BASE   = Path(__file__).parent
 DATA   = BASE / "data.json"
@@ -261,7 +261,18 @@ async def estate_simulate_workout(req: Request):
     # ── Compute passive buffs from sanctuary + relics ────────────────────────
     buffs = buff_engine.get_all_buffs(state)
 
-    events = workout_engine.process_workout(state, workout_type, buffs=buffs, **kwargs)
+    raw_events = workout_engine.process_workout(state, workout_type, buffs=buffs, **kwargs)
+
+    # Extract any structured trophy events from the events list
+    # (workout_engine appends a dict when a laurel window completes)
+    trophy_award = None
+    events = []
+    for e in raw_events:
+        if isinstance(e, dict) and e.get("type") == "trophy":
+            trophy_award = e["trophy"]
+            events.append(e["msg"])  # include the text message in event log
+        else:
+            events.append(e)
 
     # Consume Hermes blessing after a run (MISS-4)
     if buffs.get("blessing_hermes") and workout_type == "running":
@@ -282,7 +293,9 @@ async def estate_simulate_workout(req: Request):
         events.append(f"  🏅 Title unlocked: {tid.replace('_', ' ').title()}")
 
     # ── Creature encounter (outdoor workouts only, 5% base) ──────────────────
+    # event_chance buff (relics/creatures) + creature_chance buff (trophies)
     encounter_chance = buff_engine.effective_event_chance(buffs, 0.05)
+    encounter_chance = min(1.0, encounter_chance + buffs.get("creature_chance", 0.0))
     creature_encounter = creature_engine.maybe_creature_encounter(
         workout_type, chance=encounter_chance
     )
@@ -322,9 +335,11 @@ async def estate_simulate_workout(req: Request):
             )
 
     # ── Relic discovery via events (MISS-6): 3% base chance ─────────────────
+    # event_chance buff (relics/creatures) + relic_chance buff (trophies)
     relic_find = None
     import random as _random
     relic_chance = buff_engine.effective_event_chance(buffs, 0.03)
+    relic_chance = min(1.0, relic_chance + buffs.get("relic_chance", 0.0))
     if _random.random() < relic_chance:
         candidate = relic_engine.roll_relic_reward()
         if candidate:
@@ -342,6 +357,7 @@ async def estate_simulate_workout(req: Request):
         "event":              narrative_event,       # None or event dict
         "creature_encounter": creature_encounter,    # None or creature dict
         "relic_find":         relic_find,            # None or relic dict (MISS-6)
+        "trophy_award":       trophy_award,          # None or trophy dict (new)
     }
 
 
@@ -438,6 +454,19 @@ async def remove_relic(req: Request):
         raise HTTPException(400, msg)
     gs.save(state, ESTATE_SAVE)
     return {"status": "ok", "msg": msg, "state": state.to_dict()}
+
+# ── Trophy endpoints ────────────────────────────────────────────────────────────
+
+@app.get("/api/estate/trophies")
+def get_trophies():
+    """Return trophy inventory, buff summary, and all trophy definitions."""
+    state = gs.load(ESTATE_SAVE)
+    return {
+        "trophies":     trophy_engine.get_trophy_inventory(state),
+        "buff_summary": trophy_engine.get_buff_summary(state),
+        "total":        len(getattr(state, "trophies", None) or []),
+    }
+
 
 # ── Army / Barracks endpoints ───────────────────────────────────────────────────
 

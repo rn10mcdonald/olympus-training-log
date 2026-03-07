@@ -1,0 +1,110 @@
+{
+  "rarity_weights": {
+    "common":    50,
+    "uncommon":  30,
+    "rare":      15,
+    "epic":       4,
+    "legendary":  1
+  },
+  "trophies": [
+    {
+      "id":         "cyclops_eye",
+      "name":       "Cyclops Eye",
+      "monster":    "Cyclops",
+      "rarity":     "common",
+      "buff_type":  "drachmae_gain",
+      "buff_value": 0.03,
+      "emoji":      "👁️"
+    },
+    {
+      "id":         "harpy_feather",
+      "name":       "Harpy Feather",
+      "monster":    "Harpy",
+      "rarity":     "common",
+      "buff_type":  "farm_production",
+      "buff_value": 0.04,
+      "emoji":      "🪶"
+    },
+    {
+      "id":         "satyr_horn",
+      "name":       "Satyr Horn",
+      "monster":    "Satyr",
+      "rarity":     "common",
+      "buff_type":  "creature_chance",
+      "buff_value": 0.03,
+      "emoji":      "🐐"
+    },
+    {
+      "id":         "minotaur_hide",
+      "name":       "Minotaur Hide",
+      "monster":    "Minotaur",
+      "rarity":     "uncommon",
+      "buff_type":  "strength_rewards",
+      "buff_value": 0.05,
+      "emoji":      "🐂"
+    },
+    {
+      "id":         "medusa_scale",
+      "name":       "Medusa Scale",
+      "monster":    "Medusa",
+      "rarity":     "uncommon",
+      "buff_type":  "relic_chance",
+      "buff_value": 0.03,
+      "emoji":      "🐍"
+    },
+    {
+      "id":         "sphinx_scroll",
+      "name":       "Sphinx Riddle Scroll",
+      "monster":    "Sphinx",
+      "rarity":     "uncommon",
+      "buff_type":  "drachmae_gain",
+      "buff_value": 0.05,
+      "emoji":      "📜"
+    },
+    {
+      "id":         "hydra_fang",
+      "name":       "Hydra Fang",
+      "monster":    "Hydra",
+      "rarity":     "rare",
+      "buff_type":  "farm_production",
+      "buff_value": 0.07,
+      "emoji":      "🦷"
+    },
+    {
+      "id":         "chimera_claw",
+      "name":       "Chimera Claw",
+      "monster":    "Chimera",
+      "rarity":     "rare",
+      "buff_type":  "campaign_strength",
+      "buff_value": 0.08,
+      "emoji":      "🦁"
+    },
+    {
+      "id":         "scylla_tentacle",
+      "name":       "Scylla Tentacle",
+      "monster":    "Scylla",
+      "rarity":     "epic",
+      "buff_type":  "strength_rewards",
+      "buff_value": 0.10,
+      "emoji":      "🐙"
+    },
+    {
+      "id":         "typhon_scale",
+      "name":       "Typhon Scale",
+      "monster":    "Typhon",
+      "rarity":     "epic",
+      "buff_type":  "drachmae_gain",
+      "buff_value": 0.10,
+      "emoji":      "⚡"
+    },
+    {
+      "id":         "kronos_fragment",
+      "name":       "Kronos Fragment",
+      "monster":    "Kronos",
+      "rarity":     "legendary",
+      "buff_type":  "drachmae_gain",
+      "buff_value": 0.15,
+      "emoji":      "⏳"
+    }
+  ]
+}
