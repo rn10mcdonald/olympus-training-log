@@ -187,10 +187,6 @@ def _merge_buff(buffs: dict, buff_type: str, buff_value: float) -> None:
     elif buff_type == "rare_events":
         buffs["rare_event_chance"] = buffs.get("rare_event_chance", 0.0) + buff_value
 
-    elif buff_type == "laurel_bonus":
-        # additive chance bonus for earning extra laurels
-        buffs["laurel_bonus"] = buffs.get("laurel_bonus", 0.0) + buff_value
-
     else:
         # army_strength, campaign_rewards -> stored for future use
         buffs[buff_type] = buffs.get(buff_type, 1.0) * mult
@@ -235,6 +231,5 @@ def describe_buff(buff_type: str, buff_value: float) -> str:
         "rare_events":      f"+{pct}% rare event chance",
         "army_strength":    f"+{pct}% army strength",
         "campaign_rewards": f"+{pct}% campaign rewards",
-        "laurel_bonus":     f"+{pct}% laurel chance",
     }
     return labels.get(buff_type, f"+{pct}% passive bonus")

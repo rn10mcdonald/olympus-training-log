@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Olympus Training Log</title>
 <link rel="manifest" href="static/manifest.json">
-<link rel="stylesheet" href="static/style.css?v=11">
+<link rel="stylesheet" href="static/style.css?v=9">
 </head>
 <body>
 
@@ -361,8 +361,6 @@
           <p class="sub-text" style="margin-bottom:10px">
             Train soldiers to defend your estate and launch campaigns.
           </p>
-          <!-- Requirements progress — rendered by renderBarracksRequirements() -->
-          <div id="barracks-requirements" style="margin-bottom:12px"></div>
           <div class="barracks-cost-row">
             <span class="barracks-cost-label">Build cost:</span>
             <span class="barracks-cost-resources">🪙 600 · 🌾 40 grain · 🍷 10 wine</span>
@@ -715,41 +713,7 @@
   </div>
 </div>
 
-<!-- ═══ FARM BUILD DIALOG ═══════════════════════════════════════════════════ -->
-<div id="farm-build-overlay" class="dialog-overlay" hidden>
-  <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="farm-build-title">
-    <div class="dialog-top-row">
-      <h3 id="farm-build-title">🌾 Build a Farm</h3>
-      <button class="btn-icon" id="close-farm-build-btn">✕</button>
-    </div>
-    <p class="sub-text" style="margin-bottom:12px" id="farm-build-subtitle">Choose a farm type to build on this plot.</p>
-    <div id="farm-type-list" class="farm-type-list">
-      <!-- Rendered by renderFarmBuildDialog() -->
-    </div>
-    <div class="dialog-actions">
-      <button class="btn-ghost" id="cancel-farm-build-btn">Cancel</button>
-    </div>
-  </div>
-</div>
-
-<!-- ═══ FARM UPGRADE DIALOG ══════════════════════════════════════════════════ -->
-<div id="farm-upgrade-overlay" class="dialog-overlay" hidden>
-  <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="farm-upgrade-title">
-    <div class="dialog-top-row">
-      <h3 id="farm-upgrade-title">⬆️ Upgrade Farm</h3>
-      <button class="btn-icon" id="close-farm-upgrade-btn">✕</button>
-    </div>
-    <div id="farm-upgrade-body">
-      <!-- Rendered by showFarmUpgradeDialog() -->
-    </div>
-    <div class="dialog-actions">
-      <button class="btn-ghost" id="cancel-farm-upgrade-btn">Cancel</button>
-      <button class="btn-primary" id="confirm-farm-upgrade-btn">Upgrade</button>
-    </div>
-  </div>
-</div>
-
-<script src="static/main.js?v=11"></script>
+<script src="static/main.js?v=9"></script>
 <script>
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("service-worker.js");
