@@ -47,11 +47,11 @@ _FLAVOR = json.loads(
 _PHASES = [
     # (min_visits, phase_id, phase_name)
     (0,  0, "Stranger"),
-    (1,  1, "The Oracle Sees You"),
-    (3,  2, "Familiar Mortal"),
-    (7,  3, "Favored Mortal"),
-    (12, 4, "Kassandra Notices"),
-    (20, 5, "Kassandra, Ally"),
+    (1,  1, "The Oracle of Delphi"),
+    (3,  2, "Irritated Oracle of Delphi"),
+    (7,  3, "Irritated Oracle of Delphi"),
+    (12, 4, "Maybe Impressed Oracle of Delphi"),
+    (20, 5, "Kassandra"),
 ]
 
 # oracle_lines per phase — drawn from flavor_text or defined inline
@@ -66,10 +66,10 @@ _PHASE_POOLS = {
 
 _PHASE_TITLES = {
     0: "The Oracle of Delphi",
-    1: "The Oracle Sees You",
-    2: "A Familiar Mortal",
-    3: "A Favored Mortal",
-    4: "Kassandra Stirs",
+    1: "The Oracle of Delphi",
+    2: "An Irritated Oracle",
+    3: "An Irritated Oracle",
+    4: "Perhaps She Is Impressed",
     5: "Kassandra Speaks",
 }
 

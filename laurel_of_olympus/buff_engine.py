@@ -23,15 +23,39 @@ Public API:
 from __future__ import annotations
 
 from laurel_of_olympus.game_state import PlayerState
-from laurel_of_olympus import creature_engine, relic_engine
+from laurel_of_olympus import creature_engine, relic_engine, trophy_engine
+
+
+def _merge_buff(merged: dict, buff_type: str, buff_value: float) -> None:
+    """
+    Merge a single buff into the accumulated dict.
+
+    Additive types (probabilities/bonuses that sum):
+        event_chance, rare_events, laurel_bonus, creature_chance, relic_chance
+
+    All other types are multiplicative (compound multipliers).
+    """
+    additive_keys = ("event_chance", "rare_events", "laurel_bonus",
+                     "creature_chance", "relic_chance")
+    if buff_type in additive_keys:
+        merged[buff_type] = merged.get(buff_type, 0.0) + buff_value
+    else:
+        merged[buff_type] = merged.get(buff_type, 1.0) * (1.0 + buff_value)
 
 
 def get_all_buffs(state: PlayerState) -> dict:
     """
-    Merge sanctuary creature buffs and relic buffs.
+    Merge sanctuary creature buffs, relic buffs, trophy buffs, and active blessings.
 
-    For multiplier keys: buffs multiply together.
-    For additive keys ("event_chance", "laurel_bonus"): values sum.
+    For multiplier keys: buffs multiply together (compound interest style).
+    For additive keys ("event_chance", "laurel_bonus", etc.): values sum.
+
+    Active blessing buff keys:
+        "blessing_hermes"  → workout_running multiplier (+30%)
+        "blessing_demeter" → all_farms multiplier (+50%)
+        "blessing_ares"    → army_strength multiplier (+50%)
+
+    Trophy buffs are permanent passive modifiers that stack across all trophies.
     """
     c_buffs = creature_engine.get_sanctuary_buffs(state)
     r_buffs = relic_engine.get_relic_buffs(state)
@@ -42,6 +66,22 @@ def get_all_buffs(state: PlayerState) -> dict:
             merged[key] = merged.get(key, 0) + val
         else:
             merged[key] = merged.get(key, 1.0) * val
+
+    # ── Trophy passive buffs (permanent, stacking) ───────────────────────────
+    for tb in trophy_engine.get_trophy_buffs(state):
+        _merge_buff(merged, tb["buff_type"], tb["buff_value"])
+
+    # Apply active blessings (MISS-4)
+    active = getattr(state, "active_blessings", {}) or {}
+    if active.get("hermes", 0) > 0:
+        merged["workout_running"] = merged.get("workout_running", 1.0) * 1.30
+        merged["blessing_hermes"] = True   # flag for simulate-workout to consume
+    if active.get("demeter", 0) > 0:
+        merged["all_farms"] = merged.get("all_farms", 1.0) * 1.50
+        merged["blessing_demeter"] = True  # flag for farm production to consume
+    if active.get("ares", 0) > 0:
+        merged["army_strength"] = merged.get("army_strength", 1.0) * 1.50
+        merged["blessing_ares"] = True     # flag for campaign to consume
 
     return merged
 

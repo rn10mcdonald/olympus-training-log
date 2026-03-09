@@ -1,0 +1,42 @@
+[
+  {
+    "id": "winery",
+    "name": "Winery",
+    "icon": "🍷",
+    "input": "grapes",
+    "output": "wine",
+    "ratio": 2,
+    "build_cost": {"drachmae": 300, "grain": 10},
+    "description": "Converts grapes into wine. Requires a Vineyard."
+  },
+  {
+    "id": "bakery",
+    "name": "Bakery",
+    "icon": "🍞",
+    "input": "grain",
+    "output": "bread",
+    "ratio": 2,
+    "build_cost": {"drachmae": 250, "grain": 5},
+    "description": "Bakes grain into bread."
+  },
+  {
+    "id": "olive_press",
+    "name": "Olive Press",
+    "icon": "🫒",
+    "input": "olives",
+    "output": "olive_oil",
+    "ratio": 2,
+    "build_cost": {"drachmae": 275, "grain": 8},
+    "description": "Presses olives into olive oil."
+  },
+  {
+    "id": "meadery",
+    "name": "Meadery",
+    "icon": "🍯",
+    "input": "honey",
+    "output": "mead",
+    "ratio": 2,
+    "build_cost": {"drachmae": 325, "grain": 6},
+    "description": "Ferments honey into mead."
+  }
+]

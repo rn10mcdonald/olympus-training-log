@@ -182,7 +182,8 @@
 
       <div class="card">
         <h2 class="card-h2">⚔️ Monster Trophies</h2>
-        <p class="sub-text" style="margin-bottom:10px">Complete a 6-session microcycle to slay a monster.</p>
+        <p class="sub-text" style="margin-bottom:10px">Complete a 6-session microcycle to slay a monster and earn a permanent passive bonus.</p>
+        <div id="trophy-buffs-summary"></div>
         <div class="badge-grid" id="trophies-list">
           <div class="empty-msg">Complete a cycle to earn your first trophy.</div>
         </div>
@@ -295,6 +296,35 @@
         <p class="sub-text" style="margin-top:8px">Awards drachmae · triggers daily farm harvest</p>
       </div>
 
+      <!-- Villa -->
+      <div class="card">
+        <div class="card-header">
+          <h2>🏛️ Villa</h2>
+          <span id="villa-level-chip" class="stat-chip">Level 1</span>
+        </div>
+        <p class="sub-text" style="margin-bottom:10px">Upgrade your villa to expand your army capacity and unlock the barracks.</p>
+        <div id="villa-body"><!-- rendered by renderVilla() --></div>
+      </div>
+
+      <!-- Processing Buildings -->
+      <div class="card">
+        <div class="card-header">
+          <h2>⚗️ Workshop</h2>
+        </div>
+        <p class="sub-text" style="margin-bottom:10px">Build processing buildings to convert raw goods into refined products.</p>
+        <div id="processing-list"><!-- rendered by renderProcessing() --></div>
+      </div>
+
+      <!-- Blessings -->
+      <div class="card">
+        <div class="card-header">
+          <h2>🌟 Blessings</h2>
+          <span id="blessings-laurels-chip" class="stat-chip">🌿 0 laurels</span>
+        </div>
+        <p class="sub-text" style="margin-bottom:10px">Spend laurels to invoke divine favour before a workout or campaign.</p>
+        <div id="blessings-list"><!-- rendered by renderBlessings() --></div>
+      </div>
+
       <!-- Sanctuary -->
       <div class="card">
         <div class="card-header">
@@ -311,7 +341,7 @@
       <div class="card">
         <div class="card-header">
           <h2>⚗️ Relics</h2>
-          <span id="relics-count" class="stat-chip">0 / 5</span>
+          <span id="relics-count" class="stat-chip">0 / 10</span>
         </div>
         <p class="sub-text" style="margin-bottom:10px">Relics provide passive bonuses to workouts and farm production.</p>
         <div id="relics-list" class="relic-list">

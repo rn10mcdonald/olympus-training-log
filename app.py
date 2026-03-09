@@ -6,7 +6,7 @@ from laurel_of_olympus import game_state as gs
 from laurel_of_olympus import workout_engine, farm_engine, event_engine
 from laurel_of_olympus import oracle_engine, title_engine
 from laurel_of_olympus import creature_engine, relic_engine, buff_engine
-from laurel_of_olympus import army_engine
+from laurel_of_olympus import army_engine, processing_engine, trophy_engine
 
 BASE   = Path(__file__).parent
 DATA   = BASE / "data.json"
@@ -261,9 +261,31 @@ async def estate_simulate_workout(req: Request):
     # ── Compute passive buffs from sanctuary + relics ────────────────────────
     buffs = buff_engine.get_all_buffs(state)
 
-    events = workout_engine.process_workout(state, workout_type, buffs=buffs, **kwargs)
+    raw_events = workout_engine.process_workout(state, workout_type, buffs=buffs, **kwargs)
+
+    # Extract any structured trophy events from the events list
+    # (workout_engine appends a dict when a laurel window completes)
+    trophy_award = None
+    events = []
+    for e in raw_events:
+        if isinstance(e, dict) and e.get("type") == "trophy":
+            trophy_award = e["trophy"]
+            events.append(e["msg"])  # include the text message in event log
+        else:
+            events.append(e)
+
+    # Consume Hermes blessing after a run (MISS-4)
+    if buffs.get("blessing_hermes") and workout_type == "running":
+        state.active_blessings["hermes"] = max(0, state.active_blessings.get("hermes", 1) - 1)
+        events.append("  🪶 Blessing of Hermes consumed.")
+
     farm_events = farm_engine.produce_farms(state, buffs=buffs)
     events.extend(farm_events)
+
+    # Consume Demeter blessing after farm production (MISS-4)
+    if buffs.get("blessing_demeter") and farm_events and "No farms" not in farm_events[0]:
+        state.active_blessings["demeter"] = max(0, state.active_blessings.get("demeter", 1) - 1)
+        events.append("  🌾 Blessing of Demeter consumed.")
 
     # ── Title checks (run before event priority chain) ───────────────────────
     newly_unlocked = title_engine.check_and_unlock_titles(state)
@@ -271,7 +293,9 @@ async def estate_simulate_workout(req: Request):
         events.append(f"  🏅 Title unlocked: {tid.replace('_', ' ').title()}")
 
     # ── Creature encounter (outdoor workouts only, 5% base) ──────────────────
+    # event_chance buff (relics/creatures) + creature_chance buff (trophies)
     encounter_chance = buff_engine.effective_event_chance(buffs, 0.05)
+    encounter_chance = min(1.0, encounter_chance + buffs.get("creature_chance", 0.0))
     creature_encounter = creature_engine.maybe_creature_encounter(
         workout_type, chance=encounter_chance
     )
@@ -286,14 +310,44 @@ async def estate_simulate_workout(req: Request):
             state.active_titles["legendary"] = "favorite_of_kassandra"
             events.append("  🌟 Title unlocked: Favorite of Kassandra")
     else:
-        # 2. Oracle visit (10%)
-        narrative_event = oracle_engine.maybe_oracle_visit(state, chance=0.10)
+        # 2. Army unlock narrative — one-time hint when conditions are first met
+        if army_engine.check_army_unlock_hint(state):
+            narrative_event = {
+                "type":  "oracle",
+                "title": "Kassandra Stirs",
+                "icon":  "🏛️",
+                "lines": [
+                    "The Oracle sets down her scroll.",
+                    "She regards the estate — the fields, the sanctuary, the growing stores.",
+                    "'You have built something here. It would be a shame to lose it.'",
+                    "'Perhaps... it is time to consider defending it.'",
+                    "She says nothing more. But the thought lingers.",
+                ],
+            }
+        # 3. Oracle visit (10%)
         if narrative_event is None:
-            # 3. Regular flavour event — base 20% + event_chance buff
+            narrative_event = oracle_engine.maybe_oracle_visit(state, chance=0.10)
+        if narrative_event is None:
+            # 4. Regular flavour event — base 20% + event_chance buff
             flavour_chance = buff_engine.effective_event_chance(buffs, 0.20)
             narrative_event = event_engine.maybe_trigger_event(
                 state.to_dict(), chance=flavour_chance
             )
+
+    # ── Relic discovery via events (MISS-6): 3% base chance ─────────────────
+    # event_chance buff (relics/creatures) + relic_chance buff (trophies)
+    relic_find = None
+    import random as _random
+    relic_chance = buff_engine.effective_event_chance(buffs, 0.03)
+    relic_chance = min(1.0, relic_chance + buffs.get("relic_chance", 0.0))
+    if _random.random() < relic_chance:
+        candidate = relic_engine.roll_relic_reward()
+        if candidate:
+            ok_r, _ = relic_engine.add_relic(state, candidate["id"])
+            if ok_r:
+                relic_find = candidate
+            else:
+                relic_find = {**candidate, "not_added": True}
 
     gs.save(state, ESTATE_SAVE)
     return {
@@ -302,6 +356,8 @@ async def estate_simulate_workout(req: Request):
         "state":              state.to_dict(),
         "event":              narrative_event,       # None or event dict
         "creature_encounter": creature_encounter,    # None or creature dict
+        "relic_find":         relic_find,            # None or relic dict (MISS-6)
+        "trophy_award":       trophy_award,          # None or trophy dict (new)
     }
 
 
@@ -398,6 +454,19 @@ async def remove_relic(req: Request):
         raise HTTPException(400, msg)
     gs.save(state, ESTATE_SAVE)
     return {"status": "ok", "msg": msg, "state": state.to_dict()}
+
+# ── Trophy endpoints ────────────────────────────────────────────────────────────
+
+@app.get("/api/estate/trophies")
+def get_trophies():
+    """Return trophy inventory, buff summary, and all trophy definitions."""
+    state = gs.load(ESTATE_SAVE)
+    return {
+        "trophies":     trophy_engine.get_trophy_inventory(state),
+        "buff_summary": trophy_engine.get_buff_summary(state),
+        "total":        len(getattr(state, "trophies", None) or []),
+    }
+
 
 # ── Army / Barracks endpoints ───────────────────────────────────────────────────
 
