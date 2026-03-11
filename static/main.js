@@ -181,108 +181,49 @@ function renderHeader(state) {
 
 // ── Train section ─────────────────────────────────────────────────────────────
 function renderTrainSection(state, workout) {
+  renderProgramTrack(state, workout);
   renderWorkout(workout);
-  const totalSessions = workout && workout.total_sessions ? workout.total_sessions : SESSIONS_NEEDED;
-  renderCycleGrid(state, totalSessions);
 }
 
-// ── Cycle grid ────────────────────────────────────────────────────────────────
-function getMondayOf(dateStr) {
-  const d = new Date(dateStr + "T12:00:00");
-  const day = d.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  d.setDate(d.getDate() + diff);
-  return d;
-}
-
-function fmtShort(d) {
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-}
-
-function renderCycleGrid(state, totalSessions) {
-  const el   = document.getElementById("cycle-grid");
+// ── Program Track card ────────────────────────────────────────────────────────
+function renderProgramTrack(state, workout) {
   const mc   = state.microcycle || {};
-  const n    = totalSessions || SESSIONS_NEEDED;
+  const n    = (workout && workout.total_sessions) ? workout.total_sessions : SESSIONS_NEEDED;
   const done = Math.min(mc.sessions_completed || 0, n);
 
-  document.getElementById("cycle-fraction").textContent = `${done} / ${n}`;
+  const noState     = document.getElementById("no-program-state");
+  const activeState = document.getElementById("active-program-state");
+  const fractionEl  = document.getElementById("program-fraction");
+  const nameEl      = document.getElementById("program-name-display");
+  const barEl       = document.getElementById("program-bar");
+  const countdownEl = document.getElementById("program-countdown");
 
-  if (!mc.start_date) {
-    el.innerHTML = `<p class="dim-msg">Select a track below to begin.</p>`;
+  if (!mc.start_date || !state.track) {
+    if (noState)     noState.hidden     = false;
+    if (activeState) activeState.hidden = true;
+    if (fractionEl)  fractionEl.hidden  = true;
     return;
   }
 
-  const mon1 = getMondayOf(mc.start_date);
-  const sun1 = new Date(mon1); sun1.setDate(sun1.getDate() + 6);
-  const mon2 = new Date(mon1); mon2.setDate(mon2.getDate() + 7);
-  const sun2 = new Date(mon2); sun2.setDate(sun2.getDate() + 6);
-
-  const cycleLogs = (state.workouts || [])
-    .filter(w => w.date >= mc.start_date)
-    .slice(0, n);
-
-  function sessionCell(idx) {
-    const num = `S${idx + 1}`;
-    if (idx < done) {
-      const raw   = cycleLogs[idx]?.date || "";
-      const label = raw ? fmtShort(new Date(raw + "T12:00:00")) : "done";
-      return `<div class="cs cs-done" title="Session ${idx+1} — ${label}">
-        <span class="cs-icon">✓</span>
-        <span class="cs-num">${num}</span>
-        <span class="cs-date">${label}</span>
-      </div>`;
-    }
-    if (idx === done) {
-      return `<div class="cs cs-next" title="Session ${idx+1} — up next">
-        <span class="cs-icon">→</span>
-        <span class="cs-num">${num}</span>
-        <span class="cs-date">next</span>
-      </div>`;
-    }
-    return `<div class="cs cs-upcoming" title="Session ${idx+1} — upcoming">
-      <span class="cs-icon">○</span>
-      <span class="cs-num">${num}</span>
-    </div>`;
+  if (noState)     noState.hidden     = true;
+  if (activeState) activeState.hidden = false;
+  if (fractionEl) {
+    fractionEl.hidden      = false;
+    fractionEl.textContent = `${done} / ${n}`;
   }
 
-  // Week 1 = sessions 0-2, Week 2 = sessions 3-5 (for 6-session cycles)
-  // For custom cycles, split evenly: first half in wk1, second half in wk2
-  const half    = Math.ceil(n / 2);
-  const wk1Cells = Array.from({length: half}, (_, i) => sessionCell(i)).join("");
-  const wk2Cells = Array.from({length: n - half}, (_, i) => sessionCell(half + i)).join("");
+  // Program name: prefer workout track_name, fall back to track key
+  const trackName = (workout && workout.track_name) || state.track || "Active Program";
+  if (nameEl) nameEl.textContent = trackName;
 
-  el.innerHTML = `
-    <div class="cycle-week">
-      <div class="cycle-week-hdr">
-        <span class="cw-label">Week 1</span>
-        <span class="cw-range">${fmtShort(mon1)} – ${fmtShort(sun1)}</span>
-      </div>
-      <div class="cs-row">${wk1Cells}</div>
-    </div>
-    ${n > half ? `
-    <div class="cycle-divider"></div>
-    <div class="cycle-week">
-      <div class="cycle-week-hdr">
-        <span class="cw-label">Week 2</span>
-        <span class="cw-range">${fmtShort(mon2)} – ${fmtShort(sun2)}</span>
-      </div>
-      <div class="cs-row">${wk2Cells}</div>
-    </div>` : ""}`;
+  const pct = Math.min(Math.round((done / n) * 100), 100);
+  if (barEl) barEl.style.width = pct + "%";
 
-  // Microcycle progress bar + countdown
-  const progressWrap = document.getElementById("microcycle-progress-wrap");
-  const bar          = document.getElementById("microcycle-bar");
-  const countdown    = document.getElementById("microcycle-countdown");
-  if (progressWrap && bar && countdown && mc.start_date) {
-    const pct       = Math.min(Math.round((done / n) * 100), 100);
-    bar.style.width = pct + "%";
-    const remaining = Math.max(n - done, 0);
-    countdown.textContent = remaining > 0
-      ? `${remaining} workout${remaining !== 1 ? "s" : ""} until your next monster encounter`
+  const remaining = Math.max(n - done, 0);
+  if (countdownEl) {
+    countdownEl.textContent = remaining > 0
+      ? `${remaining} session${remaining !== 1 ? "s" : ""} until next monster encounter`
       : "🏅 Cycle complete — slay your monster!";
-    progressWrap.style.display = "";
-  } else if (progressWrap) {
-    progressWrap.style.display = "none";
   }
 }
 
@@ -294,52 +235,47 @@ function weightInputHtml(key) {
 }
 
 function renderWorkout(w) {
-  const el = document.getElementById("workout-display");
+  const el         = document.getElementById("workout-display");
+  const actionsEl  = document.getElementById("workout-actions");
 
   if (!w || w.status === "no_track") {
-    el.innerHTML = `<p class="dim-msg">No active track. Choose a track below and press <strong>Start</strong>.</p>`;
+    el.innerHTML = `<p class="dim-msg" style="margin-bottom:0">Choose a program above to see today's session.</p>`;
+    if (actionsEl) actionsEl.style.display = "none";
     return;
   }
   if (w.status === "cycle_complete") {
-    el.innerHTML = `<p class="dim-msg">🏅 Cycle complete! Log a custom workout or start a new track below.</p>`;
+    el.innerHTML = `<p class="dim-msg" style="margin-bottom:0">🏅 Cycle complete! Choose a new program to continue.</p>`;
+    if (actionsEl) actionsEl.style.display = "none";
     return;
   }
 
+  if (actionsEl) actionsEl.style.display = "";
   currentStdKg = w.std_kg || 16;
   const stdLbs = Math.round(currentStdKg * 2.20462);
 
   const accessories = (w.accessory || []).map((a, i) => `
-    <li>
+    <li class="acc-row">
       <span class="acc-text">${escHtml(a)}</span>
       ${weightInputHtml(`acc_${i}`)}
     </li>`).join("");
 
   el.innerHTML = `
-    <div class="workout-track-name">${escHtml(w.track_name || "")}</div>
-    <div class="workout-session-label">Session ${w.session_num} of ${w.total_sessions}</div>
+    <div class="session-label">Session ${w.session_num} of ${w.total_sessions}</div>
 
     <div class="workout-main">
       <span class="workout-main-text">${escHtml(w.main)}</span>
       ${weightInputHtml("main")}
     </div>
 
-    <div class="workout-accessories">
-      <h4>Accessories</h4>
-      <ul>${accessories}</ul>
-    </div>
+    ${accessories ? `<ul class="workout-accessories">${accessories}</ul>` : ""}
 
-    <div class="workout-finisher">
-      <div class="finisher-content">
-        <span class="finisher-label">Finisher</span>
-        ${escHtml(w.finisher)}
-      </div>
+    ${w.finisher ? `<div class="workout-finisher">
+      <span class="finisher-label">Finisher</span>
+      <span>${escHtml(w.finisher)}</span>
       ${weightInputHtml("finisher")}
-    </div>
+    </div>` : ""}
 
-    <div class="workout-coins-row">
-      <span class="weight-std-hint">· std: ${stdLbs} lbs (${currentStdKg} kg)</span>
-      <span class="weight-coins-preview" id="weight-coins-preview">🪙 ${BASE_WORKOUT_COINS.toFixed(2)}</span>
-    </div>`;
+    <p class="weight-std-hint">Standard bell: ${stdLbs} lbs (${currentStdKg} kg)</p>`;
 }
 
 /** Live Drachma preview — driven by the main-lift weight input. */
@@ -782,6 +718,7 @@ async function startPreviewedTrack() {
 
 // ── Actions ───────────────────────────────────────────────────────────────────
 async function logRecommended() {
+  const btn = document.getElementById("log-session-btn");
   const weights = {};
   document.querySelectorAll("#workout-display .movement-weight-input").forEach(inp => {
     const v = parseFloat(inp.value || 0);
@@ -789,14 +726,18 @@ async function logRecommended() {
   });
   const payload = Object.keys(weights).length > 0 ? { weights_lbs: weights } : {};
 
+  if (btn) btn.disabled = true;
   try {
     const r = await api("/api/workout/recommended", payload);
-    toast(r.msg || "⚔️ Workout logged!");
+    toast(r.msg || "⚔️ Session logged!", 3000, "drachmae");
+    checkLaurelEvents(r.events);
     appState = r.state;
     const workout = await api("/api/workout/today");
     renderAll(appState, workout);
     checkNewBadges(appState);
+    loadHistory();
   } catch (e) { toast("⚠ " + e.message); }
+  finally { if (btn) btn.disabled = false; }
 }
 
 async function startTrack(key) {
@@ -893,162 +834,136 @@ function renderRecentCardio() {
   }).join("");
 }
 
-// ── Strength logging ───────────────────────────────────────────────────────────
-let _movementsCache2 = null;
-let _strengthCatFilter = "all";
+// ── Program Picker ────────────────────────────────────────────────────────────
+function openProgramPicker() {
+  document.getElementById("program-picker-dialog").hidden = false;
+}
+function closeProgramPicker() {
+  document.getElementById("program-picker-dialog").hidden = true;
+}
 
-async function initMovementSelector() {
-  if (!_movementsCache2) {
-    try {
-      _movementsCache2 = await api("/api/movements");
-    } catch (_) {
-      _movementsCache2 = [];
-    }
+// ── Custom Work (new categories + movements) ──────────────────────────────────
+let _apiMovements    = null;    // from /api/movements
+let _customCatFilter = "kettlebell";
+
+// Hardcoded movement lists per category (API used for KB/Barbell/Bodyweight where possible)
+const CUSTOM_WORK_MOVEMENTS = {
+  kettlebell: null,  // filled from API: swing/snatch/clean/press/hinge/get_up/row/carry
+  dumbbell: [
+    "Dumbbell Press", "Dumbbell Row", "Dumbbell Curl", "Dumbbell Lunge",
+    "Romanian Deadlift", "Lateral Raise", "Dumbbell Squat", "Dumbbell Fly",
+    "Tricep Extension", "Dumbbell Shoulder Press", "Goblet Squat",
+  ],
+  barbell: null,     // filled from API: barbell category
+  bodyweight: null,  // filled from API: bodyweight category
+  yoga: [
+    "Sun Salutation", "Warrior Flow", "Vinyasa Flow", "Mobility Flow",
+    "Yin Yoga", "Hip Opening Flow", "Balance Flow", "Restorative Flow",
+  ],
+  pilates: [
+    "Hundred", "Roll Up", "Teaser", "Core Series",
+    "Single Leg Stretch", "Double Leg Stretch", "Spine Stretch", "Plank Series",
+  ],
+};
+
+// Categories where weight input should be hidden
+const NO_WEIGHT_CATS = new Set(["bodyweight", "yoga", "pilates"]);
+
+const KB_API_CATS = new Set(["swing","snatch","clean","press","hinge","get_up","row","carry"]);
+
+async function initCustomWorkSelector() {
+  if (!_apiMovements) {
+    try { _apiMovements = await api("/api/movements"); } catch (_) { _apiMovements = []; }
   }
-  renderMovementCats();
-  renderMovementSelect();
+  // Populate KB list from API
+  CUSTOM_WORK_MOVEMENTS.kettlebell = _apiMovements.filter(m => KB_API_CATS.has(m.category));
+  CUSTOM_WORK_MOVEMENTS.barbell    = _apiMovements.filter(m => m.category === "barbell");
+  CUSTOM_WORK_MOVEMENTS.bodyweight = _apiMovements.filter(m => m.category === "bodyweight");
 
-  // Category filter clicks
-  const catsEl = document.getElementById("movement-cats");
+  updateCustomMovementSelect();
+
+  // Category pill clicks
+  const catsEl = document.getElementById("custom-cats");
   if (catsEl) {
     catsEl.addEventListener("click", e => {
       const btn = e.target.closest(".cat-btn");
       if (!btn) return;
-      _strengthCatFilter = btn.dataset.cat;
-      renderMovementCats();
-      renderMovementSelect();
+      _customCatFilter = btn.dataset.cat;
+      // Update active state
+      catsEl.querySelectorAll(".cat-btn").forEach(b =>
+        b.classList.toggle("active", b.dataset.cat === _customCatFilter));
+      updateCustomMovementSelect();
+      // Toggle weight field
+      const wg = document.getElementById("custom-weight-group");
+      if (wg) wg.style.display = NO_WEIGHT_CATS.has(_customCatFilter) ? "none" : "";
     });
   }
 
-  // On movement change, show last weight
-  const sel = document.getElementById("movement-select");
-  if (sel) {
-    sel.addEventListener("change", () => updateLastWeightHint());
-    updateLastWeightHint();
-  }
+  const sel = document.getElementById("custom-movement-select");
+  if (sel) sel.addEventListener("change", updateCustomLastWeight);
 
-  // Weight preset buttons
-  const presetsEl = document.getElementById("weight-presets");
-  if (presetsEl) {
-    presetsEl.addEventListener("click", e => {
-      const btn = e.target.closest(".preset-btn");
-      if (!btn) return;
-      const kg = btn.dataset.kg;
-      const inp = document.getElementById("strength-weight");
-      if (inp) inp.value = kg || "";
-      if (inp && !kg) inp.focus();
-    });
-  }
+  // Init weight field visibility
+  const wg = document.getElementById("custom-weight-group");
+  if (wg) wg.style.display = NO_WEIGHT_CATS.has(_customCatFilter) ? "none" : "";
 }
 
-function renderMovementCats() {
-  const el = document.getElementById("movement-cats");
-  if (!el) return;
-  const cats = [
-    { key: "all", label: "All" }, { key: "swing", label: "Swing" },
-    { key: "snatch", label: "Snatch" }, { key: "clean", label: "Clean" },
-    { key: "press", label: "Press" }, { key: "squat", label: "Squat" },
-    { key: "hinge", label: "Hinge" }, { key: "get_up", label: "Get-Up" },
-    { key: "row", label: "Row" }, { key: "carry", label: "Carry" },
-    { key: "barbell", label: "Barbell" }, { key: "bodyweight", label: "BW" },
-  ];
-  el.innerHTML = cats.map(c =>
-    `<button class="cat-btn${c.key === _strengthCatFilter ? " active" : ""}" data-cat="${c.key}">${c.label}</button>`
-  ).join("");
+function updateCustomMovementSelect() {
+  const sel = document.getElementById("custom-movement-select");
+  if (!sel) return;
+  const list = CUSTOM_WORK_MOVEMENTS[_customCatFilter] || [];
+  sel.innerHTML = list.length
+    ? list.map(m => {
+        const name = typeof m === "string" ? m : m.name;
+        const slug = typeof m === "string" ? m.toLowerCase().replace(/\s+/g, "_") : m.slug;
+        return `<option value="${escHtml(slug)}">${escHtml(name)}</option>`;
+      }).join("")
+    : '<option value="">No movements available</option>';
+  updateCustomLastWeight();
 }
 
-function renderMovementSelect() {
-  const sel = document.getElementById("movement-select");
-  if (!sel || !_movementsCache2) return;
-  const filtered = _strengthCatFilter === "all"
-    ? _movementsCache2
-    : _movementsCache2.filter(m => m.category === _strengthCatFilter);
-  if (!filtered.length) {
-    sel.innerHTML = '<option value="">No movements in this category</option>';
-    return;
-  }
-  const prevVal = sel.value;
-  sel.innerHTML = filtered.map(m =>
-    `<option value="${escHtml(m.slug)}" data-hint="${escHtml(m.hint || "")}">${escHtml(m.name)}</option>`
-  ).join("");
-  if (prevVal && filtered.find(m => m.slug === prevVal)) sel.value = prevVal;
-  updateLastWeightHint();
-  prefillSetsReps();
-}
-
-function updateLastWeightHint() {
-  const sel  = document.getElementById("movement-select");
-  const hint = document.getElementById("movement-last-weight");
+function updateCustomLastWeight() {
+  const sel  = document.getElementById("custom-movement-select");
+  const hint = document.getElementById("custom-last-weight");
   if (!sel || !hint) return;
   const slug = sel.value;
-  if (!slug) { hint.textContent = ""; return; }
-  const last = localStorage.getItem("lastWeight_" + slug);
+  const last = slug && localStorage.getItem("lastWeight_" + slug);
   hint.textContent = last ? `Last used: ${last} kg` : "";
 }
 
-function prefillSetsReps() {
-  const sel = document.getElementById("movement-select");
-  if (!sel) return;
-  const opt = sel.options[sel.selectedIndex];
-  const hintText = opt ? opt.dataset.hint : "";
-  const m = hintText && hintText.match(/(\d+)[×x](\d+)/);
-  if (m) {
-    const setsEl = document.getElementById("strength-sets");
-    const repsEl = document.getElementById("strength-reps");
-    if (setsEl && !setsEl.value) setsEl.value = m[1];
-    if (repsEl && !repsEl.value) repsEl.value = m[2];
-  }
-}
-
-async function logStrength() {
-  const movement  = document.getElementById("movement-select")?.value;
-  const weightKg  = parseFloat(document.getElementById("strength-weight")?.value || 0);
-  const sets      = parseInt(document.getElementById("strength-sets")?.value  || 0, 10);
-  const reps      = parseInt(document.getElementById("strength-reps")?.value  || 0, 10);
+async function logExercise() {
+  const sel      = document.getElementById("custom-movement-select");
+  const movement = sel?.value || sel?.options[sel?.selectedIndex]?.text || "";
+  const weightKg = parseFloat(document.getElementById("custom-weight")?.value || 0);
+  const sets     = parseInt(document.getElementById("custom-sets")?.value || 0, 10);
+  const reps     = parseInt(document.getElementById("custom-reps")?.value || 0, 10);
 
   if (!movement) { toast("Select a movement."); return; }
-  if (!weightKg || weightKg <= 0) { toast("Enter a weight."); return; }
-  if (!sets || sets <= 0)   { toast("Enter sets."); return; }
-  if (!reps || reps <= 0)   { toast("Enter reps."); return; }
+  if (!sets || sets <= 0) { toast("Enter sets."); return; }
+  if (!reps || reps <= 0) { toast("Enter reps."); return; }
+  const needsWeight = !NO_WEIGHT_CATS.has(_customCatFilter);
+  if (needsWeight && (!weightKg || weightKg <= 0)) { toast("Enter a weight."); return; }
 
-  // Save last weight for this movement
-  localStorage.setItem("lastWeight_" + movement, String(weightKg));
-  updateLastWeightHint();
+  if (needsWeight && weightKg > 0) {
+    localStorage.setItem("lastWeight_" + movement, String(weightKg));
+    updateCustomLastWeight();
+  }
 
   try {
-    const r = await api("/api/strength", { movement, weight_kg: weightKg, sets, reps });
-    toast(r.msg || "💪 Strength logged!", 3000, "drachmae");
+    const payload = { movement, sets, reps };
+    if (needsWeight && weightKg > 0) payload.weight_kg = weightKg;
+    const r = await api("/api/strength", payload);
+    toast(r.msg || "💪 Exercise logged!", 3000, "drachmae");
     checkLaurelEvents(r.events);
     appState = r.state;
     const workout = await api("/api/workout/today");
     renderAll(appState, workout);
     checkNewBadges(appState);
     prevBadgeCount = (appState.badges || []).length;
+    // Clear inputs
+    document.getElementById("custom-weight").value = "";
+    document.getElementById("custom-sets").value   = "";
+    document.getElementById("custom-reps").value   = "";
     loadHistory();
-  } catch (e) { toast("⚠ " + e.message); }
-}
-
-function openCustomDialog() {
-  document.getElementById("custom-dialog").removeAttribute("hidden");
-  document.getElementById("custom-text").focus();
-}
-
-function closeCustomDialog() {
-  document.getElementById("custom-dialog").setAttribute("hidden", "");
-  document.getElementById("custom-text").value = "";
-}
-
-async function submitCustomWorkout() {
-  const text = document.getElementById("custom-text").value.trim();
-  if (!text) { toast("Please describe your workout."); return; }
-  try {
-    const r = await api("/api/workout/custom", { text });
-    closeCustomDialog();
-    toast(r.msg || "✔ Custom workout logged!");
-    appState = r.state;
-    const workout = await api("/api/workout/today");
-    renderAll(appState, workout);
-    checkNewBadges(appState);
   } catch (e) { toast("⚠ " + e.message); }
 }
 
@@ -1419,6 +1334,7 @@ async function saveBuilderCycle() {
     toast(`⚒ "${name}" saved! Starting now…`);
     appState = r.state;
     closeBuilderDialog();
+    closeProgramPicker();
 
     // Start the new track immediately
     const trackKey = `custom_${r.track.id}`;
@@ -1442,37 +1358,28 @@ document.querySelectorAll(".nav-btn").forEach(btn =>
 
 // Train section
 document.getElementById("refresh-btn").addEventListener("click", refresh);
-document.getElementById("log-rec-btn").addEventListener("click", logRecommended);
-document.getElementById("log-custom-btn").addEventListener("click", openCustomDialog);
+document.getElementById("log-session-btn")?.addEventListener("click", logRecommended);
+document.getElementById("log-exercise-btn")?.addEventListener("click", logExercise);
+
+// Program picker
+document.getElementById("choose-program-btn")?.addEventListener("click", openProgramPicker);
+document.getElementById("change-program-btn")?.addEventListener("click", openProgramPicker);
+document.getElementById("view-program-btn")?.addEventListener("click", showTrackPreview);
+document.getElementById("close-program-picker-btn")?.addEventListener("click", closeProgramPicker);
+document.getElementById("program-picker-dialog")?.addEventListener("click", e => {
+  if (e.target === e.currentTarget) closeProgramPicker();
+});
 document.getElementById("preview-track-btn").addEventListener("click", showTrackPreview);
-document.getElementById("start-track-btn").addEventListener("click", () => startTrack());
+document.getElementById("start-track-btn").addEventListener("click", async () => {
+  await startTrack();
+  closeProgramPicker();
+});
 document.getElementById("delete-track-btn").addEventListener("click", deleteCustomTrack);
 document.getElementById("open-builder-btn").addEventListener("click", openBuilderDialog);
 document.getElementById("track-select").addEventListener("change", updateDeleteTrackBtn);
 
-// Live coin preview — delegate from workout-display so it works after re-renders
-document.getElementById("workout-display").addEventListener("input", e => {
-  if (e.target.classList.contains("movement-weight-input") &&
-      e.target.dataset.key === "main") {
-    updateCoinPreview();
-  }
-});
-
 // Cardio section
 document.getElementById("log-cardio-btn")?.addEventListener("click", logCardio);
-
-// Strength logging
-document.getElementById("log-strength-btn")?.addEventListener("click", logStrength);
-
-// Custom workout dialog
-document.getElementById("submit-custom").addEventListener("click", submitCustomWorkout);
-document.getElementById("cancel-custom").addEventListener("click", closeCustomDialog);
-document.getElementById("custom-dialog").addEventListener("click", e => {
-  if (e.target === e.currentTarget) closeCustomDialog();
-});
-document.getElementById("custom-text").addEventListener("keydown", e => {
-  if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) submitCustomWorkout();
-});
 
 // Track preview dialog
 document.getElementById("close-preview-btn").addEventListener("click", closePreviewDialog);
@@ -2982,7 +2889,7 @@ function initAuth() {
       hideAuthOverlay();
       refresh();
       initEstate();
-      initMovementSelector();
+      initCustomWorkSelector();
       loadHistory();
     } catch (err) {
       errorEl.textContent = err.message;
@@ -3006,7 +2913,7 @@ window.addEventListener("load", () => {
   if (getToken()) {
     refresh();
     initEstate();
-    initMovementSelector();
+    initCustomWorkSelector();
     loadHistory();
   }
 });
