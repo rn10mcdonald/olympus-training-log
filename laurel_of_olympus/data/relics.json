@@ -62,6 +62,15 @@
       "buff_value": 0.20,
       "description": "Illuminates paths unseen by ordinary eyes.",
       "sprite": "torch_of_hecate.png"
+    },
+    {
+      "id": "golden_laurel",
+      "name": "Golden Laurel",
+      "rarity": "epic",
+      "buff_type": "laurel_bonus",
+      "buff_value": 0.10,
+      "description": "Gilded laurels bestowed by the Fates themselves.",
+      "sprite": "golden_laurel.png"
     }
   ],
 
