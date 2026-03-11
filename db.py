@@ -1,73 +1,125 @@
 """
-SQLite persistence layer for Olympus Training Log.
+SQLite persistence for Olympus Training Log — multi-user edition.
 
-All state is stored as JSON blobs in a single key-value table so the
-existing in-memory logic (PlayerState, core.py dicts) is untouched.
+All player state is stored as JSON blobs so the existing game engines
+(PlayerState, core.py dicts) are unchanged.
 
-DB_PATH env-var lets Railway / Render point at a mounted volume:
-    DB_PATH=/data/olympus.db
+Env vars:
+  DB_PATH   path to .db file  (default: olympus.db)
+            On Render free tier use /tmp/olympus.db or mount a disk.
 """
 import sqlite3, json, os, datetime as dt
 from pathlib import Path
 
 DB_PATH = Path(os.environ.get("DB_PATH", "olympus.db"))
 
-_DDL = """
-CREATE TABLE IF NOT EXISTS kv_store (
-    key        TEXT PRIMARY KEY,
-    value      TEXT NOT NULL,
-    updated_at TEXT NOT NULL
-);
-"""
+_DDL = [
+    """
+    CREATE TABLE IF NOT EXISTS users (
+        id            INTEGER PRIMARY KEY AUTOINCREMENT,
+        username      TEXT UNIQUE NOT NULL COLLATE NOCASE,
+        password_hash TEXT NOT NULL,
+        created_at    TEXT NOT NULL
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS player_estate (
+        user_id    INTEGER PRIMARY KEY REFERENCES users(id),
+        data       TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS player_legacy (
+        user_id    INTEGER PRIMARY KEY REFERENCES users(id),
+        data       TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+    )
+    """,
+]
 
 
 def _conn() -> sqlite3.Connection:
     conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
-    conn.execute(_DDL)
+    conn.row_factory = sqlite3.Row
+    for stmt in _DDL:
+        conn.execute(stmt)
     conn.commit()
     return conn
 
 
-# ── Public API ────────────────────────────────────────────────────────────────
+# ── User management ───────────────────────────────────────────────────────────
 
-def load(key: str) -> dict | None:
-    """Return the stored dict for *key*, or None if it doesn't exist."""
+def create_user(username: str, password_hash: str) -> int:
+    """Insert a new user and return their id. Raises on duplicate username."""
+    now = dt.datetime.utcnow().isoformat()
+    with _conn() as conn:
+        cur = conn.execute(
+            "INSERT INTO users (username, password_hash, created_at) VALUES (?, ?, ?)",
+            (username, password_hash, now),
+        )
+        return cur.lastrowid
+
+
+def get_user_by_username(username: str) -> dict | None:
     with _conn() as conn:
         row = conn.execute(
-            "SELECT value FROM kv_store WHERE key = ?", (key,)
+            "SELECT * FROM users WHERE username = ? COLLATE NOCASE", (username,)
         ).fetchone()
-        return json.loads(row[0]) if row else None
+        return dict(row) if row else None
 
 
-def save(key: str, data: dict) -> None:
-    """Upsert *data* (serialised as JSON) under *key*."""
+def get_user_by_id(user_id: int) -> dict | None:
+    with _conn() as conn:
+        row = conn.execute(
+            "SELECT * FROM users WHERE id = ?", (user_id,)
+        ).fetchone()
+        return dict(row) if row else None
+
+
+# ── Per-user estate state (Laurel of Olympus RPG) ────────────────────────────
+
+def load_estate(user_id: int) -> dict | None:
+    with _conn() as conn:
+        row = conn.execute(
+            "SELECT data FROM player_estate WHERE user_id = ?", (user_id,)
+        ).fetchone()
+        return json.loads(row["data"]) if row else None
+
+
+def save_estate(user_id: int, data: dict) -> None:
+    now = dt.datetime.utcnow().isoformat()
     with _conn() as conn:
         conn.execute(
             """
-            INSERT INTO kv_store (key, value, updated_at)
-            VALUES (?, ?, ?)
-            ON CONFLICT(key) DO UPDATE SET
-                value      = excluded.value,
+            INSERT INTO player_estate (user_id, data, updated_at) VALUES (?, ?, ?)
+            ON CONFLICT(user_id) DO UPDATE SET
+                data       = excluded.data,
                 updated_at = excluded.updated_at
             """,
-            (key, json.dumps(data, default=str), dt.datetime.utcnow().isoformat()),
+            (user_id, json.dumps(data, default=str), now),
         )
 
 
-def migrate_from_file(key: str, file_path: Path) -> bool:
-    """
-    One-time migration: if *file_path* exists and *key* is not yet in SQLite,
-    copy the file contents into SQLite then rename the file to *.bak*.
-    Returns True if migration happened.
-    """
-    if not file_path.exists():
-        return False
-    if load(key) is not None:
-        return False  # already migrated
-    try:
-        data = json.loads(file_path.read_text())
-        save(key, data)
-        file_path.rename(file_path.with_suffix(".json.bak"))
-        return True
-    except Exception:
-        return False
+# ── Per-user legacy workout state ─────────────────────────────────────────────
+
+def load_legacy(user_id: int) -> dict | None:
+    with _conn() as conn:
+        row = conn.execute(
+            "SELECT data FROM player_legacy WHERE user_id = ?", (user_id,)
+        ).fetchone()
+        return json.loads(row["data"]) if row else None
+
+
+def save_legacy(user_id: int, data: dict) -> None:
+    now = dt.datetime.utcnow().isoformat()
+    with _conn() as conn:
+        conn.execute(
+            """
+            INSERT INTO player_legacy (user_id, data, updated_at) VALUES (?, ?, ?)
+            ON CONFLICT(user_id) DO UPDATE SET
+                data       = excluded.data,
+                updated_at = excluded.updated_at
+            """,
+            (user_id, json.dumps(data, default=str), now),
+        )

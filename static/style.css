@@ -2754,3 +2754,122 @@ body {
   .nav-btn      { padding: 5px 4px 3px; }
   .nav-label    { font-size: 0.5rem; }
 }
+
+/* ── Auth Overlay ─────────────────────────────────────────────────────────── */
+.auth-overlay[hidden] { display: none; }
+.auth-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 16px;
+}
+
+.auth-box {
+  background: var(--bg2, #1a1a2e);
+  border: 1px solid var(--gold, #d4af37);
+  border-radius: 14px;
+  padding: 32px 28px 28px;
+  width: 100%;
+  max-width: 380px;
+  text-align: center;
+}
+
+.auth-brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.auth-coin-icon {
+  font-size: 2rem;
+}
+
+.auth-title {
+  font-size: 1.8rem;
+  color: var(--gold, #d4af37);
+  margin: 0;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.auth-subtitle {
+  color: var(--muted, #aaa);
+  font-size: 0.85rem;
+  margin: 0 0 20px;
+}
+
+.auth-tabs {
+  display: flex;
+  gap: 0;
+  border: 1px solid var(--gold, #d4af37);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+.auth-tab {
+  flex: 1;
+  padding: 9px 0;
+  background: transparent;
+  border: none;
+  color: var(--muted, #aaa);
+  cursor: pointer;
+  font-size: 0.88rem;
+  transition: background 0.15s, color 0.15s;
+}
+
+.auth-tab.active {
+  background: var(--gold, #d4af37);
+  color: #000;
+  font-weight: 600;
+}
+
+.auth-input {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 11px 14px;
+  margin-bottom: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  color: #fff;
+  font-size: 1rem;
+}
+
+.auth-input:focus {
+  outline: none;
+  border-color: var(--gold, #d4af37);
+}
+
+.auth-error {
+  color: #f87171;
+  font-size: 0.83rem;
+  margin-bottom: 10px;
+  text-align: left;
+}
+
+.auth-submit-btn {
+  width: 100%;
+  padding: 12px 0;
+  background: var(--gold, #d4af37);
+  color: #000;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  transition: opacity 0.15s;
+}
+
+.auth-submit-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
