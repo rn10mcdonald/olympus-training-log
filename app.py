@@ -255,16 +255,39 @@ async def log_ruck(req: Request, u: dict = CurrentUser):
     p = await req.json()
     try:
         miles  = float(p["miles"])
-        pounds = float(p["pounds"])
+        pounds = float(p.get("pounds", 0) or 0)
     except (KeyError, ValueError):
-        raise HTTPException(400, "miles and pounds must be numeric")
+        raise HTTPException(400, "miles must be numeric")
     if miles <= 0:
         raise HTTPException(400, "miles must be positive")
-    uid   = u["user_id"]
-    state = _load_legacy(uid)
-    msg   = core.log_ruck(state, miles, pounds)
+    uid      = u["user_id"]
+    state    = _load_legacy(uid)
+    msg      = core.log_ruck(state, miles, pounds)
     _save_legacy(uid, state)
-    return {"status": "ok", "msg": msg, "state": state}
+    # Also run through estate engine for laurel tracking
+    estate   = _load_estate(uid)
+    buffs    = buff_engine.get_all_buffs(estate)
+    raw_evts = workout_engine.process_workout(estate, "rucking", buffs=buffs,
+                                              miles=miles, lbs=pounds)
+    trophy_award = None
+    events = []
+    for e in raw_evts:
+        if isinstance(e, dict) and e.get("type") == "trophy":
+            trophy_award = e["trophy"]
+            events.append(e["msg"])
+        else:
+            events.append(e)
+    _save_estate(uid, estate)
+    # Persist to workouts table
+    today = str(dt.date.today())
+    drachm = estate.drachmae - (_load_estate(uid).drachmae if False else 0)
+    earned = next((float(ev.split("+")[1].split(" ")[0]) for ev in events
+                   if isinstance(ev, str) and "drachmae" in ev), 0.0)
+    db.insert_workout(uid, today, "rucking", earned,
+                      distance_miles=miles, weight_lbs=pounds,
+                      duration_min=float(p.get("duration_min") or 0) or None)
+    return {"status": "ok", "msg": msg, "state": state,
+            "events": events, "trophy_award": trophy_award}
 
 @app.post("/api/walk")
 async def log_walk(req: Request, u: dict = CurrentUser):
@@ -279,7 +302,26 @@ async def log_walk(req: Request, u: dict = CurrentUser):
     state = _load_legacy(uid)
     msg   = core.log_walk(state, miles)
     _save_legacy(uid, state)
-    return {"status": "ok", "msg": msg, "state": state}
+    estate   = _load_estate(uid)
+    buffs    = buff_engine.get_all_buffs(estate)
+    raw_evts = workout_engine.process_workout(estate, "walking", buffs=buffs, miles=miles)
+    trophy_award = None
+    events = []
+    for e in raw_evts:
+        if isinstance(e, dict) and e.get("type") == "trophy":
+            trophy_award = e["trophy"]
+            events.append(e["msg"])
+        else:
+            events.append(e)
+    _save_estate(uid, estate)
+    today  = str(dt.date.today())
+    earned = next((float(ev.split("+")[1].split(" ")[0]) for ev in events
+                   if isinstance(ev, str) and "drachmae" in ev), 0.0)
+    db.insert_workout(uid, today, "walking", earned,
+                      distance_miles=miles,
+                      duration_min=float(p.get("duration_min") or 0) or None)
+    return {"status": "ok", "msg": msg, "state": state,
+            "events": events, "trophy_award": trophy_award}
 
 @app.post("/api/run")
 async def log_run(req: Request, u: dict = CurrentUser):
@@ -300,7 +342,155 @@ async def log_run(req: Request, u: dict = CurrentUser):
     state = _load_legacy(uid)
     msg   = core.log_run(state, miles, pace)
     _save_legacy(uid, state)
-    return {"status": "ok", "msg": msg, "state": state}
+    estate   = _load_estate(uid)
+    buffs    = buff_engine.get_all_buffs(estate)
+    raw_evts = workout_engine.process_workout(estate, "running", buffs=buffs, miles=miles)
+    trophy_award = None
+    events = []
+    for e in raw_evts:
+        if isinstance(e, dict) and e.get("type") == "trophy":
+            trophy_award = e["trophy"]
+            events.append(e["msg"])
+        else:
+            events.append(e)
+    _save_estate(uid, estate)
+    today  = str(dt.date.today())
+    earned = next((float(ev.split("+")[1].split(" ")[0]) for ev in events
+                   if isinstance(ev, str) and "drachmae" in ev), 0.0)
+    db.insert_workout(uid, today, "running", earned,
+                      distance_miles=miles,
+                      duration_min=float(p.get("duration_min") or 0) or None)
+    return {"status": "ok", "msg": msg, "state": state,
+            "events": events, "trophy_award": trophy_award}
+
+@app.post("/api/hike")
+async def log_hike(req: Request, u: dict = CurrentUser):
+    """Hike: like a ruck but counts toward walking miles."""
+    p = await req.json()
+    try:
+        miles  = float(p["miles"])
+        pounds = float(p.get("pounds", 0) or 0)
+    except (KeyError, ValueError):
+        raise HTTPException(400, "miles must be numeric")
+    if miles <= 0:
+        raise HTTPException(400, "miles must be positive")
+    uid   = u["user_id"]
+    state = _load_legacy(uid)
+    msg   = core.log_walk(state, miles)   # counts toward walk miles
+    _save_legacy(uid, state)
+    estate   = _load_estate(uid)
+    buffs    = buff_engine.get_all_buffs(estate)
+    raw_evts = workout_engine.process_workout(estate, "rucking", buffs=buffs,
+                                              miles=miles, lbs=pounds)
+    trophy_award = None
+    events = []
+    for e in raw_evts:
+        if isinstance(e, dict) and e.get("type") == "trophy":
+            trophy_award = e["trophy"]
+            events.append(e["msg"])
+        else:
+            events.append(e)
+    _save_estate(uid, estate)
+    today  = str(dt.date.today())
+    earned = next((float(ev.split("+")[1].split(" ")[0]) for ev in events
+                   if isinstance(ev, str) and "drachmae" in ev), 0.0)
+    db.insert_workout(uid, today, "hiking", earned,
+                      distance_miles=miles, weight_lbs=pounds or None,
+                      duration_min=float(p.get("duration_min") or 0) or None)
+    return {"status": "ok", "msg": f"⛰️ Hike logged! {msg}", "state": state,
+            "events": events, "trophy_award": trophy_award}
+
+@app.post("/api/strength")
+async def log_strength(req: Request, u: dict = CurrentUser):
+    """Free-form strength workout logging with movement selector."""
+    p = await req.json()
+    movement   = (p.get("movement") or "").strip()
+    weight_kg  = float(p.get("weight_kg") or 0)
+    sets_n     = int(p.get("sets") or 1)
+    reps_n     = int(p.get("reps") or 1)
+    if not movement:
+        raise HTTPException(400, "movement is required")
+    if sets_n < 1 or reps_n < 1:
+        raise HTTPException(400, "sets and reps must be at least 1")
+    # volume in lbs for reward calculation
+    volume = weight_kg * 2.20462 * sets_n * reps_n
+    uid    = u["user_id"]
+    estate = _load_estate(uid)
+    buffs  = buff_engine.get_all_buffs(estate)
+    raw_evts = workout_engine.process_workout(estate, "strength", buffs=buffs, volume=volume)
+    trophy_award = None
+    events = []
+    for e in raw_evts:
+        if isinstance(e, dict) and e.get("type") == "trophy":
+            trophy_award = e["trophy"]
+            events.append(e["msg"])
+        else:
+            events.append(e)
+    _save_estate(uid, estate)
+    today  = str(dt.date.today())
+    earned = next((float(ev.split("+")[1].split(" ")[0]) for ev in events
+                   if isinstance(ev, str) and "drachmae" in ev), 0.0)
+    db.insert_workout(uid, today, "strength", earned,
+                      movement=movement, weight_kg=weight_kg,
+                      sets=sets_n, reps=reps_n)
+    move_name = next((m["name"] for m in core.get_movements() if m["slug"] == movement),
+                     movement.replace("_", " ").title())
+    return {
+        "status": "ok",
+        "msg": f"💪 {move_name} — {sets_n}×{reps_n} @ {weight_kg}kg logged! +{earned:.2f} ⚡",
+        "events": events,
+        "trophy_award": trophy_award,
+        "estate_state": estate.to_dict(),
+    }
+
+# ── Workout history CRUD ───────────────────────────────────────────────────────
+
+@app.get("/api/workouts")
+def get_workouts_list(u: dict = CurrentUser):
+    return {"workouts": db.get_workouts(u["user_id"])}
+
+@app.put("/api/workout/{workout_id}")
+async def edit_workout(workout_id: int, req: Request, u: dict = CurrentUser):
+    p   = await req.json()
+    uid = u["user_id"]
+    # Get old drachmae to compute diff
+    old_rows = db.get_workouts(uid, limit=500)
+    old = next((r for r in old_rows if r["id"] == workout_id), None)
+    if not old:
+        raise HTTPException(404, "Workout not found")
+    update_fields = {}
+    for field in ("movement", "weight_kg", "sets", "reps",
+                  "distance_miles", "duration_min", "weight_lbs", "notes"):
+        if field in p:
+            update_fields[field] = p[field]
+    new_drachmae = p.get("drachmae_earned")
+    if new_drachmae is not None:
+        update_fields["drachmae_earned"] = float(new_drachmae)
+    ok = db.update_workout(workout_id, uid, **update_fields)
+    if not ok:
+        raise HTTPException(404, "Workout not found or no changes")
+    # Adjust estate drachmae if changed
+    if new_drachmae is not None:
+        diff = float(new_drachmae) - float(old["drachmae_earned"] or 0)
+        if abs(diff) > 0.001:
+            estate = _load_estate(uid)
+            estate.drachmae = round(estate.drachmae + diff, 2)
+            _save_estate(uid, estate)
+    return {"status": "ok", "workouts": db.get_workouts(uid)}
+
+@app.delete("/api/workout/{workout_id}")
+def del_workout(workout_id: int, u: dict = CurrentUser):
+    uid     = u["user_id"]
+    deleted = db.delete_workout(workout_id, uid)
+    if not deleted:
+        raise HTTPException(404, "Workout not found")
+    # Subtract drachmae from estate
+    earned = float(deleted.get("drachmae_earned") or 0)
+    if earned > 0:
+        estate = _load_estate(uid)
+        estate.drachmae = max(0.0, round(estate.drachmae - earned, 2))
+        _save_estate(uid, estate)
+    return {"status": "ok", "workouts": db.get_workouts(uid)}
 
 @app.post("/api/tracks/custom")
 async def save_custom_track(req: Request, u: dict = CurrentUser):
@@ -767,3 +957,48 @@ async def activate_blessing(req: Request, u: dict = CurrentUser):
     _save_estate(uid, state)
     return {"status": "ok", "message": f"{b['icon']} {b['name']} activated! {b['effect']}",
             "state": state.to_dict()}
+
+
+# ── Agora — sell goods for drachmae ───────────────────────────────────────────
+
+import json as _json
+
+_MARKET_PATH = BASE / "static" / "market_prices.json"
+
+def _market_prices() -> dict:
+    try:
+        return _json.loads(_MARKET_PATH.read_text())
+    except Exception:
+        return {}
+
+@app.get("/api/estate/agora/prices")
+def agora_prices():
+    return _market_prices()
+
+@app.post("/api/estate/agora/sell")
+async def agora_sell(req: Request, u: dict = CurrentUser):
+    p        = await req.json()
+    resource = (p.get("resource") or "").strip()
+    quantity = int(p.get("quantity") or 1)
+    if quantity < 1:
+        raise HTTPException(400, "quantity must be at least 1")
+    prices = _market_prices()
+    if resource not in prices:
+        raise HTTPException(400, f"Unknown resource: {resource}")
+    uid   = u["user_id"]
+    state = _load_estate(uid)
+    stock = getattr(state, resource, 0)
+    if stock < quantity:
+        raise HTTPException(400, f"Not enough {resource} (have {stock}, need {quantity})")
+    setattr(state, resource, stock - quantity)
+    earned = prices[resource]["price"] * quantity
+    state.drachmae = round(state.drachmae + earned, 2)
+    _save_estate(uid, state)
+    label = prices[resource]["label"]
+    emoji = prices[resource]["emoji"]
+    return {
+        "status":   "ok",
+        "message":  f"Sold {quantity}× {emoji} {label} for +{earned} 🪙",
+        "earned":   earned,
+        "state":    state.to_dict(),
+    }

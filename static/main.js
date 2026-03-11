@@ -58,14 +58,26 @@ async function api(url, data, method) {
   return r.json();
 }
 
-// ── Toast ─────────────────────────────────────────────────────────────────────
+// ── Toast queue ───────────────────────────────────────────────────────────────
 const toastEl = document.getElementById("toast");
-let _toastTimer;
-function toast(msg, ms = 3500) {
+const _toastQueue = [];
+let _toastActive = false;
+
+function toast(msg, ms = 3500, type = "default") {
+  _toastQueue.push({ msg, ms, type });
+  if (!_toastActive) _drainToastQueue();
+}
+
+function _drainToastQueue() {
+  if (!_toastQueue.length) { _toastActive = false; return; }
+  _toastActive = true;
+  const { msg, ms, type } = _toastQueue.shift();
   toastEl.textContent = msg;
-  toastEl.classList.add("show");
-  clearTimeout(_toastTimer);
-  _toastTimer = setTimeout(() => toastEl.classList.remove("show"), ms);
+  toastEl.className = "toast show" + (type !== "default" ? " toast-" + type : "");
+  setTimeout(() => {
+    toastEl.classList.remove("show");
+    setTimeout(_drainToastQueue, 350);
+  }, ms);
 }
 
 // ── Utility ───────────────────────────────────────────────────────────────────
@@ -151,11 +163,8 @@ async function refresh() {
 function renderAll(state, workout) {
   renderHeader(state);
   renderTrainSection(state, workout);
-  renderRuckSection(state);
-  renderRunSection(state);
-  renderWalkSection(state);
+  renderCardioSection(state);
   renderVaultSection(state);
-  renderHistory(state, historyFilter);
 }
 
 // ── Header ────────────────────────────────────────────────────────────────────
@@ -259,6 +268,22 @@ function renderCycleGrid(state, totalSessions) {
       </div>
       <div class="cs-row">${wk2Cells}</div>
     </div>` : ""}`;
+
+  // Microcycle progress bar + countdown
+  const progressWrap = document.getElementById("microcycle-progress-wrap");
+  const bar          = document.getElementById("microcycle-bar");
+  const countdown    = document.getElementById("microcycle-countdown");
+  if (progressWrap && bar && countdown && mc.start_date) {
+    const pct       = Math.min(Math.round((done / n) * 100), 100);
+    bar.style.width = pct + "%";
+    const remaining = Math.max(n - done, 0);
+    countdown.textContent = remaining > 0
+      ? `${remaining} workout${remaining !== 1 ? "s" : ""} until your next monster encounter`
+      : "🏅 Cycle complete — slay your monster!";
+    progressWrap.style.display = "";
+  } else if (progressWrap) {
+    progressWrap.style.display = "none";
+  }
 }
 
 /** Compact weight input HTML for a given movement key. */
@@ -356,27 +381,51 @@ function updateDeleteTrackBtn() {
   if (btn) btn.style.display = sel.value.startsWith("custom_") ? "" : "none";
 }
 
-// ── Ruck section ──────────────────────────────────────────────────────────────
-function renderRuckSection(state) {
+// ── Cardio section ────────────────────────────────────────────────────────────
+function renderCardioSection(state) {
   const ruckMiles = state.total_ruck_miles  || 0;
   const runMiles  = state.total_run_miles   || 0;
   const walkMiles = state.total_walk_miles  || 0;
   const journey   = state.journey_miles     || 0;
 
-  document.getElementById("total-ruck-miles").textContent = ruckMiles.toFixed(1) + " mi";
-  document.getElementById("total-run-miles-ruck").textContent = runMiles.toFixed(1) + " mi";
-  document.getElementById("total-walk-miles-ruck").textContent = walkMiles.toFixed(1) + " mi";
+  const totalRuckEl = document.getElementById("total-ruck-miles");
+  const totalRunEl  = document.getElementById("total-run-miles");
+  const totalWalkEl = document.getElementById("total-walk-miles");
+  if (totalRuckEl) totalRuckEl.textContent = ruckMiles.toFixed(1) + " mi";
+  if (totalRunEl)  totalRunEl.textContent  = runMiles.toFixed(1)  + " mi";
+  if (totalWalkEl) totalWalkEl.textContent = walkMiles.toFixed(1) + " mi";
 
   const pct = Math.min((journey / TRIP_MILES) * 100, 100);
-  document.getElementById("journey-bar").style.width = pct.toFixed(1) + "%";
-  document.getElementById("journey-fraction").textContent =
-    `${journey.toFixed(1)} / ${TRIP_MILES} mi`;
+  const journeyBar = document.getElementById("journey-bar");
+  const journeyFrac = document.getElementById("journey-fraction");
+  if (journeyBar)  journeyBar.style.width = pct.toFixed(1) + "%";
+  if (journeyFrac) journeyFrac.textContent = `${journey.toFixed(1)} / ${TRIP_MILES} mi`;
 
   const postcards = (state.badges || []).filter(b => b.type === "ruck_quest").reverse();
-  document.getElementById("ruck-postcards").innerHTML =
+  const postcardsEl = document.getElementById("ruck-postcards");
+  if (postcardsEl) postcardsEl.innerHTML =
     postcards.length
       ? postcards.map(b => postcardHtml(b)).join("")
-      : `<p class="dim-msg">Ruck or run your first miles to unlock waypoints.</p>`;
+      : `<p class="dim-msg">Log cardio miles to unlock journey waypoints.</p>`;
+}
+
+// ── Cardio type toggle ────────────────────────────────────────────────────────
+let activeCardioType = "running";
+
+function initCardioTypeRow() {
+  const row = document.getElementById("cardio-type-row");
+  if (!row) return;
+  row.addEventListener("click", e => {
+    const btn = e.target.closest(".cardio-type-btn");
+    if (!btn) return;
+    row.querySelectorAll(".cardio-type-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    activeCardioType = btn.dataset.type;
+    // Show/hide weight field for ruck/hike
+    const needsWeight = (activeCardioType === "rucking" || activeCardioType === "hiking");
+    const wg = document.getElementById("cardio-weight-group");
+    if (wg) wg.style.display = needsWeight ? "" : "none";
+  });
 }
 
 function postcardHtml(b) {
@@ -396,60 +445,7 @@ function postcardHtml(b) {
     </div>`;
 }
 
-// ── Run section ───────────────────────────────────────────────────────────────
-function renderRunSection(state) {
-  const runMiles = state.total_run_miles || 0;
-  const journey  = state.journey_miles   || 0;
-
-  const runDrachma = (state.run_log || [])
-    .reduce((sum, r) => sum + (r.coins || 0), 0);
-
-  document.getElementById("total-run-miles").textContent = runMiles.toFixed(1) + " mi";
-  document.getElementById("run-drachma").textContent = "🪙 " + runDrachma.toFixed(2);
-
-  const pct = Math.min((journey / TRIP_MILES) * 100, 100);
-  document.getElementById("journey-bar-run").style.width = pct.toFixed(1) + "%";
-  document.getElementById("journey-fraction-run").textContent =
-    `${journey.toFixed(1)} / ${TRIP_MILES} mi`;
-
-  const runs = [...(state.run_log || [])].reverse().slice(0, 5);
-  document.getElementById("recent-runs").innerHTML = runs.length
-    ? runs.map(r => `
-        <div class="recent-run-item">
-          <span class="run-miles-text">${r.distance_miles.toFixed(2)} mi</span>
-          ${r.pace_min_per_mile
-            ? `<span class="run-pace-text">${formatPace(r.pace_min_per_mile)}/mi</span>`
-            : ""}
-          <span class="run-date-text">${r.date || ""}</span>
-        </div>`).join("")
-    : `<p class="dim-msg">No runs logged yet.</p>`;
-}
-
-// ── Walk section ──────────────────────────────────────────────────────────────
-function renderWalkSection(state) {
-  const walkMiles = state.total_walk_miles || 0;
-  const journey   = state.journey_miles    || 0;
-
-  const walkDrachma = (state.walk_log || [])
-    .reduce((sum, r) => sum + (r.coins || 0), 0);
-
-  document.getElementById("total-walk-miles").textContent = walkMiles.toFixed(1) + " mi";
-  document.getElementById("walk-drachma").textContent = "🪙 " + walkDrachma.toFixed(2);
-
-  const pct = Math.min((journey / TRIP_MILES) * 100, 100);
-  document.getElementById("journey-bar-walk").style.width = pct.toFixed(1) + "%";
-  document.getElementById("journey-fraction-walk").textContent =
-    `${journey.toFixed(1)} / ${TRIP_MILES} mi`;
-
-  const walks = [...(state.walk_log || [])].reverse().slice(0, 5);
-  document.getElementById("recent-walks").innerHTML = walks.length
-    ? walks.map(w => `
-        <div class="recent-run-item">
-          <span class="run-miles-text">${w.distance_miles.toFixed(2)} mi</span>
-          <span class="run-date-text">${w.date || ""}</span>
-        </div>`).join("")
-    : `<p class="dim-msg">No walks logged yet.</p>`;
-}
+// (renderRunSection / renderWalkSection replaced by renderCardioSection + loadHistory)
 
 // ── Vault section ─────────────────────────────────────────────────────────────
 function renderVaultSection(state) {
@@ -542,78 +538,195 @@ function badgeCardHtml(b) {
     </div>`;
 }
 
-// ── History ───────────────────────────────────────────────────────────────────
-function renderHistory(state, filter) {
-  const byDate = {};
+// ── History (from workouts table) ─────────────────────────────────────────────
+async function loadHistory() {
+  try {
+    const workouts = await api("/api/workouts");
+    _recentWorkouts = workouts;
+    renderActivityCalendar(workouts);
+    renderHistoryList(workouts, historyFilter);
+    renderRecentCardio();
+  } catch (e) {
+    console.error("History load failed:", e);
+  }
+}
 
-  if (filter === "all" || filter === "lifting") {
-    for (const w of state.workouts || []) {
-      if (!w.date) continue;
-      let detail = w.details || "";
+function renderActivityCalendar(workouts) {
+  const el = document.getElementById("activity-calendar");
+  const labelEl = document.getElementById("calendar-week-label");
+  if (!el) return;
 
-      if (w.weights_lbs && Object.keys(w.weights_lbs).length > 0) {
-        const order = ["main", "acc_0", "acc_1", "acc_2", "finisher"];
-        const parts = order.map(k => w.weights_lbs[k]).filter(v => v && v > 0);
-        if (parts.length) detail += ` · ${parts.join("/")} lbs`;
-      } else if (w.weight_kg) {
-        detail += ` · ${Math.round(w.weight_kg * 2.20462)} lbs`;
-      }
+  const today = new Date();
+  // Find Monday of this week
+  const dayOfWeek = today.getDay() || 7; // make Sunday = 7
+  const monday = new Date(today);
+  monday.setDate(today.getDate() - (dayOfWeek - 1));
 
-      if (w.coins != null) detail += ` · 🪙 ${Number(w.coins).toFixed(2)}`;
-      (byDate[w.date] = byDate[w.date] || [])
-        .push({ kind: w.type === "recommended" ? "lifting" : "custom",
-                detail, _filter: "lifting" });
-    }
+  if (labelEl) {
+    const monStr = monday.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    const sunDate = new Date(monday); sunDate.setDate(monday.getDate() + 6);
+    const sunStr = sunDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    labelEl.textContent = `${monStr} – ${sunStr}`;
   }
 
-  if (filter === "all" || filter === "ruck") {
-    for (const r of state.ruck_log || []) {
-      if (!r.date || typeof r.distance_miles !== "number") continue;
-      (byDate[r.date] = byDate[r.date] || [])
-        .push({ kind: "ruck",
-                detail: `${r.distance_miles} mi @ ${r.weight_lbs} lb — 🪙 ${(r.coins || 0).toFixed(2)}`,
-                _filter: "ruck" });
-    }
-  }
+  // Build set of workout dates this week
+  const workedDates = new Set((workouts || []).map(w => w.date));
 
-  if (filter === "all" || filter === "run") {
-    for (const r of state.run_log || []) {
-      if (!r.date || typeof r.distance_miles !== "number") continue;
-      const pace = r.pace_min_per_mile ? ` @ ${formatPace(r.pace_min_per_mile)}/mi` : "";
-      (byDate[r.date] = byDate[r.date] || [])
-        .push({ kind: "run",
-                detail: `${r.distance_miles} mi${pace} — 🪙 ${(r.coins || 0).toFixed(2)}`,
-                _filter: "run" });
-    }
-  }
+  const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  const todayStr = today.toISOString().slice(0, 10);
 
-  if (filter === "all" || filter === "walk") {
-    for (const r of state.walk_log || []) {
-      if (!r.date || typeof r.distance_miles !== "number") continue;
-      (byDate[r.date] = byDate[r.date] || [])
-        .push({ kind: "walk",
-                detail: `${r.distance_miles} mi — 🪙 ${(r.coins || 0).toFixed(2)}`,
-                _filter: "walk" });
-    }
-  }
+  const cells = days.map((day, i) => {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    const dateStr = d.toISOString().slice(0, 10);
+    const isToday  = dateStr === todayStr;
+    const isDone   = workedDates.has(dateStr);
+    const isFuture = dateStr > todayStr;
+    let cls = "cal-day";
+    if (isToday)  cls += " cal-today";
+    if (isDone)   cls += " cal-done";
+    if (isFuture) cls += " cal-future";
+    return `<div class="${cls}">
+      <span class="cal-label">${day}</span>
+      <span class="cal-check">${isDone ? "✓" : (isFuture ? "" : "–")}</span>
+    </div>`;
+  }).join("");
 
-  const dates = Object.keys(byDate).sort().reverse();
-  const el    = document.getElementById("history-list");
+  el.innerHTML = `<div class="cal-week">${cells}</div>`;
+}
 
-  if (!dates.length) {
-    el.innerHTML = `<div class="empty-msg">No activity logged yet — get moving!</div>`;
+function workoutTypeLabel(type) {
+  const labels = {
+    strength: "💪 Strength",
+    running:  "🏃 Run",
+    walking:  "🚶 Walk",
+    rucking:  "🎒 Ruck",
+    hiking:   "🥾 Hike",
+  };
+  return labels[type] || type;
+}
+
+function workoutDetail(w) {
+  const parts = [];
+  if (w.movement) parts.push(w.movement.replace(/_/g, " "));
+  if (w.weight_kg) parts.push(`${w.weight_kg} kg`);
+  if (w.sets && w.reps) parts.push(`${w.sets}×${w.reps}`);
+  if (w.distance_miles) parts.push(`${Number(w.distance_miles).toFixed(2)} mi`);
+  if (w.duration_min) parts.push(`${w.duration_min} min`);
+  if (w.weight_lbs) parts.push(`${w.weight_lbs} lbs pack`);
+  if (w.drachmae_earned) parts.push(`🪙 ${Number(w.drachmae_earned).toFixed(2)}`);
+  return parts.join(" · ");
+}
+
+function renderHistoryList(workouts, filter) {
+  const el = document.getElementById("history-list");
+  if (!el) return;
+
+  const filtered = (workouts || []).filter(w => {
+    if (filter === "all") return true;
+    return w.type === filter;
+  });
+
+  if (!filtered.length) {
+    el.innerHTML = '<div class="empty-msg">No activity logged yet — get moving!</div>';
     return;
   }
 
+  const byDate = {};
+  for (const w of filtered) {
+    if (!w.date) continue;
+    (byDate[w.date] = byDate[w.date] || []).push(w);
+  }
+
+  const dates = Object.keys(byDate).sort().reverse();
   el.innerHTML = dates.map(date => `
     <div class="history-group">
       <div class="history-date">${date}</div>
-      ${byDate[date].map(e => `
+      ${byDate[date].map(w => `
         <div class="history-entry">
-          <span class="history-kind">${escHtml(e.kind)}</span>
-          <span class="history-detail">${escHtml(e.detail)}</span>
+          <div class="history-entry-main">
+            <span class="history-kind">${escHtml(workoutTypeLabel(w.type))}</span>
+            <span class="history-detail">${escHtml(workoutDetail(w))}</span>
+          </div>
+          <div class="history-actions">
+            <button class="btn-ghost-sm history-edit-btn" data-id="${w.id}" title="Edit">✏️</button>
+            <button class="btn-danger-sm history-delete-btn" data-id="${w.id}" data-drach="${w.drachmae_earned || 0}" title="Delete">🗑</button>
+          </div>
         </div>`).join("")}
     </div>`).join("");
+
+  // Wire up edit/delete buttons
+  el.querySelectorAll(".history-delete-btn").forEach(btn => {
+    btn.addEventListener("click", () => deleteWorkout(parseInt(btn.dataset.id, 10)));
+  });
+  el.querySelectorAll(".history-edit-btn").forEach(btn => {
+    btn.addEventListener("click", () => editWorkout(parseInt(btn.dataset.id, 10), workouts));
+  });
+}
+
+async function deleteWorkout(id) {
+  if (!confirm("Delete this workout? Drachmae will be deducted.")) return;
+  try {
+    const r = await api(`/api/workout/${id}`, undefined, "DELETE");
+    toast("🗑 Workout deleted.", 2500);
+    if (r.state) { estateState = r.state; renderEstateResources(); }
+    loadHistory();
+  } catch (e) { toast("⚠ " + e.message); }
+}
+
+function editWorkout(id, workouts) {
+  const w = (workouts || _recentWorkouts).find(x => x.id === id);
+  if (!w) return;
+
+  const el = document.getElementById("history-list");
+  const entryEl = el?.querySelector(`.history-delete-btn[data-id="${id}"]`)?.closest(".history-entry");
+  if (!entryEl) return;
+
+  entryEl.innerHTML = `
+    <div class="edit-workout-form">
+      ${w.distance_miles != null ? `
+        <div class="field-group">
+          <label>Miles</label>
+          <input type="number" id="edit-miles-${id}" value="${w.distance_miles}" step="0.01" min="0">
+        </div>` : ""}
+      ${w.weight_kg != null ? `
+        <div class="field-group">
+          <label>Weight (kg)</label>
+          <input type="number" id="edit-kg-${id}" value="${w.weight_kg}" step="0.5" min="0">
+        </div>` : ""}
+      ${w.sets != null ? `
+        <div class="field-group">
+          <label>Sets</label>
+          <input type="number" id="edit-sets-${id}" value="${w.sets}" step="1" min="1">
+        </div>
+        <div class="field-group">
+          <label>Reps</label>
+          <input type="number" id="edit-reps-${id}" value="${w.reps}" step="1" min="1">
+        </div>` : ""}
+      <div class="edit-workout-actions">
+        <button class="btn-primary" id="save-edit-${id}">Save</button>
+        <button class="btn-ghost" id="cancel-edit-${id}">Cancel</button>
+      </div>
+    </div>`;
+
+  document.getElementById(`cancel-edit-${id}`)?.addEventListener("click", loadHistory);
+  document.getElementById(`save-edit-${id}`)?.addEventListener("click", async () => {
+    const updates = {};
+    const milesEl = document.getElementById(`edit-miles-${id}`);
+    const kgEl    = document.getElementById(`edit-kg-${id}`);
+    const setsEl  = document.getElementById(`edit-sets-${id}`);
+    const repsEl  = document.getElementById(`edit-reps-${id}`);
+    if (milesEl) updates.distance_miles = parseFloat(milesEl.value);
+    if (kgEl)    updates.weight_kg      = parseFloat(kgEl.value);
+    if (setsEl)  updates.sets           = parseInt(setsEl.value, 10);
+    if (repsEl)  updates.reps           = parseInt(repsEl.value, 10);
+    try {
+      const r = await api(`/api/workout/${id}`, updates, "PUT");
+      toast("✏️ Workout updated.");
+      if (r.state) { estateState = r.state; renderEstateResources(); }
+      loadHistory();
+    } catch (e) { toast("⚠ " + e.message); }
+  });
 }
 
 // ── Track preview modal ───────────────────────────────────────────────────────
@@ -714,62 +827,204 @@ async function deleteCustomTrack() {
   } catch (e) { toast("⚠ " + e.message); }
 }
 
-async function logRuck() {
-  const miles  = parseFloat(document.getElementById("ruck-miles").value || 0);
-  const pounds = parseFloat(document.getElementById("ruck-lbs").value  || 0);
+// ── Cardio logging (unified) ───────────────────────────────────────────────────
+async function logCardio() {
+  const miles    = parseFloat(document.getElementById("cardio-miles").value || 0);
+  const duration = parseFloat(document.getElementById("cardio-duration").value || 0) || null;
+  const lbs      = parseFloat(document.getElementById("cardio-weight-lbs").value || 0) || null;
+
   if (!miles || miles <= 0) { toast("Enter a valid distance."); return; }
+
+  const typeToEndpoint = {
+    running: "/api/run",
+    walking: "/api/walk",
+    rucking: "/api/ruck",
+    hiking:  "/api/hike",
+  };
+  const endpoint = typeToEndpoint[activeCardioType] || "/api/run";
+
+  const payload = { miles };
+  if (duration) payload.duration_min = duration;
+  if (lbs && (activeCardioType === "rucking" || activeCardioType === "hiking")) payload.pounds = lbs;
+
+  const emojis = { running: "🏃", walking: "🚶", rucking: "🎒", hiking: "🥾" };
+  const emoji  = emojis[activeCardioType] || "🏃";
+
   try {
-    const r = await api("/api/ruck", { miles, pounds });
-    toast(r.msg || "🎒 Ruck logged!");
+    const r = await api(endpoint, payload);
+    toast(r.msg || `${emoji} Cardio logged!`, 3000, "drachmae");
+    checkLaurelEvents(r.events);
     appState = r.state;
     const workout = await api("/api/workout/today");
     renderAll(appState, workout);
     checkNewBadges(appState);
-    document.getElementById("ruck-miles").value = "";
-    const newPostcards = (appState.badges || []).filter(b => b.type === "ruck_quest");
-    if (newPostcards.length > prevBadgeCount) switchSection("ruck");
+    document.getElementById("cardio-miles").value = "";
+    document.getElementById("cardio-duration").value = "";
     prevBadgeCount = (appState.badges || []).length;
+    // Refresh history tab
+    loadHistory();
+    // Refresh recent cardio list
+    renderRecentCardio();
   } catch (e) { toast("⚠ " + e.message); }
 }
 
-async function logWalk() {
-  const miles = parseFloat(document.getElementById("walk-miles").value || 0);
-  if (!miles || miles <= 0) { toast("Enter a valid distance."); return; }
-  try {
-    const r = await api("/api/walk", { miles });
-    toast(r.msg || "🚶 Walk logged!");
-    appState = r.state;
-    const workout = await api("/api/workout/today");
-    renderAll(appState, workout);
-    checkNewBadges(appState);
-    document.getElementById("walk-miles").value = "";
-    prevBadgeCount = (appState.badges || []).length;
-  } catch (e) { toast("⚠ " + e.message); }
-}
+// Render recent cardio items from the global workouts cache
+let _recentWorkouts = [];
 
-async function logRun() {
-  const miles = parseFloat(document.getElementById("run-miles").value || 0);
-  if (!miles || miles <= 0) { toast("Enter a valid distance."); return; }
-
-  const paceStr = document.getElementById("run-pace").value.trim();
-  const pace    = parsePace(paceStr);
-  if (paceStr && pace === null) {
-    toast("Invalid pace format. Use MM:SS (e.g. 8:30).");
+function renderRecentCardio() {
+  const el = document.getElementById("recent-cardio");
+  if (!el) return;
+  const cardioTypes = new Set(["running", "walking", "rucking", "hiking"]);
+  const recent = _recentWorkouts.filter(w => cardioTypes.has(w.type)).slice(0, 8);
+  if (!recent.length) {
+    el.innerHTML = '<p class="dim-msg">No cardio logged yet.</p>';
     return;
   }
+  const typeEmoji = { running: "🏃", walking: "🚶", rucking: "🎒", hiking: "🥾" };
+  el.innerHTML = recent.map(w => {
+    const emoji   = typeEmoji[w.type] || "🏃";
+    const miles   = w.distance_miles != null ? `${Number(w.distance_miles).toFixed(2)} mi` : "";
+    const dur     = w.duration_min ? ` · ${w.duration_min} min` : "";
+    const coins   = w.drachmae_earned != null ? ` · 🪙 ${Number(w.drachmae_earned).toFixed(2)}` : "";
+    return `<div class="recent-run-item">
+      <span class="run-miles-text">${emoji} ${miles}${dur}</span>
+      <span class="run-date-text">${w.date || ""}${coins}</span>
+    </div>`;
+  }).join("");
+}
+
+// ── Strength logging ───────────────────────────────────────────────────────────
+let _movementsCache2 = null;
+let _strengthCatFilter = "all";
+
+async function initMovementSelector() {
+  if (!_movementsCache2) {
+    try {
+      _movementsCache2 = await api("/api/movements");
+    } catch (_) {
+      _movementsCache2 = [];
+    }
+  }
+  renderMovementCats();
+  renderMovementSelect();
+
+  // Category filter clicks
+  const catsEl = document.getElementById("movement-cats");
+  if (catsEl) {
+    catsEl.addEventListener("click", e => {
+      const btn = e.target.closest(".cat-btn");
+      if (!btn) return;
+      _strengthCatFilter = btn.dataset.cat;
+      renderMovementCats();
+      renderMovementSelect();
+    });
+  }
+
+  // On movement change, show last weight
+  const sel = document.getElementById("movement-select");
+  if (sel) {
+    sel.addEventListener("change", () => updateLastWeightHint());
+    updateLastWeightHint();
+  }
+
+  // Weight preset buttons
+  const presetsEl = document.getElementById("weight-presets");
+  if (presetsEl) {
+    presetsEl.addEventListener("click", e => {
+      const btn = e.target.closest(".preset-btn");
+      if (!btn) return;
+      const kg = btn.dataset.kg;
+      const inp = document.getElementById("strength-weight");
+      if (inp) inp.value = kg || "";
+      if (inp && !kg) inp.focus();
+    });
+  }
+}
+
+function renderMovementCats() {
+  const el = document.getElementById("movement-cats");
+  if (!el) return;
+  const cats = [
+    { key: "all", label: "All" }, { key: "swing", label: "Swing" },
+    { key: "snatch", label: "Snatch" }, { key: "clean", label: "Clean" },
+    { key: "press", label: "Press" }, { key: "squat", label: "Squat" },
+    { key: "hinge", label: "Hinge" }, { key: "get_up", label: "Get-Up" },
+    { key: "row", label: "Row" }, { key: "carry", label: "Carry" },
+    { key: "barbell", label: "Barbell" }, { key: "bodyweight", label: "BW" },
+  ];
+  el.innerHTML = cats.map(c =>
+    `<button class="cat-btn${c.key === _strengthCatFilter ? " active" : ""}" data-cat="${c.key}">${c.label}</button>`
+  ).join("");
+}
+
+function renderMovementSelect() {
+  const sel = document.getElementById("movement-select");
+  if (!sel || !_movementsCache2) return;
+  const filtered = _strengthCatFilter === "all"
+    ? _movementsCache2
+    : _movementsCache2.filter(m => m.category === _strengthCatFilter);
+  if (!filtered.length) {
+    sel.innerHTML = '<option value="">No movements in this category</option>';
+    return;
+  }
+  const prevVal = sel.value;
+  sel.innerHTML = filtered.map(m =>
+    `<option value="${escHtml(m.slug)}" data-hint="${escHtml(m.hint || "")}">${escHtml(m.name)}</option>`
+  ).join("");
+  if (prevVal && filtered.find(m => m.slug === prevVal)) sel.value = prevVal;
+  updateLastWeightHint();
+  prefillSetsReps();
+}
+
+function updateLastWeightHint() {
+  const sel  = document.getElementById("movement-select");
+  const hint = document.getElementById("movement-last-weight");
+  if (!sel || !hint) return;
+  const slug = sel.value;
+  if (!slug) { hint.textContent = ""; return; }
+  const last = localStorage.getItem("lastWeight_" + slug);
+  hint.textContent = last ? `Last used: ${last} kg` : "";
+}
+
+function prefillSetsReps() {
+  const sel = document.getElementById("movement-select");
+  if (!sel) return;
+  const opt = sel.options[sel.selectedIndex];
+  const hintText = opt ? opt.dataset.hint : "";
+  const m = hintText && hintText.match(/(\d+)[×x](\d+)/);
+  if (m) {
+    const setsEl = document.getElementById("strength-sets");
+    const repsEl = document.getElementById("strength-reps");
+    if (setsEl && !setsEl.value) setsEl.value = m[1];
+    if (repsEl && !repsEl.value) repsEl.value = m[2];
+  }
+}
+
+async function logStrength() {
+  const movement  = document.getElementById("movement-select")?.value;
+  const weightKg  = parseFloat(document.getElementById("strength-weight")?.value || 0);
+  const sets      = parseInt(document.getElementById("strength-sets")?.value  || 0, 10);
+  const reps      = parseInt(document.getElementById("strength-reps")?.value  || 0, 10);
+
+  if (!movement) { toast("Select a movement."); return; }
+  if (!weightKg || weightKg <= 0) { toast("Enter a weight."); return; }
+  if (!sets || sets <= 0)   { toast("Enter sets."); return; }
+  if (!reps || reps <= 0)   { toast("Enter reps."); return; }
+
+  // Save last weight for this movement
+  localStorage.setItem("lastWeight_" + movement, String(weightKg));
+  updateLastWeightHint();
 
   try {
-    const payload = { miles };
-    if (pace !== null) payload.pace_min_per_mile = pace;
-    const r = await api("/api/run", payload);
-    toast(r.msg || "🏃 Run logged!");
+    const r = await api("/api/strength", { movement, weight_kg: weightKg, sets, reps });
+    toast(r.msg || "💪 Strength logged!", 3000, "drachmae");
+    checkLaurelEvents(r.events);
     appState = r.state;
     const workout = await api("/api/workout/today");
     renderAll(appState, workout);
     checkNewBadges(appState);
-    document.getElementById("run-miles").value = "";
-    document.getElementById("run-pace").value  = "";
     prevBadgeCount = (appState.badges || []).length;
+    loadHistory();
   } catch (e) { toast("⚠ " + e.message); }
 }
 
@@ -802,9 +1057,103 @@ function checkNewBadges(state) {
   const count = (state.badges || []).length;
   if (count > prevBadgeCount && prevBadgeCount > 0) {
     const newest = state.badges[state.badges.length - 1];
-    if (newest) toast(`🎉 ${newest.name} unlocked!`, 5000);
+    if (newest) toast(`🎉 ${newest.name} unlocked!`, 5000, "trophy");
   }
   prevBadgeCount = count;
+}
+
+// ── Laurel popup ──────────────────────────────────────────────────────────────
+function checkLaurelEvents(events) {
+  const laurelEvt = (events || []).find(e =>
+    typeof e === "string" && e.toUpperCase().includes("LAUREL"));
+  if (laurelEvt) showLaurelPopup(laurelEvt);
+}
+
+function showLaurelPopup(msg) {
+  const popup = document.getElementById("laurel-popup");
+  const msgEl = document.getElementById("laurel-popup-msg");
+  if (!popup) return;
+  if (msgEl) msgEl.textContent = msg;
+  popup.hidden = false;
+  // Also update blessings/estate in background
+  initBlessings().catch(() => {});
+  if (estateState) renderEstateResources();
+}
+
+document.getElementById("laurel-popup-close")?.addEventListener("click", () => {
+  const popup = document.getElementById("laurel-popup");
+  if (popup) popup.hidden = true;
+});
+
+// ── Agora ─────────────────────────────────────────────────────────────────────
+let _marketPrices = null;
+
+async function initAgora() {
+  try {
+    if (!_marketPrices) {
+      _marketPrices = await fetch("/static/market_prices.json").then(r => r.json());
+    }
+    renderAgora();
+  } catch (e) {
+    const el = document.getElementById("agora-grid");
+    if (el) el.innerHTML = '<p class="dim-msg">Market unavailable.</p>';
+  }
+}
+
+function renderAgora() {
+  const el = document.getElementById("agora-grid");
+  if (!el || !_marketPrices || !estateState) return;
+
+  const resources = Object.entries(_marketPrices);
+  if (!resources.length) {
+    el.innerHTML = '<p class="dim-msg">No goods available.</p>';
+    return;
+  }
+
+  el.innerHTML = resources.map(([key, info]) => {
+    const stock = estateState[key] ?? 0;
+    return `<div class="agora-item">
+      <div class="agora-item-icon">${info.emoji}</div>
+      <div class="agora-item-info">
+        <div class="agora-item-name">${escHtml(info.label)}</div>
+        <div class="agora-item-stock sub-text">Stock: ${stock}</div>
+        <div class="agora-item-price sub-text">🪙 ${info.price}/unit</div>
+      </div>
+      <div class="agora-sell-btns">
+        <button class="btn-outline-sm agora-sell-btn"
+                data-resource="${key}" data-qty="1" ${stock < 1 ? "disabled" : ""}>
+          Sell 1
+        </button>
+        <button class="btn-outline-sm agora-sell-btn"
+                data-resource="${key}" data-qty="all" ${stock < 1 ? "disabled" : ""}>
+          All
+        </button>
+      </div>
+    </div>`;
+  }).join("");
+
+  el.querySelectorAll(".agora-sell-btn").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const resource = btn.dataset.resource;
+      const qty      = btn.dataset.qty === "all"
+        ? (estateState[resource] ?? 0)
+        : 1;
+      if (qty <= 0) return;
+      btn.disabled = true;
+      try {
+        const r = await api("/api/estate/agora/sell", { resource, quantity: qty });
+        estateState = r.state;
+        renderEstateResources();
+        const earned = (qty * (_marketPrices[resource]?.price || 0)).toFixed(2);
+        toast(`🏛️ Sold ${qty} ${_marketPrices[resource]?.label || resource} for 🪙 ${earned}`, 3000, "drachmae");
+        pushEstateLog(`🏛️ Sold ${qty} ${_marketPrices[resource]?.label || resource} → +${earned} 🪙`, "reward");
+        renderAgora();
+      } catch (e) {
+        toast("⚠ " + e.message);
+        btn.disabled = false;
+      }
+    });
+  });
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -1109,14 +1458,11 @@ document.getElementById("workout-display").addEventListener("input", e => {
   }
 });
 
-// Ruck section
-document.getElementById("log-ruck-btn").addEventListener("click", logRuck);
+// Cardio section
+document.getElementById("log-cardio-btn")?.addEventListener("click", logCardio);
 
-// Run section
-document.getElementById("log-run-btn").addEventListener("click", logRun);
-document.getElementById("log-walk-btn").addEventListener("click", logWalk);
-document.getElementById("go-to-ruck-btn").addEventListener("click", () => switchSection("ruck"));
-document.getElementById("go-to-ruck-from-walk-btn").addEventListener("click", () => switchSection("ruck"));
+// Strength logging
+document.getElementById("log-strength-btn")?.addEventListener("click", logStrength);
 
 // Custom workout dialog
 document.getElementById("submit-custom").addEventListener("click", submitCustomWorkout);
@@ -1142,7 +1488,7 @@ document.querySelectorAll(".filter-btn").forEach(btn =>
     document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
     btn.classList.add("active");
     historyFilter = btn.dataset.filter;
-    if (appState) renderHistory(appState, historyFilter);
+    renderHistoryList(_recentWorkouts, historyFilter);
   }));
 
 // Builder dialog — header/footer buttons
@@ -1238,6 +1584,7 @@ async function initEstate() {
       initVilla(),
       initProcessing(),
       initBlessings(),
+      initAgora(),
       api("/api/estate/prophecy").then(scroll => {
         const previewEl = document.getElementById("prophecy-combined-preview");
         if (previewEl) previewEl.textContent = scroll.combined_title || "Unnamed Mortal";
@@ -2635,6 +2982,8 @@ function initAuth() {
       hideAuthOverlay();
       refresh();
       initEstate();
+      initMovementSelector();
+      loadHistory();
     } catch (err) {
       errorEl.textContent = err.message;
       errorEl.hidden = false;
@@ -2653,5 +3002,11 @@ function initAuth() {
 // ── Init ──────────────────────────────────────────────────────────────────────
 window.addEventListener("load", () => {
   initAuth();
-  if (getToken()) { refresh(); initEstate(); }
+  initCardioTypeRow();
+  if (getToken()) {
+    refresh();
+    initEstate();
+    initMovementSelector();
+    loadHistory();
+  }
 });
