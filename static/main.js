@@ -9,14 +9,46 @@ const TRIP_MILES      = 306;
 const SESSIONS_NEEDED = 6;
 const WEEK_TARGET     = 3;
 
+// ── Auth ──────────────────────────────────────────────────────────────────────
+const AUTH_KEY = "olympus_token";
+const AUTH_USER_KEY = "olympus_username";
+
+function getToken() { return localStorage.getItem(AUTH_KEY); }
+function getUsername() { return localStorage.getItem(AUTH_USER_KEY); }
+
+function setAuth(token, username) {
+  localStorage.setItem(AUTH_KEY, token);
+  localStorage.setItem(AUTH_USER_KEY, username);
+}
+
+function clearAuth() {
+  localStorage.removeItem(AUTH_KEY);
+  localStorage.removeItem(AUTH_USER_KEY);
+}
+
+function showAuthOverlay() {
+  document.getElementById("auth-overlay").hidden = false;
+}
+
+function hideAuthOverlay() {
+  document.getElementById("auth-overlay").hidden = true;
+}
+
 // ── API helper ────────────────────────────────────────────────────────────────
 async function api(url, data, method) {
   const m = method || (data !== undefined ? "POST" : "GET");
+  const headers = { "Content-Type": "application/json" };
+  const token = getToken();
+  if (token) headers["Authorization"] = "Bearer " + token;
   const opts = m !== "GET"
-    ? { method: m, headers: { "Content-Type": "application/json" },
-        body: data !== undefined ? JSON.stringify(data) : undefined }
-    : {};
+    ? { method: m, headers, body: data !== undefined ? JSON.stringify(data) : undefined }
+    : { headers };
   const r = await fetch(url, opts);
+  if (r.status === 401) {
+    clearAuth();
+    showAuthOverlay();
+    throw new Error("Session expired — please sign in again");
+  }
   if (!r.ok) {
     const text = await r.text();
     let msg = text;
@@ -2558,5 +2590,66 @@ function renderEstateGridInteractive() {
   });
 }
 
+// ── Auth UI ───────────────────────────────────────────────────────────────────
+function initAuth() {
+  const overlay  = document.getElementById("auth-overlay");
+  const form     = document.getElementById("auth-form");
+  const errorEl  = document.getElementById("auth-error");
+  const submitBtn= document.getElementById("auth-submit");
+  const tabs     = document.querySelectorAll(".auth-tab");
+  let mode = "login";
+
+  // Toggle login / register
+  tabs.forEach(tab => {
+    tab.addEventListener("click", () => {
+      mode = tab.dataset.mode;
+      tabs.forEach(t => t.classList.toggle("active", t.dataset.mode === mode));
+      submitBtn.textContent = mode === "login" ? "Sign In" : "Create Account";
+      document.getElementById("auth-password").autocomplete =
+        mode === "login" ? "current-password" : "new-password";
+      errorEl.hidden = true;
+    });
+  });
+
+  // Submit
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    errorEl.hidden = true;
+    const username = document.getElementById("auth-username").value.trim();
+    const password = document.getElementById("auth-password").value;
+    submitBtn.disabled = true;
+    submitBtn.textContent = mode === "login" ? "Signing in…" : "Creating…";
+    try {
+      const endpoint = mode === "login" ? "/login" : "/register";
+      // Auth endpoints don't need token — call fetch directly
+      const r = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password }),
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.detail || "Request failed");
+      setAuth(data.token, data.username);
+      hideAuthOverlay();
+      refresh();
+      initEstate();
+    } catch (err) {
+      errorEl.textContent = err.message;
+      errorEl.hidden = false;
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = mode === "login" ? "Sign In" : "Create Account";
+    }
+  });
+
+  // Show overlay if not logged in
+  if (!getToken()) {
+    overlay.hidden = false;
+  }
+}
+
 // ── Init ──────────────────────────────────────────────────────────────────────
-window.addEventListener("load", () => { refresh(); initEstate(); });
+window.addEventListener("load", () => {
+  initAuth();
+  if (getToken()) { refresh(); initEstate(); }
+});
