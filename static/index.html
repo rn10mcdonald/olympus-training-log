@@ -361,6 +361,360 @@
           <p class="sub-text" style="margin-bottom:10px">
             Train soldiers to defend your estate and launch campaigns.
           </p>
+          <!-- Requirements progress — rendered by renderBarracksRequirements() -->
+          <div id="barracks-requirements" style="margin-bottom:12px"></div>
+          <div class="barracks-cost-row">
+            <span class="barracks-cost-label">Build cost:</span>
+            <span class="barracks-cost-resources">🪙 600 · 🌾 40 grain · 🍷 10 wine</span>
+          </div>
+          <button class="btn-primary" id="build-barracks-btn" style="margin-top:12px;width:100%">
+            🏰 Build Barracks
+          </button>
+        </div>
+
+        <!-- State B: barracks open -->
+        <div id="barracks-open" hidden>
+          <div class="army-stats-row">
+            <div class="army-stat-chip">
+              <span class="army-stat-label">Units</span>
+              <span id="army-count" class="army-stat-val">0 / 10</span>
+            </div>
+            <div class="army-stat-chip">
+              <span class="army-stat-label">Strength</span>
+              <span id="army-total-strength" class="army-stat-val">0</span>
+            </div>
+          </div>
+
+          <!-- Current army list -->
+          <div id="army-unit-list" class="unit-list" style="margin-top:12px">
+            <p class="dim-msg">No soldiers recruited yet.</p>
+          </div>
+
+          <!-- Recruit section -->
+          <div class="recruit-section">
+            <div class="recruit-section-header">⚔️ Recruit Soldiers</div>
+            <div id="recruit-unit-list" class="recruit-list">
+              <!-- Populated by renderArmy() -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Campaign Map CTA -->
+      <div class="card prophecy-cta-card">
+        <div class="prophecy-cta-row">
+          <div>
+            <div class="prophecy-cta-label">Military Campaigns</div>
+            <div id="campaigns-won-preview" class="prophecy-cta-title">0 victories</div>
+          </div>
+          <button class="btn-outline" id="open-campaign-map-btn">⚔️ Campaign Map</button>
+        </div>
+      </div>
+
+      <!-- Prophecy Scroll button -->
+      <div class="card prophecy-cta-card">
+        <div class="prophecy-cta-row">
+          <div>
+            <div class="prophecy-cta-label">Your Heroic Title</div>
+            <div id="prophecy-combined-preview" class="prophecy-cta-title">Unnamed Mortal</div>
+          </div>
+          <button class="btn-outline" id="open-prophecy-btn">📜 Prophecy Scroll</button>
+        </div>
+      </div>
+
+      <!-- Event Log -->
+      <div class="card">
+        <h2 class="card-h2">📜 Estate Log</h2>
+        <div class="estate-event-log" id="estate-event-log">
+          <p class="dim-msg">Log a workout to see events.</p>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ── HISTORY ────────────────────────────────────────────────────────────── -->
+  <section class="page-section" id="section-history">
+    <div class="section-scroll">
+
+      <div class="card">
+        <div class="filter-row">
+          <button class="filter-btn active" data-filter="all">All</button>
+          <button class="filter-btn" data-filter="lifting">Lifting</button>
+          <button class="filter-btn" data-filter="ruck">Ruck</button>
+          <button class="filter-btn" data-filter="run">Run</button>
+          <button class="filter-btn" data-filter="walk">Walk</button>
+        </div>
+        <div id="history-list"><p class="dim-msg">No activity logged yet — get moving!</p></div>
+      </div>
+
+    </div>
+  </section>
+
+</main>
+
+<!-- ═══ BOTTOM NAV ═══════════════════════════════════════════════════════════ -->
+<nav class="bottom-nav">
+  <button class="nav-btn active" data-section="train">
+    <span class="nav-icon">⚔️</span>
+    <span class="nav-label">Train</span>
+  </button>
+  <button class="nav-btn" data-section="ruck">
+    <span class="nav-icon">🎒</span>
+    <span class="nav-label">Ruck</span>
+  </button>
+  <button class="nav-btn" data-section="run">
+    <span class="nav-icon">🏃</span>
+    <span class="nav-label">Run</span>
+  </button>
+  <button class="nav-btn" data-section="vault">
+    <span class="nav-icon">🏆</span>
+    <span class="nav-label">Vault</span>
+  </button>
+  <button class="nav-btn" data-section="walk">
+    <span class="nav-icon">🚶</span>
+    <span class="nav-label">Walk</span>
+  </button>
+  <button class="nav-btn" data-section="estate">
+    <span class="nav-icon">🏛️</span>
+    <span class="nav-label">Estate</span>
+  </button>
+  <button class="nav-btn" data-section="history">
+    <span class="nav-icon">📜</span>
+    <span class="nav-label">History</span>
+  </button>
+</nav>
+
+<!-- ═══ TOAST ════════════════════════════════════════════════════════════════ -->
+<div id="toast" class="toast" role="alert" aria-live="polite"></div>
+
+<!-- ═══ CUSTOM WORKOUT DIALOG ════════════════════════════════════════════════ -->
+<div id="custom-dialog" class="dialog-overlay" hidden>
+  <div class="dialog" role="dialog" aria-modal="true">
+    <h3>Log Custom Workout</h3>
+    <textarea id="custom-text" rows="4"
+              placeholder="Describe your workout… (Ctrl+Enter to submit)"></textarea>
+    <div class="dialog-actions">
+      <button class="btn-ghost" id="cancel-custom">Cancel</button>
+      <button class="btn-primary" id="submit-custom">Log It</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ CYCLE BUILDER DIALOG ════════════════════════════════════════════════ -->
+<div id="builder-dialog" class="dialog-overlay" hidden>
+  <div class="dialog dialog-wide builder-dialog-box" role="dialog" aria-modal="true">
+
+    <!-- Header -->
+    <div class="dialog-top-row">
+      <h3>⚒ Build Custom Cycle</h3>
+      <button class="btn-icon" id="close-builder-btn">✕</button>
+    </div>
+
+    <!-- Session tabs -->
+    <div class="builder-tabs" id="builder-tabs">
+      <!-- Injected by renderBuilderTabs() -->
+    </div>
+
+    <!-- Scrollable body: session editor + movement library -->
+    <div class="builder-body">
+
+      <!-- Session editor -->
+      <div class="builder-session-editor" id="builder-session-editor">
+        <!-- Injected by renderBuilderEditor() -->
+      </div>
+
+      <!-- Movement library (always visible, scrolls with body) -->
+      <div class="builder-library">
+        <div class="builder-lib-hdr">
+          <span class="builder-lib-title">📖 Movement Library</span>
+          <span class="builder-lib-hint">tap to insert into focused slot</span>
+        </div>
+        <input id="lib-search" type="text" placeholder="Search movements…"
+               class="lib-search-input" autocomplete="off">
+        <div class="builder-lib-cats" id="lib-cats">
+          <!-- Category pills injected by renderLibraryCats() -->
+        </div>
+        <div class="builder-lib-grid" id="lib-grid">
+          <!-- Movement pills injected by renderLibraryGrid() -->
+        </div>
+      </div>
+
+    </div><!-- /.builder-body -->
+
+    <!-- Footer -->
+    <div class="builder-footer">
+      <input id="builder-name" type="text" placeholder="Name your cycle…"
+             class="builder-name-input">
+      <div class="builder-footer-btns">
+        <button class="btn-ghost" id="cancel-builder-btn">Cancel</button>
+        <button class="btn-primary" id="save-builder-btn">💾 Save &amp; Start</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══ TRACK PREVIEW DIALOG ════════════════════════════════════════════════ -->
+<div id="preview-dialog" class="dialog-overlay" hidden>
+  <div class="dialog dialog-wide" role="dialog" aria-modal="true">
+    <div class="dialog-top-row">
+      <h3 id="preview-track-name">Track Preview</h3>
+      <button class="btn-icon" id="close-preview-btn">✕</button>
+    </div>
+    <p class="sub-text" style="margin-bottom:12px">Tap a session to expand details.</p>
+    <div id="preview-sessions" class="preview-sessions"></div>
+    <div class="dialog-actions">
+      <button class="btn-ghost" id="cancel-preview-btn">Close</button>
+      <button class="btn-primary" id="start-previewed-btn">Start This Track</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ CREATURE ENCOUNTER DIALOG ════════════════════════════════════════════ -->
+<div id="encounter-overlay" class="dialog-overlay" hidden>
+  <div class="dialog encounter-dialog" role="dialog" aria-modal="true"
+       aria-labelledby="encounter-creature-name">
+
+    <div class="encounter-header">
+      <div id="encounter-rarity-badge" class="encounter-rarity-badge">common</div>
+      <div id="encounter-icon" class="encounter-icon">🌿</div>
+    </div>
+
+    <h3 id="encounter-creature-name" class="encounter-title">A Creature Appears</h3>
+    <p id="encounter-description" class="encounter-description"></p>
+
+    <div class="encounter-buff-row">
+      <span class="encounter-buff-icon">✨</span>
+      <span id="encounter-buff-label" class="encounter-buff-label">Passive buff</span>
+    </div>
+
+    <p id="encounter-flavor" class="encounter-flavor"></p>
+
+    <div class="encounter-actions">
+      <button class="btn-outline encounter-release-btn" id="encounter-release-btn">
+        ⚡ Release <span id="encounter-release-reward">(+5 🪙)</span>
+      </button>
+      <button class="btn-primary encounter-recruit-btn" id="encounter-recruit-btn">
+        🏛️ Recruit
+      </button>
+    </div>
+
+    <button class="btn-ghost encounter-skip-btn" id="encounter-skip-btn">
+      Leave it be
+    </button>
+  </div>
+</div>
+
+<!-- ═══ PROPHECY SCROLL DIALOG ═══════════════════════════════════════════════ -->
+<div id="prophecy-overlay" class="dialog-overlay prophecy-overlay" hidden>
+  <div class="dialog dialog-wide prophecy-dialog" role="dialog" aria-modal="true"
+       aria-labelledby="prophecy-dialog-title">
+
+    <!-- Header -->
+    <div class="dialog-top-row prophecy-header">
+      <div>
+        <div class="prophecy-scroll-eyebrow">Prophecy Scroll</div>
+        <h3 id="prophecy-dialog-title" class="prophecy-scroll-title">Unnamed Mortal</h3>
+      </div>
+      <button class="btn-icon" id="close-prophecy-btn">✕</button>
+    </div>
+
+    <!-- Oracle phase bar -->
+    <div class="prophecy-oracle-bar">
+      <span class="prophecy-oracle-icon">🔮</span>
+      <div class="prophecy-oracle-info">
+        <span class="prophecy-oracle-phase-label">Oracle Relationship</span>
+        <span id="prophecy-oracle-phase-name" class="prophecy-oracle-phase-name">Stranger</span>
+      </div>
+      <div class="prophecy-oracle-meta">
+        <span id="prophecy-oracle-visits" class="prophecy-oracle-visits">0 visits</span>
+      </div>
+    </div>
+
+    <!-- Laurels -->
+    <div class="prophecy-laurels-row">
+      <span class="prophecy-laurels-icon">🌿</span>
+      <span class="prophecy-laurels-label">Laurels Earned</span>
+      <span id="prophecy-laurels" class="prophecy-laurels-count">0</span>
+    </div>
+
+    <!-- Title categories -->
+    <div id="prophecy-categories" class="prophecy-categories">
+      <!-- Injected by renderProphecyCategories() -->
+    </div>
+
+    <div class="dialog-actions">
+      <button class="btn-ghost" id="cancel-prophecy-btn">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ ESTATE EVENT POPUP ════════════════════════════════════════════════════ -->
+<div id="event-overlay" class="event-overlay" hidden>
+  <div class="event-popup" role="dialog" aria-modal="true" aria-labelledby="event-title">
+
+    <div class="event-popup-header">
+      <span id="event-icon"  class="event-icon">🔮</span>
+      <span id="event-type-badge" class="event-type-badge">oracle</span>
+    </div>
+
+    <h3 id="event-title" class="event-title">The Oracle Appears</h3>
+
+    <div id="event-lines" class="event-lines">
+      <!-- Lines injected by showEventPopup() -->
+    </div>
+
+    <!-- Creature card (hidden unless creature event) -->
+    <div id="event-creature-card" class="event-creature-card" hidden>
+      <span id="event-creature-rarity" class="event-creature-rarity"></span>
+      <span id="event-creature-name"   class="event-creature-name"></span>
+    </div>
+
+    <button class="btn-primary event-dismiss-btn" id="event-dismiss-btn">
+      Continue →
+    </button>
+
+  </div>
+</div>
+
+<!-- ═══ CAMPAIGN MAP DIALOG ════════════════════════════════════════════════ -->
+<div id="campaign-overlay" class="dialog-overlay" hidden>
+  <div class="dialog dialog-wide campaign-dialog" role="dialog" aria-modal="true"
+       aria-labelledby="campaign-dialog-title">
+
+    <div class="dialog-top-row">
+      <div>
+        <div class="prophecy-scroll-eyebrow">Military Campaign</div>
+        <h3 id="campaign-dialog-title" class="prophecy-scroll-title">Choose Your Battle</h3>
+      </div>
+      <button class="btn-icon" id="close-campaign-btn">✕</button>
+    </div>
+
+    <!-- Army strength bar -->
+    <div class="campaign-army-bar">
+      <span class="campaign-army-icon">⚔️</span>
+      <div class="campaign-army-info">
+        <span class="campaign-army-label">Army Strength</span>
+        <strong id="campaign-army-strength-display" class="campaign-army-val">0</strong>
+      </div>
+    </div>
+
+    <p class="sub-text campaign-cost-note">
+      Launch cost: 🪙 50 drachmae · 🌾 5 grain
+    </p>
+
+    <!-- Region list -->
+    <div id="campaign-region-list" class="campaign-region-list">
+      <p class="dim-msg">Loading regions…</p>
+    </div>
+
+    <div class="dialog-actions">
+      <button class="btn-ghost" id="cancel-campaign-btn">Close</button>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ FARM BUILD DIALOG ═══════════════════════════════════════════════════ -->
 <div id="farm-build-overlay" class="dialog-overlay" hidden>
   <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="farm-build-title">
