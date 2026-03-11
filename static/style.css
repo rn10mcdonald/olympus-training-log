@@ -2630,3 +2630,127 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   MOBILE RESPONSIVE — comprehensive breakpoints for phone screens
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Small phones (< 480px) ────────────────────────────────────────────── */
+@media (max-width: 480px) {
+
+  /* Tighten global font & spacing */
+  body { font-size: 14px; }
+
+  /* Header */
+  .site-header { padding: 0 10px; gap: 6px; }
+  .brand-title  { font-size: 0.9rem; }
+  .coin-spin    { width: 22px; height: 22px; }
+  .header-stats { gap: 6px; }
+  .stat-pill    { padding: 3px 7px; font-size: 0.72rem; }
+
+  /* Bottom nav */
+  .bottom-nav   { padding: 0 2px; }
+  .nav-btn      { min-width: 0; padding: 6px 2px 4px; gap: 2px; flex: 1; }
+  .nav-icon     { font-size: 1.1rem; }
+  .nav-label    { font-size: 0.52rem; }
+
+  /* Page sections */
+  .page-section { padding: 10px 10px 100px; }
+
+  /* Cards */
+  .card         { padding: 12px 12px; }
+  .card-header  { gap: 8px; }
+
+  /* Workout section */
+  .workout-meta-row { flex-wrap: wrap; gap: 6px; }
+  .weight-row       { flex-wrap: wrap; }
+  .weight-label     { min-width: 0; flex: 1 1 100%; }
+
+  /* Estate grid — shrink tiles so full 6-col grid fits */
+  .estate-grid-inner { grid-template-columns: repeat(6, 1fr); gap: 3px; }
+  .estate-tile       { height: 42px; border-radius: 6px; }
+  .estate-tile-icon  { font-size: 1rem; }
+  .estate-tile-lvl   { font-size: 0.5rem; }
+
+  /* Estate resource bar */
+  .estate-resource-bar { gap: 5px; flex-wrap: wrap; }
+  .estate-res-pill     { padding: 3px 7px; font-size: 0.7rem; }
+
+  /* Creature / relic cards */
+  .creature-card,
+  .relic-card    { flex-direction: column; align-items: flex-start; gap: 6px; }
+  .creature-card-icon,
+  .relic-card-icon { font-size: 1.6rem; }
+
+  /* Unit cards */
+  .unit-card     { flex-direction: column; gap: 6px; }
+  .unit-card-icon { font-size: 1.6rem; }
+
+  /* Badge / trophy grid */
+  .badge-grid    { grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 8px; }
+  .badge-card    { padding: 10px 6px 8px; }
+  .badge-emoji   { font-size: 1.8rem; }
+
+  /* Trophy buff chips */
+  .trophy-buff-chip  { font-size: 0.7rem; padding: 3px 7px; }
+
+  /* Overlays / dialogs */
+  .dialog-box,
+  .overlay-box   { padding: 14px 12px; width: 96vw; max-width: 96vw; }
+  .prophecy-dialog-box { padding: 14px 12px; }
+
+  /* Prophecy scroll */
+  .prophecy-title-list  { padding: 0; }
+  .prophecy-title-item  { padding: 7px 6px; gap: 8px; }
+
+  /* Farm build/upgrade dialog */
+  .farm-type-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+
+  /* Processing cards */
+  .processing-card { flex-direction: column; gap: 8px; }
+
+  /* Campaign regions */
+  .campaign-region-card { padding: 10px 10px; }
+  .campaign-region-name { font-size: 0.9rem; }
+
+  /* Blessings */
+  .blessings-grid { grid-template-columns: 1fr; }
+
+  /* Estate event log */
+  .estate-log-row { font-size: 0.76rem; }
+
+  /* Army strength pill */
+  #army-strength-pill { font-size: 0.72rem; }
+
+  /* Barracks requirements list */
+  .barracks-req-item { font-size: 0.8rem; }
+
+  /* Villa */
+  .villa-stats { flex-wrap: wrap; gap: 6px; }
+
+  /* Toast */
+  .toast { font-size: 0.82rem; padding: 8px 14px; max-width: 90vw; }
+
+  /* Trophy award banner */
+  .trophy-award-banner { padding: 8px 10px; gap: 8px; }
+  .trophy-award-emoji  { font-size: 1.8rem; }
+  .trophy-award-name   { font-size: 0.85rem; }
+}
+
+/* ── Very narrow phones (< 360px) ─────────────────────────────────────── */
+@media (max-width: 360px) {
+  .nav-label  { display: none; }       /* icon-only nav on tiny screens */
+  .nav-btn    { padding: 8px 2px; }
+  .nav-icon   { font-size: 1.2rem; }
+  .brand-title { display: none; }      /* hide wordmark, keep coin icon */
+  .estate-grid-inner { grid-template-columns: repeat(6, 1fr); gap: 2px; }
+  .estate-tile       { height: 36px; }
+}
+
+/* ── Landscape phones (short viewport) ────────────────────────────────── */
+@media (max-height: 500px) and (max-width: 900px) {
+  :root { --header-h: 44px; --nav-h: 50px; }
+  .page-section { padding-bottom: 60px; }
+  .nav-btn      { padding: 5px 4px 3px; }
+  .nav-label    { font-size: 0.5rem; }
+}
