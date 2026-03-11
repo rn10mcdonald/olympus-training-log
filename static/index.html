@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Olympus Training Log</title>
 <link rel="manifest" href="static/manifest.json">
-<link rel="stylesheet" href="static/style.css?v=11">
+<link rel="stylesheet" href="static/style.css?v=14">
 </head>
 <body>
 
@@ -19,6 +19,10 @@
     <div class="stat-pill" title="Drachma treasury">
       <span class="stat-icon">🪙</span>
       <span id="drachma" class="stat-value">0.00</span>
+    </div>
+    <div class="stat-pill" title="Laurels earned">
+      <span class="stat-icon">🌿</span>
+      <span id="laurel-count" class="stat-value">0</span>
     </div>
     <div class="stat-pill" title="Activities this week / goal">
       <span class="stat-icon">🗓</span>
@@ -34,76 +38,118 @@
   <section class="page-section active" id="section-train">
     <div class="section-scroll">
 
-      <!-- Today's Workout -->
+      <!-- 1. PROGRAM TRACK -->
       <div class="card">
         <div class="card-header">
-          <h2>Today's Workout</h2>
+          <h2>⚔️ Program</h2>
+          <span id="program-fraction" class="stat-chip" hidden>0 / 6</span>
+        </div>
+
+        <!-- No program selected -->
+        <div id="no-program-state">
+          <p class="dim-msg" style="margin-bottom:12px">Choose a training program to begin your journey.</p>
+          <button class="btn-primary" id="choose-program-btn" style="width:100%">Choose Program</button>
+        </div>
+
+        <!-- Program active -->
+        <div id="active-program-state" hidden>
+          <p class="program-name" id="program-name-display"></p>
+          <div class="progress-bar-wrap" style="margin:10px 0 4px">
+            <div id="program-bar" class="progress-bar-fill" style="width:0%"></div>
+          </div>
+          <p class="sub-text" id="program-countdown" style="margin-bottom:14px;text-align:center"></p>
+          <div class="btn-row">
+            <button class="btn-outline-sm" id="change-program-btn">Change Program</button>
+            <button class="btn-ghost-sm" id="view-program-btn">View Sessions</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. TODAY'S SESSION -->
+      <div class="card" id="todays-session-card">
+        <div class="card-header">
+          <h2>Today's Session</h2>
           <button class="btn-icon" id="refresh-btn" title="Refresh">↺</button>
         </div>
-        <!-- Per-movement weight inputs are injected here by renderWorkout() -->
         <div id="workout-display"><p class="dim-msg">Loading…</p></div>
-
-        <div class="action-row" id="workout-actions">
-          <button class="btn-primary" id="log-rec-btn">✓ Log Recommended</button>
-          <button class="btn-outline" id="log-custom-btn">+ Custom</button>
+        <div id="workout-actions" style="margin-top:12px">
+          <button class="btn-primary btn-large" id="log-session-btn" style="width:100%">⚔️ Log Session</button>
         </div>
       </div>
 
-      <!-- Cycle Progress -->
+      <!-- 3. CUSTOM WORK -->
       <div class="card">
-        <div class="card-header">
-          <h2>Microcycle</h2>
-          <span id="cycle-fraction" class="stat-chip">0 / 6</span>
+        <h2 class="card-h2">💪 Custom Work</h2>
+        <div class="movement-cats" id="custom-cats">
+          <button class="cat-btn active" data-cat="kettlebell">Kettlebell</button>
+          <button class="cat-btn" data-cat="dumbbell">Dumbbell</button>
+          <button class="cat-btn" data-cat="barbell">Barbell</button>
+          <button class="cat-btn" data-cat="bodyweight">Bodyweight</button>
+          <button class="cat-btn" data-cat="yoga">Yoga</button>
+          <button class="cat-btn" data-cat="pilates">Pilates</button>
         </div>
-        <div id="cycle-grid"><p class="dim-msg">Select a track below to begin.</p></div>
-      </div>
-
-      <!-- Track Picker -->
-      <div class="card">
-        <div class="card-header">
-          <h2>Training Track</h2>
+        <div class="field-group" style="margin-top:10px">
+          <label for="custom-movement-select">Movement</label>
+          <select id="custom-movement-select" class="track-select"></select>
+          <p class="sub-text" id="custom-last-weight" style="margin-top:4px;min-height:1.2em"></p>
         </div>
-        <div class="track-picker-row">
-          <select id="track-select" class="track-select"></select>
-          <button class="btn-icon-sm" id="preview-track-btn" title="Preview all sessions">👁</button>
-          <button class="btn-icon-sm" id="delete-track-btn" title="Delete custom cycle" style="display:none">🗑</button>
-          <button class="btn-outline-sm" id="start-track-btn">Start</button>
+        <div class="input-row" style="margin-top:10px" id="custom-inputs">
+          <div class="field-group" id="custom-weight-group">
+            <label for="custom-weight">Weight (kg)</label>
+            <input id="custom-weight" type="number" placeholder="16" step="0.5" min="0" inputmode="decimal">
+          </div>
+          <div class="field-group">
+            <label for="custom-sets">Sets</label>
+            <input id="custom-sets" type="number" placeholder="3" step="1" min="1" inputmode="numeric">
+          </div>
+          <div class="field-group">
+            <label for="custom-reps">Reps</label>
+            <input id="custom-reps" type="number" placeholder="10" step="1" min="1" inputmode="numeric">
+          </div>
         </div>
-        <div style="margin-top:10px;text-align:right">
-          <button class="btn-ghost-sm" id="open-builder-btn">⚒ Build Custom Cycle</button>
-        </div>
+        <button class="btn-primary" id="log-exercise-btn" style="margin-top:10px;width:100%">💪 Log Exercise</button>
       </div>
 
     </div>
   </section>
 
-  <!-- ── RUCK ──────────────────────────────────────────────────────────────── -->
-  <section class="page-section" id="section-ruck">
+  <!-- ── CARDIO ────────────────────────────────────────────────────────────── -->
+  <section class="page-section" id="section-cardio">
     <div class="section-scroll">
 
-      <!-- Log Ruck -->
+      <!-- Log Cardio -->
       <div class="card">
-        <h2 class="card-h2">🎒 Log Ruck</h2>
-        <div class="input-row">
+        <h2 class="card-h2">🏃 Log Cardio</h2>
+        <div class="cardio-type-row" id="cardio-type-row">
+          <button class="cardio-type-btn active" data-type="running">🏃 Run</button>
+          <button class="cardio-type-btn" data-type="walking">🚶 Walk</button>
+          <button class="cardio-type-btn" data-type="rucking">🎒 Ruck</button>
+          <button class="cardio-type-btn" data-type="hiking">🥾 Hike</button>
+        </div>
+        <div class="input-row" style="margin-top:10px">
           <div class="field-group">
-            <label for="ruck-miles">Miles</label>
-            <input id="ruck-miles" type="number" placeholder="0.0" step="0.1" min="0">
+            <label for="cardio-miles">Miles</label>
+            <input id="cardio-miles" type="number" placeholder="0.0" step="0.01" min="0" inputmode="decimal">
           </div>
           <div class="field-group">
-            <label for="ruck-lbs">Weight (lbs)</label>
-            <input id="ruck-lbs" type="number" placeholder="20" step="1" min="0">
+            <label for="cardio-duration">Duration (min)</label>
+            <input id="cardio-duration" type="number" placeholder="optional" step="1" min="0" inputmode="numeric">
           </div>
-          <button class="btn-primary" id="log-ruck-btn">Log</button>
+          <div class="field-group" id="cardio-weight-group" style="display:none">
+            <label for="cardio-weight-lbs">Weight (lbs)</label>
+            <input id="cardio-weight-lbs" type="number" placeholder="20" step="1" min="0" inputmode="numeric">
+          </div>
+          <button class="btn-primary" id="log-cardio-btn" style="align-self:flex-end;min-height:44px">Log</button>
         </div>
         <div class="stat-row">
           <span class="dim-text">Rucked</span>
           <strong id="total-ruck-miles" class="gold-text">0.0 mi</strong>
           <span class="divider">·</span>
           <span class="dim-text">Run</span>
-          <strong id="total-run-miles-ruck" class="gold-text">0.0 mi</strong>
+          <strong id="total-run-miles" class="gold-text">0.0 mi</strong>
           <span class="divider">·</span>
           <span class="dim-text">Walked</span>
-          <strong id="total-walk-miles-ruck" class="gold-text">0.0 mi</strong>
+          <strong id="total-walk-miles" class="gold-text">0.0 mi</strong>
         </div>
       </div>
 
@@ -113,64 +159,19 @@
           <h2>📜 Pheidippides Journey</h2>
           <span id="journey-fraction" class="stat-chip">0 / 306 mi</span>
         </div>
-        <p class="sub-text" style="margin-bottom:8px">Ruck <em>and</em> run miles both count toward this route.</p>
+        <p class="sub-text" style="margin-bottom:8px">Ruck, run, walk, and hike miles all count toward this route.</p>
         <div class="progress-bar-wrap">
           <div id="journey-bar" class="progress-bar-fill" style="width:0%"></div>
         </div>
         <div id="ruck-postcards" class="postcard-list" style="margin-top:14px">
-          <p class="dim-msg">Ruck or run your first miles to unlock waypoints.</p>
+          <p class="dim-msg">Log your first miles to unlock waypoints.</p>
         </div>
       </div>
 
-    </div>
-  </section>
-
-  <!-- ── RUN ───────────────────────────────────────────────────────────────── -->
-  <section class="page-section" id="section-run">
-    <div class="section-scroll">
-
-      <!-- Log Run -->
+      <!-- Recent Cardio -->
       <div class="card">
-        <h2 class="card-h2">🏃 Log Run</h2>
-        <div class="input-row">
-          <div class="field-group">
-            <label for="run-miles">Miles</label>
-            <input id="run-miles" type="number" placeholder="0.0" step="0.01" min="0">
-          </div>
-          <div class="field-group">
-            <label for="run-pace">Pace (MM:SS/mi)</label>
-            <input id="run-pace" type="text" placeholder="8:30" inputmode="numeric">
-          </div>
-          <button class="btn-primary" id="log-run-btn">Log</button>
-        </div>
-        <div class="stat-row">
-          <span class="dim-text">Run total</span>
-          <strong id="total-run-miles" class="gold-text">0.0 mi</strong>
-          <span class="divider">·</span>
-          <span class="dim-text">Earned</span>
-          <strong id="run-drachma" class="gold-text">🪙 0.00</strong>
-        </div>
-      </div>
-
-      <!-- Journey tie-in -->
-      <div class="card">
-        <div class="card-header">
-          <h2>📜 Journey Progress</h2>
-          <span id="journey-fraction-run" class="stat-chip">0 / 306 mi</span>
-        </div>
-        <p class="sub-text" style="margin-bottom:8px">Your runs count toward the Pheidippides Journey alongside your rucks.</p>
-        <div class="progress-bar-wrap">
-          <div id="journey-bar-run" class="progress-bar-fill" style="width:0%"></div>
-        </div>
-        <div class="run-section-cta">
-          <button class="btn-ghost-sm" id="go-to-ruck-btn">View full journey →</button>
-        </div>
-      </div>
-
-      <!-- Recent Runs -->
-      <div class="card">
-        <h2 class="card-h2">Recent Runs</h2>
-        <div id="recent-runs"><p class="dim-msg">No runs logged yet.</p></div>
+        <h2 class="card-h2">Recent Cardio</h2>
+        <div id="recent-cardio"><p class="dim-msg">No cardio logged yet.</p></div>
       </div>
 
     </div>
@@ -203,53 +204,6 @@
         <div id="vault-postcards" class="postcard-list">
           <div class="empty-msg">Unlock waypoints by covering journey miles.</div>
         </div>
-      </div>
-
-    </div>
-  </section>
-
-  <!-- ── WALK ─────────────────────────────────────────────────────────────── -->
-  <section class="page-section" id="section-walk">
-    <div class="section-scroll">
-
-      <!-- Log Walk -->
-      <div class="card">
-        <h2 class="card-h2">🚶 Log Walk</h2>
-        <div class="input-row">
-          <div class="field-group">
-            <label for="walk-miles">Miles</label>
-            <input id="walk-miles" type="number" placeholder="0.0" step="0.01" min="0">
-          </div>
-          <button class="btn-primary" id="log-walk-btn">Log</button>
-        </div>
-        <div class="stat-row">
-          <span class="dim-text">Walk total</span>
-          <strong id="total-walk-miles" class="gold-text">0.0 mi</strong>
-          <span class="divider">·</span>
-          <span class="dim-text">Earned</span>
-          <strong id="walk-drachma" class="gold-text">🪙 0.00</strong>
-        </div>
-      </div>
-
-      <!-- Journey tie-in -->
-      <div class="card">
-        <div class="card-header">
-          <h2>📜 Journey Progress</h2>
-          <span id="journey-fraction-walk" class="stat-chip">0 / 306 mi</span>
-        </div>
-        <p class="sub-text" style="margin-bottom:8px">Walks count toward the Pheidippides Journey alongside rucks and runs.</p>
-        <div class="progress-bar-wrap">
-          <div id="journey-bar-walk" class="progress-bar-fill" style="width:0%"></div>
-        </div>
-        <div class="run-section-cta">
-          <button class="btn-ghost-sm" id="go-to-ruck-from-walk-btn">View full journey →</button>
-        </div>
-      </div>
-
-      <!-- Recent Walks -->
-      <div class="card">
-        <h2 class="card-h2">Recent Walks</h2>
-        <div id="recent-walks"><p class="dim-msg">No walks logged yet.</p></div>
       </div>
 
     </div>
@@ -422,6 +376,17 @@
         </div>
       </div>
 
+      <!-- Agora (Marketplace) -->
+      <div class="card">
+        <div class="card-header">
+          <h2>🏛️ Agora</h2>
+          <span class="sub-text" style="font-size:0.78rem">Sell goods for drachmae</span>
+        </div>
+        <div class="agora-grid" id="agora-grid">
+          <p class="dim-msg">Loading market prices…</p>
+        </div>
+      </div>
+
       <!-- Event Log -->
       <div class="card">
         <h2 class="card-h2">📜 Estate Log</h2>
@@ -437,13 +402,24 @@
   <section class="page-section" id="section-history">
     <div class="section-scroll">
 
+      <!-- Activity Calendar -->
+      <div class="card">
+        <div class="card-header">
+          <h2>📅 This Week</h2>
+          <span id="calendar-week-label" class="stat-chip"></span>
+        </div>
+        <div class="activity-calendar" id="activity-calendar">
+          <!-- Rendered by renderActivityCalendar() -->
+        </div>
+      </div>
+
       <div class="card">
         <div class="filter-row">
           <button class="filter-btn active" data-filter="all">All</button>
-          <button class="filter-btn" data-filter="lifting">Lifting</button>
-          <button class="filter-btn" data-filter="ruck">Ruck</button>
-          <button class="filter-btn" data-filter="run">Run</button>
-          <button class="filter-btn" data-filter="walk">Walk</button>
+          <button class="filter-btn" data-filter="strength">Strength</button>
+          <button class="filter-btn" data-filter="running">Run</button>
+          <button class="filter-btn" data-filter="rucking">Ruck</button>
+          <button class="filter-btn" data-filter="walking">Walk</button>
         </div>
         <div id="history-list"><p class="dim-msg">No activity logged yet — get moving!</p></div>
       </div>
@@ -459,21 +435,13 @@
     <span class="nav-icon">⚔️</span>
     <span class="nav-label">Train</span>
   </button>
-  <button class="nav-btn" data-section="ruck">
-    <span class="nav-icon">🎒</span>
-    <span class="nav-label">Ruck</span>
-  </button>
-  <button class="nav-btn" data-section="run">
+  <button class="nav-btn" data-section="cardio">
     <span class="nav-icon">🏃</span>
-    <span class="nav-label">Run</span>
+    <span class="nav-label">Cardio</span>
   </button>
   <button class="nav-btn" data-section="vault">
     <span class="nav-icon">🏆</span>
     <span class="nav-label">Vault</span>
-  </button>
-  <button class="nav-btn" data-section="walk">
-    <span class="nav-icon">🚶</span>
-    <span class="nav-label">Walk</span>
   </button>
   <button class="nav-btn" data-section="estate">
     <span class="nav-icon">🏛️</span>
@@ -749,7 +717,64 @@
   </div>
 </div>
 
-<script src="static/main.js?v=11"></script>
+<!-- ═══ PROGRAM PICKER DIALOG ════════════════════════════════════════════════ -->
+<div id="program-picker-dialog" class="dialog-overlay" hidden>
+  <div class="dialog dialog-md">
+    <div class="dialog-header">
+      <h2>Choose Program</h2>
+      <button class="btn-icon" id="close-program-picker-btn">✕</button>
+    </div>
+    <div class="dialog-body">
+      <div class="field-group">
+        <label for="track-select">Program</label>
+        <div class="track-picker-row">
+          <select id="track-select" class="track-select"></select>
+          <button class="btn-icon-sm" id="preview-track-btn" title="Preview sessions">👁</button>
+          <button class="btn-icon-sm" id="delete-track-btn" title="Delete custom program" style="display:none">🗑</button>
+        </div>
+      </div>
+      <button class="btn-primary" id="start-track-btn" style="width:100%;margin-top:12px">Start Program</button>
+      <div class="dialog-divider">or</div>
+      <button class="btn-ghost-sm" id="open-builder-btn" style="width:100%">⚒ Build Custom Program</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ LAUREL POPUP ══════════════════════════════════════════════════════════ -->
+<div id="laurel-popup" class="laurel-popup" hidden>
+  <div class="laurel-popup-box">
+    <div class="laurel-crown">🌿</div>
+    <h2 style="margin:8px 0 4px">Laurel Earned!</h2>
+    <p class="sub-text">Awarded for weekly training consistency.</p>
+    <p id="laurel-popup-msg" style="margin-top:8px;color:var(--gold)"></p>
+    <button class="btn-primary" id="laurel-popup-close" style="margin-top:16px;width:100%">✓ Claim</button>
+  </div>
+</div>
+
+<!-- ═══ AUTH OVERLAY ══════════════════════════════════════════════════════════ -->
+<div id="auth-overlay" class="auth-overlay" hidden>
+  <div class="auth-box">
+    <div class="auth-brand">
+      <span class="auth-coin-icon">⚡</span>
+      <h1 class="auth-title">Olympus</h1>
+    </div>
+    <p class="auth-subtitle">Training Log of the Gods</p>
+    <div class="auth-tabs">
+      <button class="auth-tab active" data-mode="login">Sign In</button>
+      <button class="auth-tab" data-mode="register">Create Account</button>
+    </div>
+    <form id="auth-form" autocomplete="on">
+      <input type="text" id="auth-username" class="auth-input" placeholder="Username"
+             autocomplete="username" required>
+      <input type="password" id="auth-password" class="auth-input" placeholder="Password"
+             autocomplete="current-password" required>
+      <div id="auth-error" class="auth-error" hidden></div>
+      <button type="submit" id="auth-submit" class="auth-submit-btn">Sign In</button>
+    </form>
+  </div>
+</div>
+
+<script src="static/main.js?v=14"></script>
 <script>
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("service-worker.js");

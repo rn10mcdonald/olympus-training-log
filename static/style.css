@@ -2754,3 +2754,516 @@ body {
   .nav-btn      { padding: 5px 4px 3px; }
   .nav-label    { font-size: 0.5rem; }
 }
+
+/* ── Auth Overlay ─────────────────────────────────────────────────────────── */
+.auth-overlay[hidden] { display: none; }
+.auth-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 16px;
+}
+
+.auth-box {
+  background: var(--bg2, #1a1a2e);
+  border: 1px solid var(--gold, #d4af37);
+  border-radius: 14px;
+  padding: 32px 28px 28px;
+  width: 100%;
+  max-width: 380px;
+  text-align: center;
+}
+
+.auth-brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.auth-coin-icon {
+  font-size: 2rem;
+}
+
+.auth-title {
+  font-size: 1.8rem;
+  color: var(--gold, #d4af37);
+  margin: 0;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.auth-subtitle {
+  color: var(--muted, #aaa);
+  font-size: 0.85rem;
+  margin: 0 0 20px;
+}
+
+.auth-tabs {
+  display: flex;
+  gap: 0;
+  border: 1px solid var(--gold, #d4af37);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+.auth-tab {
+  flex: 1;
+  padding: 9px 0;
+  background: transparent;
+  border: none;
+  color: var(--muted, #aaa);
+  cursor: pointer;
+  font-size: 0.88rem;
+  transition: background 0.15s, color 0.15s;
+}
+
+.auth-tab.active {
+  background: var(--gold, #d4af37);
+  color: #000;
+  font-weight: 600;
+}
+
+.auth-input {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 11px 14px;
+  margin-bottom: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  color: #fff;
+  font-size: 1rem;
+}
+
+.auth-input:focus {
+  outline: none;
+  border-color: var(--gold, #d4af37);
+}
+
+.auth-error {
+  color: #f87171;
+  font-size: 0.83rem;
+  margin-bottom: 10px;
+  text-align: left;
+}
+
+.auth-submit-btn {
+  width: 100%;
+  padding: 12px 0;
+  background: var(--gold, #d4af37);
+  color: #000;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  transition: opacity 0.15s;
+}
+
+.auth-submit-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* ── Cardio type selector ─────────────────────────────────────────────────── */
+.cardio-type-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.cardio-type-btn {
+  flex: 1;
+  min-width: 70px;
+  padding: 10px 8px;
+  background: var(--surface-hi);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s;
+  min-height: 44px;
+}
+
+.cardio-type-btn.active {
+  background: var(--gold-dim);
+  border-color: var(--gold);
+  color: var(--gold);
+  font-weight: 600;
+}
+
+/* ── Movement category pills ─────────────────────────────────────────────── */
+.movement-cats {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.cat-btn {
+  padding: 5px 10px;
+  background: var(--surface-hi);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  color: var(--text-dim);
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  min-height: 32px;
+}
+
+.cat-btn.active {
+  background: var(--gold-dim);
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+/* ── Weight preset buttons ────────────────────────────────────────────────── */
+.weight-presets {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  margin: 8px 0 4px;
+}
+
+.preset-btn {
+  flex: 1;
+  min-width: 56px;
+  padding: 8px 4px;
+  background: var(--surface-hi);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-dim);
+  font-size: 0.8rem;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s;
+  min-height: 40px;
+}
+
+.preset-btn:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+/* ── Activity Calendar ────────────────────────────────────────────────────── */
+.activity-calendar { padding: 4px 0; }
+
+.cal-week {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.cal-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 4px;
+  border-radius: 8px;
+  background: var(--surface-hi);
+  border: 1px solid var(--border);
+  min-height: 60px;
+  justify-content: center;
+}
+
+.cal-day.cal-done {
+  background: rgba(106, 191, 106, 0.15);
+  border-color: var(--success);
+}
+
+.cal-day.cal-today {
+  border-color: var(--gold);
+}
+
+.cal-day.cal-future {
+  opacity: 0.4;
+}
+
+.cal-label {
+  font-size: 0.68rem;
+  color: var(--text-dim);
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.cal-check {
+  font-size: 1rem;
+  color: var(--success);
+}
+
+.cal-day.cal-today .cal-label { color: var(--gold); }
+
+/* ── Laurel popup ─────────────────────────────────────────────────────────── */
+.laurel-popup {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.laurel-popup[hidden] { display: none; }
+
+.laurel-popup-box {
+  background: var(--surface);
+  border: 2px solid var(--gold);
+  border-radius: 16px;
+  padding: 28px 24px;
+  max-width: 320px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 8px 40px rgba(201, 176, 55, 0.3);
+}
+
+.laurel-crown {
+  font-size: 3rem;
+  animation: laurel-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes laurel-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+}
+
+/* ── Agora / Marketplace ──────────────────────────────────────────────────── */
+.agora-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.agora-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  background: var(--surface-hi);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.agora-item-icon { font-size: 1.4rem; width: 2rem; text-align: center; }
+
+.agora-item-info { flex: 1; }
+.agora-item-name { font-weight: 600; font-size: 0.9rem; }
+
+.agora-sell-btns {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* ── History edit/delete ──────────────────────────────────────────────────── */
+.history-entry {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.history-entry:last-child { border-bottom: none; }
+
+.history-entry-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.history-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.btn-danger-sm {
+  padding: 4px 8px;
+  background: transparent;
+  border: 1px solid #c0392b;
+  border-radius: 6px;
+  color: #e74c3c;
+  font-size: 0.78rem;
+  cursor: pointer;
+  min-height: 32px;
+  transition: background 0.15s;
+}
+
+.btn-danger-sm:hover {
+  background: rgba(231, 76, 60, 0.15);
+}
+
+.edit-workout-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: flex-end;
+  padding: 8px;
+  background: var(--surface-hi);
+  border-radius: 8px;
+  width: 100%;
+}
+
+.edit-workout-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+/* ── Typed toasts ─────────────────────────────────────────────────────────── */
+.toast.toast-drachmae { border-left: 3px solid var(--gold); }
+.toast.toast-laurel   { border-left: 3px solid var(--success); }
+.toast.toast-trophy   { border-left: 3px solid var(--accent); }
+
+/* ── Microcycle progress wrap ─────────────────────────────────────────────── */
+#microcycle-countdown {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+
+/* ── Recent cardio items ──────────────────────────────────────────────────── */
+.recent-run-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.88rem;
+}
+
+.recent-run-item:last-child { border-bottom: none; }
+
+/* ── Program Track card ───────────────────────────────────────────────────── */
+.program-name {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--gold);
+  margin-bottom: 2px;
+}
+
+.btn-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.btn-large {
+  min-height: 52px;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+/* ── Today's Session card ─────────────────────────────────────────────────── */
+.session-label {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 10px;
+}
+
+.workout-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.workout-main-text {
+  flex: 1;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.workout-accessories {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0;
+}
+
+.workout-accessories .acc-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.workout-accessories .acc-row:last-child { border-bottom: none; }
+.acc-text { flex: 1; font-size: 0.9rem; }
+
+.workout-finisher {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  font-size: 0.88rem;
+  color: var(--text-dim);
+}
+
+.finisher-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: var(--surface-hi);
+  border-radius: 4px;
+  padding: 2px 6px;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.weight-std-hint {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  display: block;
+  margin-top: 8px;
+}
+
+/* ── Program picker dialog ────────────────────────────────────────────────── */
+.dialog-md {
+  max-width: 400px;
+}
+
+.dialog-divider {
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 0.8rem;
+  margin: 12px 0;
+  position: relative;
+}
+
+.dialog-divider::before,
+.dialog-divider::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 42%;
+  height: 1px;
+  background: var(--border);
+}
+
+.dialog-divider::before { left: 0; }
+.dialog-divider::after  { right: 0; }
+
+/* ── Custom Work card ─────────────────────────────────────────────────────── */
+/* (uses existing .movement-cats / .cat-btn styles — no duplication needed) */

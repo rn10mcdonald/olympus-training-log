@@ -1,0 +1,11 @@
+{
+  "grain":     {"price": 2,  "emoji": "🌾", "label": "Grain"},
+  "grapes":    {"price": 3,  "emoji": "🍇", "label": "Grapes"},
+  "olives":    {"price": 4,  "emoji": "🫒", "label": "Olives"},
+  "honey":     {"price": 5,  "emoji": "🍯", "label": "Honey"},
+  "herbs":     {"price": 6,  "emoji": "🌱", "label": "Herbs"},
+  "wine":      {"price": 8,  "emoji": "🍷", "label": "Wine"},
+  "bread":     {"price": 6,  "emoji": "🍞", "label": "Bread"},
+  "olive_oil": {"price": 10, "emoji": "🫙", "label": "Olive Oil"},
+  "mead":      {"price": 12, "emoji": "🍺", "label": "Mead"}
+}

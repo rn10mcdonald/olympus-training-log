@@ -1,4 +1,4 @@
-const CACHE = "olympus-v2";
+const CACHE = "olympus-v5";
 const ASSETS = [
   "/", "/static/index.html", "/static/style.css",
   "/static/main.js", "/static/manifest.json", "/static/coin.png"
