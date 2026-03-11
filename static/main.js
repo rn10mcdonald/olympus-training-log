@@ -2627,8 +2627,10 @@ function initAuth() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
       });
-      const data = await r.json();
-      if (!r.ok) throw new Error(data.detail || "Request failed");
+      const text = await r.text();
+      let data = {};
+      try { data = JSON.parse(text); } catch (_) {}
+      if (!r.ok) throw new Error(data.detail || (r.status === 500 ? "Server error — check deployment logs" : "Request failed"));
       setAuth(data.token, data.username);
       hideAuthOverlay();
       refresh();
