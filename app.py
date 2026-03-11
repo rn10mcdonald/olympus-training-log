@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request, HTTPException, Depends
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
-import json, core, datetime as dt, os, sqlite3
+import json, core, datetime as dt, os
 import db
 import auth as _auth
 from laurel_of_olympus import game_state as gs
@@ -123,7 +123,7 @@ async def register(req: Request):
         raise HTTPException(409, "Username already taken")
     try:
         user_id = db.create_user(username, _auth.hash_password(password))
-    except sqlite3.IntegrityError:
+    except ValueError:
         raise HTTPException(409, "Username already taken")
     token = _auth.create_token(user_id, username)
     return {"status": "ok", "token": token, "username": username}
@@ -236,7 +236,11 @@ async def log_recommended(req: Request, u: dict = CurrentUser):
     state = _load_legacy(uid)
     msg   = core.log_rec(state, weights_lbs=weights_lbs)
     _save_legacy(uid, state)
-    return {"status": "ok", "msg": msg, "state": state}
+    estate     = _load_estate(uid)
+    oracle_evt = oracle_engine.maybe_oracle_visit(estate, chance=0.10)
+    if oracle_evt:
+        _save_estate(uid, estate)
+    return {"status": "ok", "msg": msg, "state": state, "oracle_event": oracle_evt}
 
 @app.post("/api/workout/custom")
 async def log_custom(req: Request, u: dict = CurrentUser):
@@ -278,6 +282,9 @@ async def log_ruck(req: Request, u: dict = CurrentUser):
         else:
             events.append(e)
     _save_estate(uid, estate)
+    oracle_evt = oracle_engine.maybe_oracle_visit(estate, chance=0.10)
+    if oracle_evt:
+        _save_estate(uid, estate)
     # Persist to workouts table
     today = str(dt.date.today())
     drachm = estate.drachmae - (_load_estate(uid).drachmae if False else 0)
@@ -287,7 +294,7 @@ async def log_ruck(req: Request, u: dict = CurrentUser):
                       distance_miles=miles, weight_lbs=pounds,
                       duration_min=float(p.get("duration_min") or 0) or None)
     return {"status": "ok", "msg": msg, "state": state,
-            "events": events, "trophy_award": trophy_award}
+            "events": events, "trophy_award": trophy_award, "oracle_event": oracle_evt}
 
 @app.post("/api/walk")
 async def log_walk(req: Request, u: dict = CurrentUser):
@@ -314,6 +321,9 @@ async def log_walk(req: Request, u: dict = CurrentUser):
         else:
             events.append(e)
     _save_estate(uid, estate)
+    oracle_evt = oracle_engine.maybe_oracle_visit(estate, chance=0.10)
+    if oracle_evt:
+        _save_estate(uid, estate)
     today  = str(dt.date.today())
     earned = next((float(ev.split("+")[1].split(" ")[0]) for ev in events
                    if isinstance(ev, str) and "drachmae" in ev), 0.0)
@@ -321,7 +331,7 @@ async def log_walk(req: Request, u: dict = CurrentUser):
                       distance_miles=miles,
                       duration_min=float(p.get("duration_min") or 0) or None)
     return {"status": "ok", "msg": msg, "state": state,
-            "events": events, "trophy_award": trophy_award}
+            "events": events, "trophy_award": trophy_award, "oracle_event": oracle_evt}
 
 @app.post("/api/run")
 async def log_run(req: Request, u: dict = CurrentUser):
@@ -354,6 +364,9 @@ async def log_run(req: Request, u: dict = CurrentUser):
         else:
             events.append(e)
     _save_estate(uid, estate)
+    oracle_evt = oracle_engine.maybe_oracle_visit(estate, chance=0.10)
+    if oracle_evt:
+        _save_estate(uid, estate)
     today  = str(dt.date.today())
     earned = next((float(ev.split("+")[1].split(" ")[0]) for ev in events
                    if isinstance(ev, str) and "drachmae" in ev), 0.0)
@@ -361,7 +374,7 @@ async def log_run(req: Request, u: dict = CurrentUser):
                       distance_miles=miles,
                       duration_min=float(p.get("duration_min") or 0) or None)
     return {"status": "ok", "msg": msg, "state": state,
-            "events": events, "trophy_award": trophy_award}
+            "events": events, "trophy_award": trophy_award, "oracle_event": oracle_evt}
 
 @app.post("/api/hike")
 async def log_hike(req: Request, u: dict = CurrentUser):
@@ -391,6 +404,9 @@ async def log_hike(req: Request, u: dict = CurrentUser):
         else:
             events.append(e)
     _save_estate(uid, estate)
+    oracle_evt = oracle_engine.maybe_oracle_visit(estate, chance=0.10)
+    if oracle_evt:
+        _save_estate(uid, estate)
     today  = str(dt.date.today())
     earned = next((float(ev.split("+")[1].split(" ")[0]) for ev in events
                    if isinstance(ev, str) and "drachmae" in ev), 0.0)
@@ -398,7 +414,7 @@ async def log_hike(req: Request, u: dict = CurrentUser):
                       distance_miles=miles, weight_lbs=pounds or None,
                       duration_min=float(p.get("duration_min") or 0) or None)
     return {"status": "ok", "msg": f"⛰️ Hike logged! {msg}", "state": state,
-            "events": events, "trophy_award": trophy_award}
+            "events": events, "trophy_award": trophy_award, "oracle_event": oracle_evt}
 
 @app.post("/api/strength")
 async def log_strength(req: Request, u: dict = CurrentUser):
@@ -427,6 +443,9 @@ async def log_strength(req: Request, u: dict = CurrentUser):
         else:
             events.append(e)
     _save_estate(uid, estate)
+    oracle_evt = oracle_engine.maybe_oracle_visit(estate, chance=0.10)
+    if oracle_evt:
+        _save_estate(uid, estate)
     today  = str(dt.date.today())
     earned = next((float(ev.split("+")[1].split(" ")[0]) for ev in events
                    if isinstance(ev, str) and "drachmae" in ev), 0.0)
@@ -440,6 +459,7 @@ async def log_strength(req: Request, u: dict = CurrentUser):
         "msg": f"💪 {move_name} — {sets_n}×{reps_n} @ {weight_kg}kg logged! +{earned:.2f} ⚡",
         "events": events,
         "trophy_award": trophy_award,
+        "oracle_event": oracle_evt,
         "estate_state": estate.to_dict(),
     }
 
