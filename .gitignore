@@ -8,6 +8,13 @@ venv/
 
 # Data / saves
 data.json
+data.json.bak
+*.laurel_of_olympus.json
+*.laurel_of_olympus.json.bak
+*.db
+*.db-shm
+*.db-wal
+*_old.json
 
 # OS
 .DS_Store
