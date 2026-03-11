@@ -541,7 +541,9 @@ function badgeCardHtml(b) {
 // ── History (from workouts table) ─────────────────────────────────────────────
 async function loadHistory() {
   try {
-    const workouts = await api("/api/workouts");
+    const data = await api("/api/workouts");
+    // endpoint returns {workouts: [...]} — normalise to bare array
+    const workouts = Array.isArray(data) ? data : (data.workouts || []);
     _recentWorkouts = workouts;
     renderActivityCalendar(workouts);
     renderHistoryList(workouts, historyFilter);
@@ -861,10 +863,8 @@ async function logCardio() {
     document.getElementById("cardio-miles").value = "";
     document.getElementById("cardio-duration").value = "";
     prevBadgeCount = (appState.badges || []).length;
-    // Refresh history tab
+    // loadHistory fetches workouts, then calls renderActivityCalendar + renderRecentCardio internally
     loadHistory();
-    // Refresh recent cardio list
-    renderRecentCardio();
   } catch (e) { toast("⚠ " + e.message); }
 }
 
