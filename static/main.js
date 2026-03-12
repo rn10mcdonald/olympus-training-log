@@ -736,6 +736,8 @@ async function logRecommended() {
     renderAll(appState, workout);
     checkNewBadges(appState);
     loadHistory();
+    // Show oracle dialogue popup if triggered
+    if (r.oracle_event) showEventPopup(r.oracle_event);
   } catch (e) { toast("⚠ " + e.message); }
   finally { if (btn) btn.disabled = false; }
 }
@@ -806,6 +808,8 @@ async function logCardio() {
     prevBadgeCount = (appState.badges || []).length;
     // loadHistory fetches workouts, then calls renderActivityCalendar + renderRecentCardio internally
     loadHistory();
+    // Show oracle dialogue popup if triggered
+    if (r.oracle_event) showEventPopup(r.oracle_event);
   } catch (e) { toast("⚠ " + e.message); }
 }
 
@@ -954,7 +958,9 @@ async function logExercise() {
     const r = await api("/api/strength", payload);
     toast(r.msg || "💪 Exercise logged!", 3000, "drachmae");
     checkLaurelEvents(r.events);
-    appState = r.state;
+    // /api/strength returns estate_state (not legacy state) — update estate display
+    if (r.estate_state) { estateState = r.estate_state; renderEstateResources(); }
+    // appState remains unchanged (strength doesn't affect legacy state)
     const workout = await api("/api/workout/today");
     renderAll(appState, workout);
     checkNewBadges(appState);
@@ -964,6 +970,8 @@ async function logExercise() {
     document.getElementById("custom-sets").value   = "";
     document.getElementById("custom-reps").value   = "";
     loadHistory();
+    // Show oracle dialogue popup if triggered
+    if (r.oracle_event) showEventPopup(r.oracle_event);
   } catch (e) { toast("⚠ " + e.message); }
 }
 
@@ -990,9 +998,12 @@ function showLaurelPopup(msg) {
   if (!popup) return;
   if (msgEl) msgEl.textContent = msg;
   popup.hidden = false;
-  // Also update blessings/estate in background
+  // Re-fetch estate to get the updated laurel count — updates top banner + estate resources
+  api("/api/estate/state").then(fresh => {
+    estateState = fresh;
+    renderEstateResources();
+  }).catch(() => {});
   initBlessings().catch(() => {});
-  if (estateState) renderEstateResources();
 }
 
 document.getElementById("laurel-popup-close")?.addEventListener("click", () => {
@@ -1002,6 +1013,14 @@ document.getElementById("laurel-popup-close")?.addEventListener("click", () => {
 
 // ── Agora ─────────────────────────────────────────────────────────────────────
 let _marketPrices = null;
+
+// Advanced products are hidden until their production building is built
+const ADVANCED_PRODUCT_GATE = {
+  wine:      "winery",
+  bread:     "bakery",
+  olive_oil: "olive_press",
+  mead:      "meadery",
+};
 
 async function initAgora() {
   try {
@@ -1019,7 +1038,12 @@ function renderAgora() {
   const el = document.getElementById("agora-grid");
   if (!el || !_marketPrices || !estateState) return;
 
-  const resources = Object.entries(_marketPrices);
+  // Filter out advanced products whose production building hasn't been built yet
+  const builtBuildings = new Set(estateState.processing_buildings || []);
+  const resources = Object.entries(_marketPrices).filter(([key]) => {
+    const gate = ADVANCED_PRODUCT_GATE[key];
+    return !gate || builtBuildings.has(gate);
+  });
   if (!resources.length) {
     el.innerHTML = '<p class="dim-msg">No goods available.</p>';
     return;
@@ -1507,6 +1531,9 @@ function renderEstateResources() {
   if (!el || !estateState) return;
   const drachEl = document.getElementById("estate-drachma-pill");
   if (drachEl) drachEl.textContent = `🪙 ${(estateState.drachmae ?? 0).toFixed(2)}`;
+  // Keep top banner laurel count in sync
+  const laurelCountEl = document.getElementById("laurel-count");
+  if (laurelCountEl) laurelCountEl.textContent = estateState.laurels ?? 0;
   el.innerHTML = ESTATE_RES.map(r => {
     const val = estateState[r.key] ?? 0;
     return `<div class="estate-res-pill">
@@ -2521,6 +2548,8 @@ function renderProcessing(data) {
       }
     });
   });
+  // Refresh Agora after processing state changes (new buildings may unlock products)
+  if (_marketPrices) renderAgora();
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
