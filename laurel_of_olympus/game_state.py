@@ -80,8 +80,12 @@ class PlayerState:
     workout_log: List[Dict] = field(default_factory=list)
 
     # ── Laurel tracking ──────────────────────────────────────────────────────
-    # Each entry: {"start": ISO, "workouts": [...dates...]}
-    # A new window opens every 14 days; ≥6 workouts → laurel
+    # Week-based: 3 workouts in an ISO calendar week (Mon–Sun) → +1 laurel.
+    # {"YYYY-Www": count}  e.g. {"2024-W12": 2}
+    week_log: Dict[str, int] = field(default_factory=dict)
+
+    # Legacy rolling-window list (no longer written to; kept so old save files
+    # deserialise without errors).
     laurel_windows: List[Dict] = field(default_factory=list)
 
     # ── Earned titles by category ────────────────────────────────────────────
@@ -122,7 +126,7 @@ class PlayerState:
     # ── Trophy inventory ──────────────────────────────────────────────────────
     # Each entry: {id, name, monster, rarity, buff_type, buff_value, emoji,
     #              date_earned, buff_label}
-    # Awarded when a 6-workout laurel window completes.
+    # Awarded when a program microcycle is completed.
     trophies: List[Dict] = field(default_factory=list)
 
     # ── Version for future migrations ────────────────────────────────────────

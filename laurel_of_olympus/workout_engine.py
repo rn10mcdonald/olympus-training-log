@@ -1,7 +1,8 @@
 """
-workout_engine.py – Drachmae reward calculations.
+workout_engine.py – Drachmae reward calculations and weekly laurel tracking.
 
-All formulas come directly from balance_table.txt.
+All drachmae formulas come directly from balance_table.txt.
+Laurel rule: 3 workouts in one ISO calendar week (Mon–Sun) → +1 laurel.
 
 Public API:
     calculate_reward(workout_type, **kwargs) -> float
@@ -158,50 +159,36 @@ def process_workout(
             f"diminishing returns ×{multiplier:.1f} applied"
         )
 
-    # ── Check laurel window progress ─────────────────────────────────────────
-    _update_laurel_window(state, today, events)
+    # ── Check weekly laurel progress ─────────────────────────────────────────
+    _update_weekly_laurel(state, today, events)
 
     return events
 
 
 # ---------------------------------------------------------------------------
-# Laurel window logic  (6 workouts within any 14-day window → +1 laurel)
+# Laurel logic  (3 workouts within an ISO calendar week Mon–Sun → +1 laurel)
 # ---------------------------------------------------------------------------
 
-def _update_laurel_window(
+_WK_TARGET = 3  # workouts per calendar week for a laurel
+
+
+def _update_weekly_laurel(
     state: PlayerState, today: str, events: List[str]
 ) -> None:
     """
-    Maintain a rolling 14-day window. If 6 workouts fall within it, award
-    a laurel and open a new window.
+    Award a laurel on the 3rd workout of any ISO calendar week (Mon–Sun).
+    Uses state.week_log {"YYYY-Www": count} to track progress.
     """
     today_date = dt.date.fromisoformat(today)
+    iso_year, iso_week, _ = today_date.isocalendar()
+    week_key = f"{iso_year}-W{iso_week:02d}"
 
-    # Open the very first window
-    if not state.laurel_windows:
-        state.laurel_windows.append({"start": today, "workouts": [today]})
-        return
+    state.week_log[week_key] = state.week_log.get(week_key, 0) + 1
+    count = state.week_log[week_key]
 
-    current = state.laurel_windows[-1]
-    window_start = dt.date.fromisoformat(current["start"])
-    days_elapsed = (today_date - window_start).days
-
-    if days_elapsed <= 14:
-        # Still inside the current window
-        current["workouts"].append(today)
-        count = len(current["workouts"])
-        if count >= 6:
-            state.laurels += 1
-            events.append(
-                f"  ★ LAUREL EARNED! ({count} workouts in 14 days) "
-                f"→ Total laurels: {state.laurels}"
-            )
-            # Open a fresh window starting today
-            state.laurel_windows.append({"start": today, "workouts": [today]})
-    else:
-        # Window expired – open a new one
-        state.laurel_windows.append({"start": today, "workouts": [today]})
+    if count == _WK_TARGET:
+        state.laurels += 1
         events.append(
-            "  (New 14-day laurel window opened — "
-            f"6 workouts within it earn a laurel)"
+            f"  ★ LAUREL EARNED! ({_WK_TARGET} workouts this week) "
+            f"→ Total laurels: {state.laurels}"
         )
