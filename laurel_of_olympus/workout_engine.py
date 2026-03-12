@@ -17,7 +17,6 @@ import datetime as dt
 from typing import Dict, List, Optional
 
 from laurel_of_olympus.game_state import PlayerState
-from laurel_of_olympus import trophy_engine
 
 # ---------------------------------------------------------------------------
 # Diminishing-returns multipliers for multiple workouts in one day
@@ -197,17 +196,6 @@ def _update_laurel_window(
                 f"  ★ LAUREL EARNED! ({count} workouts in 14 days) "
                 f"→ Total laurels: {state.laurels}"
             )
-            # Award a monster trophy for completing the microcycle
-            trophy = trophy_engine.award_random_trophy(state)
-            events.append({
-                "type":    "trophy",
-                "msg":     (
-                    f"  ⚔️ Monster slain! You earned: "
-                    f"{trophy['emoji']} {trophy['name']} "
-                    f"[{trophy['rarity'].title()}] — {trophy['buff_label']}"
-                ),
-                "trophy":  trophy,
-            })
             # Open a fresh window starting today
             state.laurel_windows.append({"start": today, "workouts": [today]})
     else:
