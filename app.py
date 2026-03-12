@@ -84,6 +84,15 @@ def _save_legacy(user_id: int, d: dict) -> None:
 def index():
     return FileResponse(STATIC / "index.html")
 
+@app.get("/service-worker.js")
+def service_worker_root():
+    """Serve SW from root path so its scope covers '/' (not just '/static/')."""
+    fp = STATIC / "service-worker.js"
+    resp = FileResponse(fp, media_type="application/javascript")
+    resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    resp.headers["Service-Worker-Allowed"] = "/"
+    return resp
+
 @app.get("/static/{path:path}")
 def statics(path: str):
     fp = STATIC / path
