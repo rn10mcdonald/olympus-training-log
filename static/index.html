@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Olympus Training Log</title>
 <link rel="manifest" href="static/manifest.json">
-<link rel="stylesheet" href="static/style.css?v=13">
+<link rel="stylesheet" href="static/style.css?v=14">
 </head>
 <body>
 
@@ -19,6 +19,10 @@
     <div class="stat-pill" title="Drachma treasury">
       <span class="stat-icon">🪙</span>
       <span id="drachma" class="stat-value">0.00</span>
+    </div>
+    <div class="stat-pill" title="Laurels earned">
+      <span class="stat-icon">🌿</span>
+      <span id="laurel-count" class="stat-value">0</span>
     </div>
     <div class="stat-pill" title="Activities this week / goal">
       <span class="stat-icon">🗓</span>
@@ -770,7 +774,7 @@
   </div>
 </div>
 
-<script src="static/main.js?v=13"></script>
+<script src="static/main.js?v=14"></script>
 <script>
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("service-worker.js");
