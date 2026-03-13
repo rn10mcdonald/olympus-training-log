@@ -241,14 +241,30 @@ async def log_recommended(req: Request, u: dict = CurrentUser):
         weights_lbs = p.get("weights_lbs")
     except Exception:
         pass
-    uid   = u["user_id"]
-    state = _load_legacy(uid)
-    msg   = core.log_rec(state, weights_lbs=weights_lbs)
+    uid          = u["user_id"]
+    state        = _load_legacy(uid)
+    old_treasury = state.get("treasury", 0.0)
+    msg          = core.log_rec(state, weights_lbs=weights_lbs)
     _save_legacy(uid, state)
+    base_coins   = round(state.get("treasury", 0.0) - old_treasury, 2)
+
+    # Credit estate drachmae, apply strength buff, consume Hephaestus blessing
     estate     = _load_estate(uid)
+    buffs      = buff_engine.get_all_buffs(estate)
+    earned     = buff_engine.apply_workout_buff(buffs, "strength", base_coins)
+    if base_coins > 0:
+        estate.drachmae = round(estate.drachmae + earned, 2)
+    if buffs.get("blessing_hephaestus") and base_coins > 0:
+        estate.active_blessings["hephaestus"] = max(
+            0, estate.active_blessings.get("hephaestus", 1) - 1
+        )
     oracle_evt = oracle_engine.maybe_oracle_visit(estate, chance=0.10)
-    if oracle_evt:
-        _save_estate(uid, estate)
+    _save_estate(uid, estate)
+
+    if base_coins > 0:
+        today = str(dt.date.today())
+        db.insert_workout(uid, today, "recommended", earned)
+
     return {"status": "ok", "msg": msg, "state": state, "oracle_event": oracle_evt}
 
 @app.post("/api/workout/custom")
@@ -257,10 +273,29 @@ async def log_custom(req: Request, u: dict = CurrentUser):
     text    = payload.get("text", "").strip()
     if not text:
         raise HTTPException(400, "Empty workout description")
-    uid   = u["user_id"]
-    state = _load_legacy(uid)
-    msg   = core.log_custom(state, text)
+    uid          = u["user_id"]
+    state        = _load_legacy(uid)
+    old_treasury = state.get("treasury", 0.0)
+    msg          = core.log_custom(state, text)
     _save_legacy(uid, state)
+    base_coins   = round(state.get("treasury", 0.0) - old_treasury, 2)
+
+    # Credit estate drachmae, apply strength buff, consume Hephaestus blessing
+    estate = _load_estate(uid)
+    buffs  = buff_engine.get_all_buffs(estate)
+    earned = buff_engine.apply_workout_buff(buffs, "strength", base_coins)
+    if base_coins > 0:
+        estate.drachmae = round(estate.drachmae + earned, 2)
+    if buffs.get("blessing_hephaestus") and base_coins > 0:
+        estate.active_blessings["hephaestus"] = max(
+            0, estate.active_blessings.get("hephaestus", 1) - 1
+        )
+    _save_estate(uid, estate)
+
+    if base_coins > 0:
+        today = str(dt.date.today())
+        db.insert_workout(uid, today, "custom", earned, notes=text[:200])
+
     return {"status": "ok", "msg": msg, "state": state}
 
 @app.post("/api/ruck")
@@ -290,13 +325,17 @@ async def log_ruck(req: Request, u: dict = CurrentUser):
             events.append(e["msg"])
         else:
             events.append(e)
+    if buffs.get("blessing_poseidon"):
+        estate.active_blessings["poseidon"] = max(
+            0, estate.active_blessings.get("poseidon", 1) - 1
+        )
+        events.append("  🌊 Blessing of Poseidon consumed.")
     _save_estate(uid, estate)
     oracle_evt = oracle_engine.maybe_oracle_visit(estate, chance=0.10)
     if oracle_evt:
         _save_estate(uid, estate)
     # Persist to workouts table
-    today = str(dt.date.today())
-    drachm = estate.drachmae - (_load_estate(uid).drachmae if False else 0)
+    today  = str(dt.date.today())
     earned = next((float(ev.split("+")[1].split(" ")[0]) for ev in events
                    if isinstance(ev, str) and "drachmae" in ev), 0.0)
     db.insert_workout(uid, today, "rucking", earned,
@@ -372,6 +411,11 @@ async def log_run(req: Request, u: dict = CurrentUser):
             events.append(e["msg"])
         else:
             events.append(e)
+    if buffs.get("blessing_hermes"):
+        estate.active_blessings["hermes"] = max(
+            0, estate.active_blessings.get("hermes", 1) - 1
+        )
+        events.append("  🪶 Blessing of Hermes consumed.")
     _save_estate(uid, estate)
     oracle_evt = oracle_engine.maybe_oracle_visit(estate, chance=0.10)
     if oracle_evt:
@@ -412,6 +456,11 @@ async def log_hike(req: Request, u: dict = CurrentUser):
             events.append(e["msg"])
         else:
             events.append(e)
+    if buffs.get("blessing_poseidon"):
+        estate.active_blessings["poseidon"] = max(
+            0, estate.active_blessings.get("poseidon", 1) - 1
+        )
+        events.append("  🌊 Blessing of Poseidon consumed.")
     _save_estate(uid, estate)
     oracle_evt = oracle_engine.maybe_oracle_visit(estate, chance=0.10)
     if oracle_evt:
@@ -451,6 +500,11 @@ async def log_strength(req: Request, u: dict = CurrentUser):
             events.append(e["msg"])
         else:
             events.append(e)
+    if buffs.get("blessing_hephaestus"):
+        estate.active_blessings["hephaestus"] = max(
+            0, estate.active_blessings.get("hephaestus", 1) - 1
+        )
+        events.append("  🔥 Blessing of Hephaestus consumed.")
     _save_estate(uid, estate)
     oracle_evt = oracle_engine.maybe_oracle_visit(estate, chance=0.10)
     if oracle_evt:
@@ -953,6 +1007,13 @@ _BLESSINGS = {
     "ares":   {"id": "ares",   "name": "Blessing of Ares",   "icon": "⚔️",
                "cost_laurels": 1, "effect": "+50% army strength for next campaign",
                "buff_key": "blessing_ares", "expires": "after next campaign"},
+    "poseidon": {"id": "poseidon", "name": "Blessing of Poseidon", "icon": "🌊",
+                 "cost_laurels": 1, "effect": "+30% rucking drachmae for your next ruck",
+                 "buff_key": "blessing_poseidon", "expires": "after next ruck"},
+    "hephaestus": {"id": "hephaestus", "name": "Blessing of Hephaestus", "icon": "🔥",
+                   "cost_laurels": 1,
+                   "effect": "+30% strength drachmae for your next strength workout",
+                   "buff_key": "blessing_hephaestus", "expires": "after next strength workout"},
 }
 
 @app.get("/api/estate/blessings")

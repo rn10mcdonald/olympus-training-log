@@ -1529,8 +1529,12 @@ async function initEstate() {
 function renderEstateResources() {
   const el = document.getElementById("estate-resources");
   if (!el || !estateState) return;
+  const formatted = (estateState.drachmae ?? 0).toFixed(2);
   const drachEl = document.getElementById("estate-drachma-pill");
-  if (drachEl) drachEl.textContent = `🪙 ${(estateState.drachmae ?? 0).toFixed(2)}`;
+  if (drachEl) drachEl.textContent = `🪙 ${formatted}`;
+  // Keep top-banner drachma in sync (estate is the single source of truth)
+  const bannerDrachEl = document.getElementById("drachma");
+  if (bannerDrachEl) bannerDrachEl.textContent = formatted;
   // Keep top banner laurel count in sync
   const laurelCountEl = document.getElementById("laurel-count");
   if (laurelCountEl) laurelCountEl.textContent = estateState.laurels ?? 0;
@@ -2934,6 +2938,12 @@ function initAuth() {
     overlay.hidden = false;
   }
 }
+
+// ── Logout ────────────────────────────────────────────────────────────────────
+document.getElementById("logout-btn")?.addEventListener("click", () => {
+  clearAuth();
+  showAuthOverlay();
+});
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 window.addEventListener("load", () => {

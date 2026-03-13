@@ -75,13 +75,19 @@ def get_all_buffs(state: PlayerState) -> dict:
     active = getattr(state, "active_blessings", {}) or {}
     if active.get("hermes", 0) > 0:
         merged["workout_running"] = merged.get("workout_running", 1.0) * 1.30
-        merged["blessing_hermes"] = True   # flag for simulate-workout to consume
+        merged["blessing_hermes"] = True       # flag for run endpoint to consume
     if active.get("demeter", 0) > 0:
         merged["all_farms"] = merged.get("all_farms", 1.0) * 1.50
-        merged["blessing_demeter"] = True  # flag for farm production to consume
+        merged["blessing_demeter"] = True      # flag for farm production to consume
     if active.get("ares", 0) > 0:
         merged["army_strength"] = merged.get("army_strength", 1.0) * 1.50
-        merged["blessing_ares"] = True     # flag for campaign to consume
+        merged["blessing_ares"] = True         # flag for campaign to consume
+    if active.get("poseidon", 0) > 0:
+        merged["workout_rucking"] = merged.get("workout_rucking", 1.0) * 1.30
+        merged["blessing_poseidon"] = True     # flag for ruck/hike endpoint to consume
+    if active.get("hephaestus", 0) > 0:
+        merged["workout_strength"] = merged.get("workout_strength", 1.0) * 1.30
+        merged["blessing_hephaestus"] = True   # flag for strength endpoints to consume
 
     return merged
 
