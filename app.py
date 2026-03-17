@@ -2,7 +2,10 @@ from fastapi import FastAPI, Request, HTTPException, Depends
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
-import json, core, datetime as dt, os
+import json, core, datetime as dt, os, time as _time
+
+# Version string: process start-time so every new Render deploy gets a new token
+_APP_VERSION = str(int(_time.time()))
 import db
 import auth as _auth
 from laurel_of_olympus import game_state as gs
@@ -113,7 +116,13 @@ def images(path: str):
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "version": "2.0.0"}
+    return {"status": "ok", "version": _APP_VERSION}
+
+@app.get("/api/version")
+def api_version():
+    """Returns the server start-time as a version token.
+    Clients poll this every 60 s and reload when it changes (new deploy)."""
+    return {"version": _APP_VERSION}
 
 # ── Auth endpoints ────────────────────────────────────────────────────────────
 
@@ -199,6 +208,21 @@ def get_today(u: dict = CurrentUser):
 def get_movements():
     return core.get_movements()
 
+@app.get("/api/movement_history/{movement}")
+def get_movement_history(movement: str, u: dict = CurrentUser):
+    """Return the last logged sets/reps/weight_kg for a given movement slug."""
+    workouts = db.get_workouts(u["user_id"], limit=200)
+    for w in workouts:
+        if w.get("movement") == movement and w.get("sets") and w.get("reps"):
+            return {
+                "movement":  movement,
+                "weight_kg": w.get("weight_kg"),
+                "sets":      w["sets"],
+                "reps":      w["reps"],
+                "date":      w["date"],
+            }
+    return {"movement": movement, "weight_kg": None, "sets": None, "reps": None}
+
 @app.get("/api/tracks")
 def get_tracks(u: dict = CurrentUser):
     state  = _load_legacy(u["user_id"])
@@ -263,7 +287,11 @@ async def log_recommended(req: Request, u: dict = CurrentUser):
 
     if base_coins > 0:
         today = str(dt.date.today())
-        db.insert_workout(uid, today, "recommended", earned)
+        # Pull the movement name logged by core.log_rec (last workouts entry)
+        movement_name = ""
+        if state.get("workouts"):
+            movement_name = state["workouts"][-1].get("details", "")
+        db.insert_workout(uid, today, "recommended", earned, notes=movement_name)
 
     return {"status": "ok", "msg": msg, "state": state, "oracle_event": oracle_evt}
 

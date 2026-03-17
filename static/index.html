@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <title>Olympus Training Log</title>
 <link rel="manifest" href="static/manifest.json">
 <link rel="stylesheet" href="static/style.css?v=14">
@@ -92,7 +92,7 @@
         <div class="field-group" style="margin-top:10px">
           <label for="custom-movement-select">Movement</label>
           <select id="custom-movement-select" class="track-select"></select>
-          <p class="sub-text" id="custom-last-weight" style="margin-top:4px;min-height:1.2em"></p>
+          <p class="sub-text" id="custom-last-weight" style="margin-top:4px;min-height:1.4em"></p>
         </div>
         <div class="input-row" style="margin-top:10px" id="custom-inputs">
           <div class="field-group" id="custom-weight-group">
@@ -108,7 +108,19 @@
             <input id="custom-reps" type="number" placeholder="10" step="1" min="1" inputmode="numeric">
           </div>
         </div>
-        <button class="btn-primary" id="log-exercise-btn" style="margin-top:10px;width:100%">💪 Log Exercise</button>
+        <!-- Multi-exercise session actions -->
+        <div class="custom-action-row">
+          <button class="btn-outline" id="add-to-session-btn" style="flex:1">+ Add to Session</button>
+          <button class="btn-primary" id="log-exercise-btn" style="flex:1">💪 Log Now</button>
+        </div>
+        <!-- Session queue (shows when exercises have been added) -->
+        <div id="session-queue-wrap" hidden>
+          <div class="session-queue-section">
+            <div class="session-queue-header">Session Queue</div>
+            <ul id="session-queue-list" class="session-queue-list"></ul>
+            <button class="btn-primary" id="submit-session-btn" style="width:100%">⚔️ Submit Session</button>
+          </div>
+        </div>
       </div>
 
     </div>
