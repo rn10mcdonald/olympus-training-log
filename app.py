@@ -1,8 +1,10 @@
 from fastapi import FastAPI, Request, HTTPException, Depends
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
-import json, core, datetime as dt, os, time as _time
+import json, core, datetime as dt, os, time as _time, logging
+
+log = logging.getLogger(__name__)
 
 # Version string: process start-time so every new Render deploy gets a new token
 _APP_VERSION = str(int(_time.time()))
@@ -36,14 +38,28 @@ CurrentUser = Depends(_auth.get_current_user)
 def _load_estate(user_id: int) -> gs.PlayerState:
     raw = db.load_estate(user_id)
     if raw is None:
+        # New user — return default state (will be saved on first mutation)
         return gs.PlayerState()
     try:
         return gs.PlayerState.from_dict(raw)
-    except Exception:
-        return gs.PlayerState()
+    except Exception as exc:
+        # Deserialization failure: log and preserve raw data rather than silently
+        # returning an empty state (which would wipe the player's estate on next save).
+        log.error(
+            "Failed to deserialize estate for user %d: %s — serving empty state "
+            "without overwriting DB record. Raw keys: %s",
+            user_id, exc, list(raw.keys()) if isinstance(raw, dict) else type(raw),
+        )
+        # Return empty state IN MEMORY but do NOT save it — the DB record is safe.
+        state = gs.PlayerState()
+        state._load_error = True  # sentinel so callers can detect degraded state
+        return state
 
 
 def _save_estate(user_id: int, state: gs.PlayerState) -> None:
+    if getattr(state, "_load_error", False):
+        log.warning("Refusing to save degraded estate state for user %d — DB record preserved.", user_id)
+        return
     db.save_estate(user_id, state.to_dict())
 
 
@@ -1224,3 +1240,51 @@ async def agora_sell(req: Request, u: dict = CurrentUser):
         "earned":   earned,
         "state":    state.to_dict(),
     }
+
+# ── Admin endpoints ───────────────────────────────────────────────────────────
+
+@app.post("/admin/backup")
+async def admin_backup(req: Request):
+    """
+    Export a JSON snapshot of all player data for backup purposes.
+    Requires the ADMIN_SECRET env var to match the X-Admin-Secret header.
+    """
+    secret = os.environ.get("ADMIN_SECRET", "")
+    if not secret or req.headers.get("X-Admin-Secret", "") != secret:
+        raise HTTPException(403, "Forbidden")
+
+    from sqlalchemy import text as _text
+    backup: dict = {"created_at": dt.datetime.utcnow().isoformat(), "tables": {}}
+
+    with db._db() as sess:
+        for table in ("users", "player_estate", "player_legacy", "workouts", "workout_sessions"):
+            try:
+                rows = sess.execute(_text(f"SELECT * FROM {table}")).fetchall()
+                backup["tables"][table] = [dict(r._mapping) for r in rows]
+            except Exception as e:
+                backup["tables"][table] = {"error": str(e)}
+
+    timestamp = dt.datetime.utcnow().strftime("%Y_%m_%d_%H%M%S")
+    filename  = f"backup_{timestamp}.json"
+
+    # Write locally (useful for SQLite; on Render this is ephemeral storage)
+    backup_path = BASE / filename
+    try:
+        backup_path.write_text(json.dumps(backup, default=str, indent=2))
+        log.info("Backup written to %s", backup_path)
+    except Exception as e:
+        log.warning("Could not write backup file: %s", e)
+
+    return JSONResponse(content={"status": "ok", "filename": filename, "backup": backup})
+
+
+# ── Startup logging ───────────────────────────────────────────────────────────
+
+@app.on_event("startup")
+async def _startup_log():
+    db_type = "PostgreSQL" if db._IS_PG else f"SQLite ({os.environ.get('DB_PATH', 'olympus.db')})"
+    log.info("=" * 60)
+    log.info("Olympus Training Log — server starting")
+    log.info("App version : %s", _APP_VERSION)
+    log.info("Database    : %s", db_type)
+    log.info("=" * 60)
