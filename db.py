@@ -151,29 +151,79 @@ sa.Table("workout_sessions", _meta,
     sa.Column("created_at",      sa.Text,    nullable=False),
 )
 
+sa.Table("schema_version", _meta,
+    sa.Column("version", sa.Integer, nullable=False),
+)
+
 # Create all tables on startup — IF NOT EXISTS semantics, safe to run every boot
 _meta.create_all(engine)
 log.info("Database tables verified / created.")
 
-# ── Schema migrations (add columns that may not exist in older installations) ──
+# ── Schema version tracking + migration system ────────────────────────────────
+#
+# Each migration is a dict with:
+#   version  : int  — the version number this migration brings the DB to
+#   describe : str  — human-readable description logged on apply
+#   apply    : callable(sess) — runs SQL against the open session
+
+_MIGRATIONS = [
+    {
+        "version": 1,
+        "describe": "Add session_id column to workouts",
+        "apply": lambda sess: _add_column_safe(sess, "workouts", "session_id", "INTEGER"),
+    },
+]
+
+
+def _add_column_safe(sess, table: str, col: str, col_type: str) -> None:
+    """Add a column if it doesn't already exist (dialect-aware)."""
+    try:
+        if _IS_PG:
+            sess.execute(text(
+                f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {col} {col_type}"
+            ))
+        else:
+            sess.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} {col_type}"))
+    except Exception:
+        pass  # column already exists
+
+
+def _get_schema_version(sess) -> int:
+    try:
+        row = sess.execute(text("SELECT version FROM schema_version LIMIT 1")).fetchone()
+        return int(row[0]) if row else 0
+    except Exception:
+        return 0
+
+
+def _set_schema_version(sess, version: int) -> None:
+    if _IS_PG:
+        sess.execute(text(
+            "INSERT INTO schema_version (version) VALUES (:v) "
+            "ON CONFLICT DO NOTHING"
+        ), {"v": version})
+        sess.execute(text("UPDATE schema_version SET version = :v"), {"v": version})
+    else:
+        sess.execute(text("DELETE FROM schema_version"))
+        sess.execute(text("INSERT INTO schema_version (version) VALUES (:v)"), {"v": version})
+
 
 def _run_migrations() -> None:
-    """Add columns / tables introduced after the initial schema."""
-    cols_to_add = [
-        ("workouts", "session_id", "INTEGER"),
-    ]
+    """Apply any pending schema migrations in version order."""
     with _db() as sess:
-        for table, col, col_type in cols_to_add:
-            try:
-                if _IS_PG:
-                    sess.execute(text(
-                        f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {col} {col_type}"
-                    ))
-                else:
-                    # SQLite: no IF NOT EXISTS on ALTER TABLE ADD COLUMN — catch duplicate error
-                    sess.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} {col_type}"))
-            except Exception:
-                pass  # column already exists
+        current = _get_schema_version(sess)
+        pending = [m for m in _MIGRATIONS if m["version"] > current]
+        if not pending:
+            log.info("Database schema version: %d — no migrations required.", current)
+            return
+        for m in sorted(pending, key=lambda x: x["version"]):
+            log.info("Applying migration v%d: %s", m["version"], m["describe"])
+            m["apply"](sess)
+            _set_schema_version(sess, m["version"])
+            log.info("Migration v%d applied successfully.", m["version"])
+        final = max(m["version"] for m in pending)
+        log.info("Database schema now at version %d.", final)
+
 
 _run_migrations()
 
