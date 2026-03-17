@@ -224,8 +224,8 @@ function renderProgramTrack(state, workout) {
   const nodesHtml = Array.from({length: n}, (_, i) =>
     `<span class="session-node ${i < done ? "session-node-done" : "session-node-empty"}">${i < done ? "●" : "○"}</span>`
   ).join("");
-  if (barEl && barEl.parentElement) {
-    barEl.parentElement.innerHTML = `<div class="session-nodes">${nodesHtml}</div>`;
+  if (nodesEl) {
+    nodesEl.innerHTML = `<div class="session-nodes-row">${nodesHtml}</div>`;
   }
 
   const remaining = Math.max(n - done, 0);
