@@ -143,9 +143,39 @@ sa.Table("workouts", _meta,
     sa.Column("created_at",      sa.Text,    nullable=False),
 )
 
+sa.Table("workout_sessions", _meta,
+    sa.Column("id",              sa.Integer, primary_key=True, autoincrement=True),
+    sa.Column("user_id",         sa.Integer, sa.ForeignKey("users.id"), nullable=False),
+    sa.Column("date",            sa.Text,    nullable=False),
+    sa.Column("drachmae_earned", sa.Float,   server_default=sa.text("0")),
+    sa.Column("created_at",      sa.Text,    nullable=False),
+)
+
 # Create all tables on startup — IF NOT EXISTS semantics, safe to run every boot
 _meta.create_all(engine)
 log.info("Database tables verified / created.")
+
+# ── Schema migrations (add columns that may not exist in older installations) ──
+
+def _run_migrations() -> None:
+    """Add columns / tables introduced after the initial schema."""
+    cols_to_add = [
+        ("workouts", "session_id", "INTEGER"),
+    ]
+    with _db() as sess:
+        for table, col, col_type in cols_to_add:
+            try:
+                if _IS_PG:
+                    sess.execute(text(
+                        f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {col} {col_type}"
+                    ))
+                else:
+                    # SQLite: no IF NOT EXISTS on ALTER TABLE ADD COLUMN — catch duplicate error
+                    sess.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} {col_type}"))
+            except Exception:
+                pass  # column already exists
+
+_run_migrations()
 
 # ── INSERT helper (dialect-aware RETURNING) ───────────────────────────────────
 
@@ -247,10 +277,44 @@ def save_legacy(user_id: int, data: dict) -> None:
         """), {"uid": user_id, "data": json.dumps(data, default=str), "now": now})
 
 
+
 # ── Workouts table — structured rows for history / edit / delete ──────────────
 
+def create_session(user_id: int, date: str, drachmae_earned: float = 0.0) -> int:
+    """Create a workout_session record and return its id."""
+    now = dt.datetime.utcnow().isoformat()
+    with _db() as sess:
+        return _insert(
+            sess,
+            "INSERT INTO workout_sessions (user_id, date, drachmae_earned, created_at) "
+            "VALUES (:user_id, :date, :drachmae_earned, :created_at)",
+            {"user_id": user_id, "date": date,
+             "drachmae_earned": drachmae_earned, "created_at": now},
+        )
+
+
+def get_sessions(user_id: int, limit: int = 50) -> list:
+    """Return recent workout sessions with their exercises, newest first."""
+    with _db() as sess:
+        session_rows = sess.execute(
+            text("SELECT * FROM workout_sessions WHERE user_id = :uid "
+                 "ORDER BY date DESC, id DESC LIMIT :limit"),
+            {"uid": user_id, "limit": limit},
+        ).fetchall()
+        sessions = []
+        for sr in session_rows:
+            sd = dict(sr._mapping)
+            exercise_rows = sess.execute(
+                text("SELECT * FROM workouts WHERE session_id = :sid ORDER BY id ASC"),
+                {"sid": sd["id"]},
+            ).fetchall()
+            sd["exercises"] = [dict(r._mapping) for r in exercise_rows]
+            sessions.append(sd)
+        return sessions
+
 def insert_workout(user_id: int, date: str, type: str,
-                   drachmae_earned: float = 0.0, **kwargs) -> int:
+                   drachmae_earned: float = 0.0,
+                   session_id: int | None = None, **kwargs) -> int:
     """Insert a workout row and return its id."""
     now = dt.datetime.utcnow().isoformat()
     params: dict = {
@@ -260,6 +324,8 @@ def insert_workout(user_id: int, date: str, type: str,
         "drachmae_earned": drachmae_earned,
         "created_at":      now,
     }
+    if session_id is not None:
+        params["session_id"] = session_id
     for col in ("movement", "weight_kg", "sets", "reps",
                 "distance_miles", "duration_min", "weight_lbs", "notes"):
         if col in kwargs and kwargs[col] is not None:
@@ -268,6 +334,22 @@ def insert_workout(user_id: int, date: str, type: str,
     placeholders = ", ".join(f":{k}" for k in params.keys())
     with _db() as sess:
         return _insert(sess, f"INSERT INTO workouts ({cols}) VALUES ({placeholders})", params)
+
+
+
+def get_movement_history(user_id: int, movement: str) -> dict | None:
+    """Return the most recent sets/reps/weight_kg for a given movement slug."""
+    with _db() as sess:
+        row = sess.execute(
+            text(
+                "SELECT sets, reps, weight_kg FROM workouts "
+                "WHERE user_id = :uid AND movement = :mvt "
+                "  AND sets IS NOT NULL AND reps IS NOT NULL "
+                "ORDER BY date DESC, id DESC LIMIT 1"
+            ),
+            {"uid": user_id, "mvt": movement},
+        ).fetchone()
+        return dict(row._mapping) if row else None
 
 
 def get_workouts(user_id: int, limit: int = 200) -> list:

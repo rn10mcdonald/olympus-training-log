@@ -3388,3 +3388,72 @@ input, select, textarea {
   gap: 8px;
   margin-top: 10px;
 }
+
+/* ── Cardio Duration Min:Sec ──────────────────────────────────────────────── */
+.duration-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.duration-row input {
+  flex: 1;
+  min-width: 0;
+}
+
+.duration-sep {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+/* ── Weight Log view ─────────────────────────────────────────────────────── */
+.wlog-movement {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.wlog-movement:last-child {
+  border-bottom: none;
+}
+
+.wlog-movement-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.wlog-movement-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.wlog-latest {
+  font-size: 0.9rem;
+  color: var(--gold, #d4a017);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.wlog-sessions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.wlog-chip {
+  font-size: 0.75rem;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: var(--surface2);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.wlog-chip-latest {
+  background: color-mix(in srgb, var(--gold, #d4a017) 20%, transparent);
+  color: var(--gold, #d4a017);
+  font-weight: 600;
+}
