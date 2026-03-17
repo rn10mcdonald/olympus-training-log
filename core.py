@@ -556,6 +556,21 @@ _MOVEMENT_TABLE = [
     ("bw_bulgarian",        "Bulgarian Split Squat",   "bodyweight", 0, "3×8/leg"),
     ("bw_hip_bridge",       "Glute Bridge",            "bodyweight", 0, "3×15"),
     ("bw_pallof",           "Pallof Press",            "bodyweight", 0, "3×10/side"),
+    # Dumbbell
+    ("db_goblet_squat",     "DB Goblet Squat",         "dumbbell",   8, "4×10"),
+    ("db_rdl",              "DB RDL",                  "dumbbell",   8, "4×10"),
+    ("db_lunge",            "DB Lunge",                "dumbbell",   8, "3×10/leg"),
+    ("db_press",            "DB Shoulder Press",       "dumbbell",   8, "4×10"),
+    ("db_bench_press",      "DB Bench Press",          "dumbbell",  10, "4×10"),
+    ("db_row",              "DB Row",                  "dumbbell",  10, "4×10/side"),
+    ("db_curl",             "DB Bicep Curl",           "dumbbell",   8, "3×12"),
+    ("db_tricep_ext",       "DB Tricep Extension",     "dumbbell",   6, "3×12"),
+    ("db_lateral_raise",    "Lateral Raise",           "dumbbell",   4, "3×15"),
+    ("db_fly",              "DB Chest Fly",            "dumbbell",   8, "3×12"),
+    ("db_step_up",          "DB Step-Up",              "dumbbell",   8, "3×10/leg"),
+    ("db_split_squat",      "DB Split Squat",          "dumbbell",   8, "3×10/leg"),
+    ("db_snatch",           "DB Snatch",               "dumbbell",   8, "5×5/side"),
+    ("db_clean_press",      "DB Clean + Press",        "dumbbell",   8, "4×8/side"),
 ]
 
 

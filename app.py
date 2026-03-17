@@ -560,6 +560,110 @@ async def log_strength(req: Request, u: dict = CurrentUser):
 def get_workouts_list(u: dict = CurrentUser):
     return {"workouts": db.get_workouts(u["user_id"])}
 
+
+@app.get("/api/movement_history/{movement}")
+def get_movement_history_api(movement: str, u: dict = CurrentUser):
+    """Return the most recent sets/reps/weight_kg logged for a movement."""
+    history = db.get_movement_history(u["user_id"], movement)
+    return {"history": history}
+
+
+@app.post("/api/session")
+async def log_session(req: Request, u: dict = CurrentUser):
+    """
+    Log a multi-exercise session (Issue #1 custom workout builder).
+
+    Body: {
+        "exercises": [
+            {"movement": str, "weight_kg": float, "sets": int, "reps": int, "notes"?: str},
+            ...
+        ],
+        "date": "YYYY-MM-DD"   # optional, defaults to today
+    }
+    """
+    p         = await req.json()
+    exercises = p.get("exercises") or []
+    date      = (p.get("date") or str(dt.date.today())).strip()
+
+    if not exercises:
+        raise HTTPException(400, "exercises list is required")
+    for ex in exercises:
+        if not ex.get("movement"):
+            raise HTTPException(400, "Each exercise must have a movement")
+        if int(ex.get("sets") or 0) < 1 or int(ex.get("reps") or 0) < 1:
+            raise HTTPException(400, "Each exercise must have sets and reps ≥ 1")
+
+    uid    = u["user_id"]
+    estate = _load_estate(uid)
+    buffs  = buff_engine.get_all_buffs(estate)
+
+    # Compute total volume across all exercises (in lbs)
+    total_volume = 0.0
+    for ex in exercises:
+        wkg  = float(ex.get("weight_kg") or 0)
+        sets = int(ex.get("sets") or 1)
+        reps = int(ex.get("reps") or 1)
+        total_volume += wkg * 2.20462 * sets * reps
+
+    raw_evts = workout_engine.process_workout(
+        estate, "strength", buffs=buffs, volume=total_volume
+    )
+    trophy_award = None
+    events = []
+    for e in raw_evts:
+        if isinstance(e, dict) and e.get("type") == "trophy":
+            trophy_award = e["trophy"]
+            events.append(e["msg"])
+        else:
+            events.append(e)
+    _save_estate(uid, estate)
+
+    oracle_evt = oracle_engine.maybe_oracle_visit(estate, chance=0.10)
+    if oracle_evt:
+        _save_estate(uid, estate)
+
+    # Persist: create session row, then one workout row per exercise
+    total_earned = next(
+        (float(ev.split("+")[1].split(" ")[0]) for ev in events
+         if isinstance(ev, str) and "drachmae" in ev),
+        0.0,
+    )
+    session_id = db.create_session(uid, date, total_earned)
+    workout_ids = []
+    for ex in exercises:
+        wkg  = float(ex.get("weight_kg") or 0)
+        sets = int(ex.get("sets") or 1)
+        reps = int(ex.get("reps") or 1)
+        wid  = db.insert_workout(
+            uid, date, "strength",
+            drachmae_earned=0.0,   # total on session; each exercise row gets 0
+            session_id=session_id,
+            movement=ex["movement"],
+            weight_kg=wkg if wkg > 0 else None,
+            sets=sets, reps=reps,
+            notes=ex.get("notes") or None,
+        )
+        workout_ids.append(wid)
+    # Assign full drachmae to the first exercise row for history display
+    if workout_ids and total_earned > 0:
+        db.update_workout(workout_ids[0], uid, drachmae_earned=total_earned)
+
+    move_names = {m["slug"]: m["name"] for m in core.get_movements()}
+    parts = []
+    for ex in exercises:
+        name = move_names.get(ex["movement"], ex["movement"].replace("_", " ").title())
+        parts.append(f"{name} {ex['sets']}×{ex['reps']} @ {ex.get('weight_kg', 0)}kg")
+
+    return {
+        "status":       "ok",
+        "msg":          "💪 Session logged: " + " | ".join(parts),
+        "events":       events,
+        "session_id":   session_id,
+        "trophy_award": trophy_award,
+        "oracle_event": oracle_evt,
+        "estate_state": estate.to_dict(),
+    }
+
 @app.put("/api/workout/{workout_id}")
 async def edit_workout(workout_id: int, req: Request, u: dict = CurrentUser):
     p   = await req.json()

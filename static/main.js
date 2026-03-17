@@ -169,8 +169,12 @@ function renderAll(state, workout) {
 
 // ── Header ────────────────────────────────────────────────────────────────────
 function renderHeader(state) {
-  document.getElementById("drachma").textContent =
-    (state.treasury || 0).toFixed(2);
+  // Issue 3: prefer estate drachmae (source of truth) over legacy treasury
+  const drachBanner = document.getElementById("drachma");
+  if (drachBanner && !estateState) {
+    drachBanner.textContent = (state.treasury || 0).toFixed(2);
+  }
+  // If estateState is loaded, renderEstateResources() handles #drachma instead
 
   const today = new Date();
   const [yr, wk] = isoWeek(today);
@@ -195,7 +199,7 @@ function renderProgramTrack(state, workout) {
   const activeState = document.getElementById("active-program-state");
   const fractionEl  = document.getElementById("program-fraction");
   const nameEl      = document.getElementById("program-name-display");
-  const barEl       = document.getElementById("program-bar");
+  const nodesEl     = document.getElementById("session-nodes");
   const countdownEl = document.getElementById("program-countdown");
 
   if (!mc.start_date || !state.track) {
@@ -565,21 +569,92 @@ function workoutTypeLabel(type) {
 }
 
 function workoutDetail(w) {
+  // Issue 7: "Clean + Press / 5 × 5 @ 16kg" format for strength entries
+  if (w.type === "strength" && w.movement) {
+    const name = (_apiMovements || []).find(m => m.slug === w.movement)?.name
+                 || w.movement.replace(/_/g, " ").replace(/\b./g, c => c.toUpperCase());
+    const setsReps = (w.sets && w.reps) ? `${w.sets} × ${w.reps}` : "";
+    const weight   = w.weight_kg ? `@ ${w.weight_kg} kg` : "";
+    const coins    = w.drachmae_earned ? ` · 🪙 ${Number(w.drachmae_earned).toFixed(2)}` : "";
+    return [name, setsReps, weight].filter(Boolean).join(" ") + coins;
+  }
   const parts = [];
   if (w.movement) parts.push(w.movement.replace(/_/g, " "));
   else if (w.notes) parts.push(w.notes);
   if (w.weight_kg) parts.push(`${w.weight_kg} kg`);
   if (w.sets && w.reps) parts.push(`${w.sets}×${w.reps}`);
   if (w.distance_miles) parts.push(`${Number(w.distance_miles).toFixed(2)} mi`);
-  if (w.duration_min) parts.push(`${w.duration_min} min`);
+  if (w.duration_min) {
+    const totalMin = Number(w.duration_min);
+    const m = Math.floor(totalMin);
+    const s = Math.round((totalMin - m) * 60);
+    parts.push(s > 0 ? `${m}:${String(s).padStart(2,"0")}` : `${m} min`);
+  }
   if (w.weight_lbs) parts.push(`${w.weight_lbs} lbs pack`);
   if (w.drachmae_earned) parts.push(`🪙 ${Number(w.drachmae_earned).toFixed(2)}`);
   return parts.join(" · ");
 }
 
+function renderWeightLog(workouts) {
+  const el = document.getElementById("history-list");
+  if (!el) return;
+
+  const strengthWos = (workouts || []).filter(w =>
+    w.type === "strength" && w.movement && w.weight_kg
+  );
+
+  if (!strengthWos.length) {
+    el.innerHTML = '<div class="empty-msg">No weight training logged yet — get lifting!</div>';
+    return;
+  }
+
+  // Group by movement slug; workouts arrive newest-first
+  const byMovement = {};
+  const movementOrder = [];
+  for (const w of strengthWos) {
+    if (!byMovement[w.movement]) {
+      byMovement[w.movement] = [];
+      movementOrder.push(w.movement);
+    }
+    byMovement[w.movement].push(w);
+  }
+
+  el.innerHTML = movementOrder.map(slug => {
+    const entries = byMovement[slug]; // newest first
+    const name = (_apiMovements || []).find(m => m.slug === slug)?.name || slug;
+    const latest = entries[0];
+    const latestKg = latest.weight_kg;
+
+    // Show up to last 8 sessions oldest→newest as chips
+    const shown = entries.slice(0, 8).reverse();
+    const chips = shown.map(w => {
+      const sr   = (w.sets && w.reps) ? `${w.sets}×${w.reps}` : "";
+      const wt   = `${w.weight_kg}kg`;
+      const date = w.date ? w.date.slice(5).replace("-", "/") : "";
+      const parts = [date, sr ? `${sr} @` : "", wt].filter(Boolean).join(" ");
+      const isLatest = w === latest;
+      return `<span class="wlog-chip${isLatest ? " wlog-chip-latest" : ""}">${escHtml(parts)}</span>`;
+    }).join("");
+
+    return `
+      <div class="wlog-movement">
+        <div class="wlog-movement-header">
+          <span class="wlog-movement-name">${escHtml(name)}</span>
+          <span class="wlog-latest">${latestKg} kg</span>
+        </div>
+        <div class="wlog-sessions">${chips}</div>
+      </div>`;
+  }).join("");
+}
+
 function renderHistoryList(workouts, filter) {
   const el = document.getElementById("history-list");
   if (!el) return;
+
+  if (filter === "weights") {
+    renderWeightLog(workouts);
+    return;
+  }
 
   const filtered = (workouts || []).filter(w => {
     if (filter === "all") return true;
@@ -753,6 +828,8 @@ async function logRecommended() {
     toast(r.msg || "⚔️ Session logged!", 3000, "drachmae");
     checkLaurelEvents(r.events);
     appState = r.state;
+    // Issue 11/3: sync estate drachmae from volume-based reward
+    if (r.estate_state) { estateState = r.estate_state; renderEstateResources(); }
     const workout = await api("/api/workout/today");
     renderAll(appState, workout);
     checkNewBadges(appState);
@@ -796,7 +873,10 @@ async function deleteCustomTrack() {
 // ── Cardio logging (unified) ───────────────────────────────────────────────────
 async function logCardio() {
   const miles    = parseFloat(document.getElementById("cardio-miles").value || 0);
-  const duration = parseFloat(document.getElementById("cardio-duration").value || 0) || null;
+  // Issue 6: min + sec inputs → decimal minutes
+  const durMin   = parseFloat(document.getElementById("cardio-duration-min")?.value || 0) || 0;
+  const durSec   = parseFloat(document.getElementById("cardio-duration-sec")?.value  || 0) || 0;
+  const duration = (durMin > 0 || durSec > 0) ? durMin + durSec / 60 : null;
   const lbs      = parseFloat(document.getElementById("cardio-weight-lbs").value || 0) || null;
 
   if (!miles || miles <= 0) { toast("Enter a valid distance."); return; }
@@ -825,7 +905,10 @@ async function logCardio() {
     renderAll(appState, workout);
     checkNewBadges(appState);
     document.getElementById("cardio-miles").value = "";
-    document.getElementById("cardio-duration").value = "";
+    const dMin = document.getElementById("cardio-duration-min");
+    const dSec = document.getElementById("cardio-duration-sec");
+    if (dMin) dMin.value = "";
+    if (dSec) dSec.value = "";
     prevBadgeCount = (appState.badges || []).length;
     // loadHistory fetches workouts, then calls renderActivityCalendar + renderRecentCardio internally
     loadHistory();
@@ -894,14 +977,15 @@ const CUSTOM_WORK_MOVEMENTS = {
 // Categories where weight input should be hidden
 const NO_WEIGHT_CATS = new Set(["bodyweight", "yoga", "pilates"]);
 
-const KB_API_CATS = new Set(["swing","snatch","clean","press","hinge","get_up","row","carry"]);
+const KB_API_CATS = new Set(["swing","snatch","clean","press","squat","hinge","get_up","row","carry"]);
 
 async function initCustomWorkSelector() {
   if (!_apiMovements) {
     try { _apiMovements = await api("/api/movements"); } catch (_) { _apiMovements = []; }
   }
-  // Populate KB list from API
+  // Populate movement lists from API (Issue 5: includes squat + dumbbell now)
   CUSTOM_WORK_MOVEMENTS.kettlebell = _apiMovements.filter(m => KB_API_CATS.has(m.category));
+  CUSTOM_WORK_MOVEMENTS.dumbbell   = _apiMovements.filter(m => m.category === "dumbbell");
   CUSTOM_WORK_MOVEMENTS.barbell    = _apiMovements.filter(m => m.category === "barbell");
   CUSTOM_WORK_MOVEMENTS.bodyweight = _apiMovements.filter(m => m.category === "bodyweight");
 
@@ -2629,6 +2713,12 @@ function renderProcessing(data) {
       btn.disabled = true;
       try {
         const res = await api("/api/estate/processing/build", { building_id: btn.dataset.id });
+        // Issue 2: check for server-side error
+        if (res.status === "error") {
+          toast("⚠ " + (res.message || "Insufficient drachmae — better go train."), 4000);
+          btn.disabled = false;
+          return;
+        }
         estateState = res.state;
         renderEstateResources();
         toast(`${btn.dataset.name} built!`);
@@ -2859,6 +2949,12 @@ document.getElementById("confirm-farm-upgrade-btn")?.addEventListener("click", a
       col: _farmUpgradeCell.col,
       row: _farmUpgradeCell.row,
     });
+    // Issue 2: check for server-side error
+    if (res.status === "error") {
+      toast("⚠ " + (res.message || "Insufficient drachmae — better go train."), 4000);
+      btn.disabled = false;
+      return;
+    }
     estateState = res.state;
     renderEstateResources();
     renderEstateGrid();
