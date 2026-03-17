@@ -810,7 +810,7 @@ def log_custom(state: dict, text: str) -> str:
 
 def log_ruck(state: dict, miles: float, pounds: float) -> str:
     """Log a ruck session, award drachma, check journey milestones."""
-    coins         = round(miles * (1 + 0.01 * pounds), 2)
+    coins         = round(miles * 20.0, 2)
     prev_journey  = state.get("journey_miles",
                               state.get("total_ruck_miles", 0.0))
     new_journey   = prev_journey + miles
@@ -833,7 +833,7 @@ def log_ruck(state: dict, miles: float, pounds: float) -> str:
 
 def log_run(state: dict, miles: float, pace: float | None = None) -> str:
     """Log a run, award base-rate drachma (no weight bonus), check journey milestones."""
-    coins        = round(miles * 1.0, 2)   # base rate; ruck earns more with weight
+    coins        = round(miles * 18.0, 2)
     prev_journey = state.get("journey_miles",
                              state.get("total_ruck_miles", 0.0))
     new_journey  = prev_journey + miles
@@ -859,7 +859,7 @@ def log_run(state: dict, miles: float, pace: float | None = None) -> str:
 
 def log_walk(state: dict, miles: float) -> str:
     """Log a walk, award half the run rate, count toward the journey."""
-    coins        = round(miles * 0.5, 2)   # walks earn half vs running
+    coins        = round(miles * 12.0, 2)
     prev_journey = state.get("journey_miles", 0.0)
     new_journey  = prev_journey + miles
 

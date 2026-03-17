@@ -122,10 +122,11 @@ const CUSTOM_WORKOUT_COINS = 3.0;
 
 /** Convert lbs → kg and compute estimated workout Drachma, mirroring core.py logic. */
 function estimateWorkoutCoins(lbs, stdKg) {
-  if (!lbs || lbs <= 0 || !stdKg) return BASE_WORKOUT_COINS;
-  const kg    = lbs * 0.453592;
-  const ratio = Math.min(Math.max(kg / stdKg, 0.5), 2.0);
-  return Math.round(BASE_WORKOUT_COINS * ratio * 100) / 100;
+  // Preview for main lift only; full session will earn ~4× this
+  // Formula: volume_lbs × 0.035, assuming a 5×5 set
+  const weightLbs = (lbs > 0 ? lbs : (stdKg || 16) * 2.20462);
+  const volume = weightLbs * 5 * 5;  // 5×5 representative set
+  return Math.round(volume * 0.035 * 100) / 100;
 }
 
 // ── App state ─────────────────────────────────────────────────────────────────
