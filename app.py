@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request, HTTPException, Depends
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
-import json, core, datetime as dt, os, time as _time, logging
+import json, core, datetime as dt, os, time as _time, logging, re as _re
 
 log = logging.getLogger(__name__)
 
@@ -34,6 +34,52 @@ app.add_middleware(
 CurrentUser = Depends(_auth.get_current_user)
 
 # ── Per-user state helpers ────────────────────────────────────────────────────
+
+def _parse_total_reps(text: str) -> int:
+    """Extract total reps from movement description strings.
+    Handles: '5×5', '3×8/leg', '(1-2-3-2-1)×3', '4×20 m/side', etc.
+    Returns a sensible default (20) when no pattern matches.
+    """
+    # Standard N×M or NxM
+    m = _re.search(r'(\d+)\s*[x×]\s*(\d+)', text)
+    if m:
+        return int(m.group(1)) * int(m.group(2))
+    # Ladder (1-2-3-2-1) × N
+    ladder = _re.search(r'\(([\d\-]+)\)\s*[x×]\s*(\d+)', text)
+    if ladder:
+        total = sum(int(v) for v in ladder.group(1).split('-') if v.isdigit())
+        return total * int(ladder.group(2))
+    return 20  # fallback for bodyweight / unstructured finishers
+
+
+def _session_volume_lbs(session: dict, weights_lbs: dict | None) -> float:
+    """Sum volume (lbs × reps) for all movements in a microcycle session.
+    Uses user-submitted weights_lbs when available, falls back to std_kg.
+    """
+    std_lbs = float(session.get("std_kg", 16) or 16) * 2.20462
+
+    def _weight(key: str) -> float:
+        if weights_lbs:
+            v = weights_lbs.get(key)
+            if v and float(v) > 0:
+                return float(v)
+        return std_lbs
+
+    total = 0.0
+    # Main lift
+    main_text = session.get("main", "")
+    if main_text:
+        total += _weight("main") * _parse_total_reps(main_text)
+    # Accessories
+    for i, acc in enumerate(session.get("accessory") or []):
+        total += _weight(f"acc_{i}") * _parse_total_reps(acc)
+    # Finisher (optional weight entry)
+    finisher = session.get("finisher", "")
+    if finisher:
+        fin_lbs = _weight("finisher")
+        total += fin_lbs * _parse_total_reps(finisher)
+    return round(total, 2)
+
 
 def _load_estate(user_id: int) -> gs.PlayerState:
     raw = db.load_estate(user_id)
@@ -281,35 +327,57 @@ async def log_recommended(req: Request, u: dict = CurrentUser):
         weights_lbs = p.get("weights_lbs")
     except Exception:
         pass
-    uid          = u["user_id"]
-    state        = _load_legacy(uid)
-    old_treasury = state.get("treasury", 0.0)
-    msg          = core.log_rec(state, weights_lbs=weights_lbs)
-    _save_legacy(uid, state)
-    base_coins   = round(state.get("treasury", 0.0) - old_treasury, 2)
+    uid   = u["user_id"]
+    state = _load_legacy(uid)
 
-    # Credit estate drachmae, apply strength buff, consume Hephaestus blessing
-    estate     = _load_estate(uid)
-    buffs      = buff_engine.get_all_buffs(estate)
-    earned     = buff_engine.apply_workout_buff(buffs, "strength", base_coins)
-    if base_coins > 0:
-        estate.drachmae = round(estate.drachmae + earned, 2)
-    if buffs.get("blessing_hephaestus") and base_coins > 0:
+    # Legacy state: journey miles, microcycle progress, weekly laurel tracking
+    msg = core.log_rec(state, weights_lbs=weights_lbs)
+    _save_legacy(uid, state)
+
+    # ── Estate reward: expand session into movements, sum volume ───────────────
+    estate = _load_estate(uid)
+    buffs  = buff_engine.get_all_buffs(estate)
+
+    # Look up the current session template to get movement structure
+    track = state.get("track", "")
+    mc    = state.get("microcycle", {})
+    # sessions_completed was just incremented by core.log_rec; use idx - 1
+    idx   = max(0, mc.get("sessions_completed", 1) - 1)
+    session_def: dict = {}
+    if track and not track.startswith("custom_") and track in core.TEMPLATES:
+        sessions = core.TEMPLATES[track].get("sessions", [])
+        if idx < len(sessions):
+            session_def = sessions[idx]
+
+    volume = _session_volume_lbs(session_def, weights_lbs)
+
+    raw_evts     = workout_engine.process_workout(estate, "strength", buffs=buffs, volume=volume)
+    trophy_award = None
+    events       = []
+    for e in raw_evts:
+        if isinstance(e, dict) and e.get("type") == "trophy":
+            trophy_award = e["trophy"]
+            events.append(e["msg"])
+        else:
+            events.append(e)
+
+    if buffs.get("blessing_hephaestus"):
         estate.active_blessings["hephaestus"] = max(
             0, estate.active_blessings.get("hephaestus", 1) - 1
         )
     oracle_evt = oracle_engine.maybe_oracle_visit(estate, chance=0.10)
     _save_estate(uid, estate)
 
-    if base_coins > 0:
-        today = str(dt.date.today())
-        # Pull the movement name logged by core.log_rec (last workouts entry)
-        movement_name = ""
-        if state.get("workouts"):
-            movement_name = state["workouts"][-1].get("details", "")
-        db.insert_workout(uid, today, "recommended", earned, notes=movement_name)
+    today  = str(dt.date.today())
+    earned = estate.drachmae  # post-mutation value reflects what was added
+    db.insert_workout(uid, today, "strength", round(volume * 0.035, 2),
+                      notes=msg[:200] if msg else None)
 
-    return {"status": "ok", "msg": msg, "state": state, "oracle_event": oracle_evt}
+    return {
+        "status": "ok", "msg": msg, "state": state,
+        "events": events, "trophy_award": trophy_award,
+        "oracle_event": oracle_evt, "estate_state": estate.to_dict(),
+    }
 
 @app.post("/api/workout/custom")
 async def log_custom(req: Request, u: dict = CurrentUser):

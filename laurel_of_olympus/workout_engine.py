@@ -35,23 +35,26 @@ def _dr_multiplier(workout_number: int) -> float:
 # ---------------------------------------------------------------------------
 
 def _reward_walking(miles: float = 1.0) -> float:
-    """Base 10 + 2 per mile."""
-    return 10.0 + 2.0 * miles
+    """12 drachmae per mile."""
+    return round(miles * 12.0, 2)
 
 
 def _reward_running(miles: float = 2.0) -> float:
-    """Base 15 + 3 per mile."""
-    return 15.0 + 3.0 * miles
+    """18 drachmae per mile."""
+    return round(miles * 18.0, 2)
 
 
 def _reward_rucking(miles: float = 2.0, lbs: float = 20.0) -> float:
-    """Base 20 + 4 per mile + 1 per 10 lbs carried."""
-    return 20.0 + 4.0 * miles + (lbs / 10.0)
+    """20 drachmae per mile."""
+    return round(miles * 20.0, 2)
 
 
 def _reward_strength(volume: float = 5000.0) -> float:
-    """Base 18 + volume / 400. Volume = weight × reps × sets."""
-    return 18.0 + volume / 400.0
+    """volume × 0.035 — pure volume scaling, no flat base.
+    Volume = weight_lbs × sets × reps (sum across all movements in session).
+    Example single movement: 35 lbs × 5 sets × 5 reps = 875 → 30.6 🪙
+    Example full session (4 movements): ~3500 → 122.5 🪙"""
+    return round(volume * 0.035, 2)
 
 
 _REWARD_FN = {
