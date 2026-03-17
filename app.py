@@ -638,6 +638,76 @@ async def log_strength(req: Request, u: dict = CurrentUser):
         "estate_state": estate.to_dict(),
     }
 
+@app.post("/api/workout/timed")
+async def log_timed(req: Request, u: dict = CurrentUser):
+    """Log a workout by duration (strength / yoga / pilates / general).
+    Body: { workout_subtype, minutes, seconds }
+    Reward: minutes_total × rate, capped at 60 🪙.
+    """
+    p = await req.json()
+    workout_subtype = (p.get("workout_subtype") or "general").strip().lower()
+    valid_subtypes  = {"strength", "yoga", "pilates", "general"}
+    if workout_subtype not in valid_subtypes:
+        raise HTTPException(400, f"workout_subtype must be one of {sorted(valid_subtypes)}")
+
+    try:
+        minutes = float(p.get("minutes") or 0)
+        seconds = float(p.get("seconds") or 0)
+    except (TypeError, ValueError):
+        raise HTTPException(400, "minutes and seconds must be numeric")
+
+    total_minutes = minutes + seconds / 60.0
+    if total_minutes <= 0:
+        raise HTTPException(400, "Duration must be greater than 0")
+
+    uid    = u["user_id"]
+    estate = _load_estate(uid)
+    buffs  = buff_engine.get_all_buffs(estate)
+
+    # Use "timed" type for estate engine; subtype controls the rate
+    raw_evts = workout_engine.process_workout(
+        estate, "timed", buffs=buffs,
+        minutes=total_minutes, workout_subtype=workout_subtype,
+    )
+    trophy_award = None
+    events = []
+    for e in raw_evts:
+        if isinstance(e, dict) and e.get("type") == "trophy":
+            trophy_award = e["trophy"]
+            events.append(e["msg"])
+        else:
+            events.append(e)
+
+    oracle_evt = oracle_engine.maybe_oracle_visit(estate, chance=0.08)
+    _save_estate(uid, estate)
+
+    # Parse earned amount from events
+    earned = next(
+        (float(ev.split("+")[1].split(" ")[0]) for ev in events
+         if isinstance(ev, str) and "drachmae" in ev),
+        0.0,
+    )
+
+    today = str(dt.date.today())
+    db.insert_workout(uid, today, "timed", earned,
+                      duration_min=total_minutes,
+                      notes=workout_subtype)
+
+    label_map = {"strength": "Strength session", "yoga": "Yoga",
+                 "pilates": "Pilates", "general": "Workout"}
+    label = label_map.get(workout_subtype, workout_subtype.title())
+    dur_str = (f"{int(minutes)}m {int(seconds)}s" if seconds
+               else f"{int(total_minutes)}m")
+    msg = f"⏱ {label} — {dur_str} logged! +{earned:.2f} ⚡"
+
+    return {
+        "status": "ok", "msg": msg,
+        "events": events, "trophy_award": trophy_award,
+        "oracle_event": oracle_evt,
+        "estate_state": estate.to_dict(),
+    }
+
+
 # ── Workout history CRUD ───────────────────────────────────────────────────────
 
 @app.get("/api/workouts")

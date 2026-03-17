@@ -1166,6 +1166,36 @@ async function logExercise() {
   finally { if (btn) btn.disabled = false; }
 }
 
+// ── Log by Time ───────────────────────────────────────────────────────────────
+async function logTimed() {
+  const btn            = document.getElementById("log-timed-btn");
+  const workout_subtype = document.getElementById("timed-subtype")?.value || "general";
+  const minutes        = parseFloat(document.getElementById("timed-duration-min")?.value || 0) || 0;
+  const seconds        = parseFloat(document.getElementById("timed-duration-sec")?.value  || 0) || 0;
+
+  if (minutes <= 0 && seconds <= 0) {
+    toast("⚠ Enter a duration before logging.", 3000);
+    return;
+  }
+
+  if (btn) btn.disabled = true;
+  try {
+    const r = await api("/api/workout/timed", { workout_subtype, minutes, seconds });
+    toast(r.msg || "⏱ Session logged!", 3000, "drachmae");
+    checkLaurelEvents(r.events);
+    if (r.estate_state) { estateState = r.estate_state; renderEstateResources(); }
+    if (r.trophy_award) showTrophyAwardBanner(r.trophy_award);
+    // Clear inputs
+    const minEl = document.getElementById("timed-duration-min");
+    const secEl = document.getElementById("timed-duration-sec");
+    if (minEl) minEl.value = "";
+    if (secEl) secEl.value = "";
+    loadHistory();
+    if (r.oracle_event) showEventPopup(r.oracle_event);
+  } catch (e) { toast("⚠ " + e.message); }
+  finally { if (btn) btn.disabled = false; }
+}
+
 // ── Badge notification ────────────────────────────────────────────────────────
 function checkNewBadges(state) {
   const count = (state.badges || []).length;
@@ -1594,6 +1624,9 @@ document.getElementById("start-track-btn").addEventListener("click", async () =>
 document.getElementById("delete-track-btn").addEventListener("click", deleteCustomTrack);
 document.getElementById("open-builder-btn").addEventListener("click", openBuilderDialog);
 document.getElementById("track-select").addEventListener("change", updateDeleteTrackBtn);
+
+// Log by Time
+document.getElementById("log-timed-btn")?.addEventListener("click", logTimed);
 
 // Cardio section
 document.getElementById("log-cardio-btn")?.addEventListener("click", logCardio);
