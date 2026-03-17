@@ -121,6 +121,29 @@
         </div>
       </div>
 
+      <!-- Log by Time -->
+      <div class="card">
+        <h2 class="card-h2">⏱ Log by Time</h2>
+        <div class="field-group" style="margin-top:4px">
+          <label for="timed-subtype">Workout Type</label>
+          <select id="timed-subtype" class="track-select">
+            <option value="strength">Strength</option>
+            <option value="yoga">Yoga</option>
+            <option value="pilates">Pilates</option>
+            <option value="general">General</option>
+          </select>
+        </div>
+        <div class="field-group" style="margin-top:10px">
+          <label>Duration</label>
+          <div class="duration-row">
+            <input id="timed-duration-min" type="number" placeholder="min" step="1" min="0" inputmode="numeric" class="duration-input">
+            <span class="duration-sep">:</span>
+            <input id="timed-duration-sec" type="number" placeholder="sec" step="1" min="0" max="59" inputmode="numeric" class="duration-input">
+          </div>
+        </div>
+        <button class="btn-primary" id="log-timed-btn" style="margin-top:12px;width:100%;min-height:44px">⏱ Log Session</button>
+      </div>
+
     </div>
   </section>
 

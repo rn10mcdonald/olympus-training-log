@@ -57,11 +57,28 @@ def _reward_strength(volume: float = 5000.0) -> float:
     return round(volume * 0.035, 2)
 
 
+# Rate per minute for time-based workouts (before 60 🪙 cap)
+_TIMED_RATES: dict[str, float] = {
+    "strength": 0.7,
+    "yoga":     0.5,
+    "pilates":  0.5,
+    "general":  0.6,
+}
+_TIMED_CAP = 60.0  # max drachmae per timed session
+
+
+def _reward_timed(minutes: float = 30.0, workout_subtype: str = "general") -> float:
+    """Drachmae for duration-based workouts.  minutes × rate, capped at 60."""
+    rate = _TIMED_RATES.get(workout_subtype, 0.6)
+    return min(round(minutes * rate, 2), _TIMED_CAP)
+
+
 _REWARD_FN = {
     "walking": _reward_walking,
     "running": _reward_running,
     "rucking": _reward_rucking,
     "strength": _reward_strength,
+    "timed": _reward_timed,
 }
 
 
