@@ -120,11 +120,11 @@ function formatPace(decMin) {
 const BASE_WORKOUT_COINS   = 5.0;
 const CUSTOM_WORKOUT_COINS = 3.0;
 
-/** Convert lbs → kg and compute estimated workout Drachma, mirroring core.py logic. */
-function estimateWorkoutCoins(lbs, stdKg) {
+/** Compute estimated workout Drachma from kg input. */
+function estimateWorkoutCoins(kg, stdKg) {
   // Preview for main lift only; full session will earn ~4× this
-  // Formula: volume_lbs × 0.035, assuming a 5×5 set
-  const weightLbs = (lbs > 0 ? lbs : (stdKg || 16) * 2.20462);
+  const weightKg = (kg > 0 ? kg : (stdKg || 16));
+  const weightLbs = weightKg * 2.20462;
   const volume = weightLbs * 5 * 5;  // 5×5 representative set
   return Math.round(volume * 0.035 * 100) / 100;
 }
@@ -240,8 +240,8 @@ function renderProgramTrack(state, workout) {
 /** Compact weight input HTML for a given movement key. */
 function weightInputHtml(key) {
   return `<input type="number" class="movement-weight-input"
-                 data-key="${key}" placeholder="lbs"
-                 step="1" min="0" max="999" inputmode="decimal">`;
+                 data-key="${key}" placeholder="kg"
+                 step="0.5" min="0" max="200" inputmode="decimal">`;
 }
 
 function renderWorkout(w) {
@@ -261,7 +261,6 @@ function renderWorkout(w) {
 
   if (actionsEl) actionsEl.style.display = "";
   currentStdKg = w.std_kg || 16;
-  const stdLbs = Math.round(currentStdKg * 2.20462);
 
   const accessoryRows = (w.accessory || []).map((a, i) => `
     <div class="workout-exercise-row">
@@ -298,7 +297,7 @@ function renderWorkout(w) {
       </div>
     </div>` : ""}
 
-    <p class="weight-std-hint">Standard bell: ${stdLbs} lbs (${currentStdKg} kg)</p>`;
+    <p class="weight-std-hint">Standard bell: ${currentStdKg} kg</p>`;
 }
 
 /** Live Drachma preview — driven by the main-lift weight input. */
@@ -816,12 +815,15 @@ async function startPreviewedTrack() {
 // ── Actions ───────────────────────────────────────────────────────────────────
 async function logRecommended() {
   const btn = document.getElementById("log-session-btn");
-  const weights = {};
+  const weightsKg = {};
   document.querySelectorAll("#workout-display .movement-weight-input").forEach(inp => {
     const v = parseFloat(inp.value || 0);
-    if (v > 0) weights[inp.dataset.key] = v;
+    if (v > 0) weightsKg[inp.dataset.key] = v;
   });
-  const payload = Object.keys(weights).length > 0 ? { weights_lbs: weights } : {};
+  // Inputs collect kg; backend expects weights_lbs
+  const weightsLbs = {};
+  for (const [k, kg] of Object.entries(weightsKg)) weightsLbs[k] = kg * 2.20462;
+  const payload = Object.keys(weightsLbs).length > 0 ? { weights_lbs: weightsLbs } : {};
 
   if (btn) btn.disabled = true;
   try {
@@ -835,8 +837,12 @@ async function logRecommended() {
     renderAll(appState, workout);
     checkNewBadges(appState);
     loadHistory();
-    // Show oracle dialogue popup if triggered
-    if (r.oracle_event) showEventPopup(r.oracle_event);
+    // Push farm events to estate log
+    (r.farm_events || []).forEach(evt => pushEstateLog(evt, "farm"));
+    // Priority popup: harvest → title → oracle
+    if (r.farm_harvest) showFarmHarvestPopup(r.farm_harvest);
+    else if (r.newly_unlocked?.length) showTitleUnlockPopup(r.newly_unlocked);
+    else if (r.oracle_event) showEventPopup(r.oracle_event);
   } catch (e) { toast("⚠ " + e.message); }
   finally { if (btn) btn.disabled = false; }
 }
@@ -913,8 +919,11 @@ async function logCardio() {
     prevBadgeCount = (appState.badges || []).length;
     // loadHistory fetches workouts, then calls renderActivityCalendar + renderRecentCardio internally
     loadHistory();
-    // Show oracle dialogue popup if triggered
-    if (r.oracle_event) showEventPopup(r.oracle_event);
+    // Push farm events to estate log then priority popup
+    (r.farm_events || []).forEach(evt => pushEstateLog(evt, "farm"));
+    if (r.farm_harvest) showFarmHarvestPopup(r.farm_harvest);
+    else if (r.newly_unlocked?.length) showTitleUnlockPopup(r.newly_unlocked);
+    else if (r.oracle_event) showEventPopup(r.oracle_event);
   } catch (e) { toast("⚠ " + e.message); }
 }
 
@@ -1123,7 +1132,10 @@ async function submitSession() {
       const r = await api("/api/strength", payload);
       if (r.estate_state) lastEstateState = r.estate_state;
       allEvents = allEvents.concat(r.events || []);
-      if (r.oracle_event) showEventPopup(r.oracle_event);
+      (r.farm_events || []).forEach(evt => pushEstateLog(evt, "farm"));
+      if (r.farm_harvest) showFarmHarvestPopup(r.farm_harvest);
+      else if (r.newly_unlocked?.length) showTitleUnlockPopup(r.newly_unlocked);
+      else if (r.oracle_event) showEventPopup(r.oracle_event);
     }
     if (lastEstateState) { estateState = lastEstateState; renderEstateResources(); }
     checkLaurelEvents(allEvents);
@@ -1161,7 +1173,10 @@ async function logExercise() {
     prevBadgeCount = (appState.badges || []).length;
     _clearExerciseInputs();
     loadHistory();
-    if (r.oracle_event) showEventPopup(r.oracle_event);
+    (r.farm_events || []).forEach(evt => pushEstateLog(evt, "farm"));
+    if (r.farm_harvest) showFarmHarvestPopup(r.farm_harvest);
+    else if (r.newly_unlocked?.length) showTitleUnlockPopup(r.newly_unlocked);
+    else if (r.oracle_event) showEventPopup(r.oracle_event);
   } catch (e) { toast("⚠ " + e.message); }
   finally { if (btn) btn.disabled = false; }
 }
@@ -1828,7 +1843,65 @@ const EVENT_TYPE_LABELS = {
   merchant:    "merchant",
   philosopher: "philosophy",
   rare:        "rare event",
+  harvest:     "harvest",
+  title:       "title earned",
 };
+
+const RESOURCE_LABELS = {
+  grain:  { emoji: "🌾", label: "Grain" },
+  grapes: { emoji: "🍇", label: "Grapes" },
+  olives: { emoji: "🫒", label: "Olives" },
+  honey:  { emoji: "🍯", label: "Honey" },
+  herbs:  { emoji: "🌿", label: "Herbs" },
+};
+
+const HARVEST_FLAVOR = [
+  "Even your farm works harder than most mortals.",
+  "The gods approve. Your estate remembers your effort.",
+  "Kassandra says nothing, but the fields speak for themselves.",
+  "Each harvest is proof you showed up. The estate does not forget.",
+  "Your labors in the gymnasium echo in the fields.",
+];
+
+function showFarmHarvestPopup(farmHarvest) {
+  if (!farmHarvest?.resources) return;
+  const lines = Object.entries(farmHarvest.resources).map(([res, amt]) => {
+    const r = RESOURCE_LABELS[res] || { emoji: "📦", label: res };
+    return `${r.emoji} +${amt} ${r.label}`;
+  });
+  const flavor = HARVEST_FLAVOR[Math.floor(Math.random() * HARVEST_FLAVOR.length)];
+  lines.push(flavor);
+  showEventPopup({
+    type:  "harvest",
+    title: "Harvest Complete",
+    icon:  "🌾",
+    lines,
+  });
+}
+
+const TITLE_FLAVOR = [
+  "Try not to let it go to your head.",
+  "The Oracle acknowledges this. Reluctantly.",
+  "Even Kassandra seems mildly impressed.",
+  "The gods have noticed. Whether that is good remains unclear.",
+  "A title earned is a story worth telling.",
+];
+
+const TITLE_ID_NAMES = {};
+
+function showTitleUnlockPopup(titleIds) {
+  if (!titleIds?.length) return;
+  const names = titleIds.map(id =>
+    TITLE_ID_NAMES[id] || id.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())
+  );
+  const flavor = TITLE_FLAVOR[Math.floor(Math.random() * TITLE_FLAVOR.length)];
+  showEventPopup({
+    type:  "title",
+    title: "Title Earned",
+    icon:  "🏅",
+    lines: names.map(n => `"${n}"`).concat([flavor]),
+  });
+}
 
 function showEventPopup(event) {
   if (!event) return;
@@ -1936,8 +2009,11 @@ document.getElementById("simulate-workout-btn")?.addEventListener("click", async
       // Refresh vault trophy list + buff summary
       renderVaultSection(appState || {});
     }
+    // Farm harvest popup, then title, then creature/oracle
+    if (res.farm_harvest) showFarmHarvestPopup(res.farm_harvest);
+    else if (res.newly_unlocked?.length) showTitleUnlockPopup(res.newly_unlocked);
     // Show creature encounter first (player must decide before narrative event)
-    if (res.creature_encounter) {
+    else if (res.creature_encounter) {
       showEncounterDialog(res.creature_encounter);
     } else if (res.event) {
       showEventPopup(res.event);
@@ -2211,6 +2287,11 @@ async function openProphecyScroll() {
 }
 
 function renderProphecyScroll(scroll) {
+  // Populate TITLE_ID_NAMES cache for popup display
+  (scroll.titles_by_category || []).forEach(cat => {
+    (cat.titles || []).forEach(t => { TITLE_ID_NAMES[t.id] = t.name; });
+  });
+
   // Title
   const combined = scroll.combined_title || "Unnamed Mortal";
   document.getElementById("prophecy-dialog-title").textContent = combined;
