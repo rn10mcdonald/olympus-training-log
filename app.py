@@ -330,53 +330,68 @@ async def log_recommended(req: Request, u: dict = CurrentUser):
     uid   = u["user_id"]
     state = _load_legacy(uid)
 
-    # Legacy state: journey miles, microcycle progress, weekly laurel tracking
+    # Get session info BEFORE logging (log_rec increments sessions_completed)
+    session_info = core.get_today_workout(state)
     msg = core.log_rec(state, weights_lbs=weights_lbs)
     _save_legacy(uid, state)
 
-    # ── Estate reward: expand session into movements, sum volume ───────────────
     estate = _load_estate(uid)
     buffs  = buff_engine.get_all_buffs(estate)
 
-    # Look up the current session template to get movement structure
-    track = state.get("track", "")
-    mc    = state.get("microcycle", {})
-    # sessions_completed was just incremented by core.log_rec; use idx - 1
-    idx   = max(0, mc.get("sessions_completed", 1) - 1)
-    session_def: dict = {}
-    if track and not track.startswith("custom_") and track in core.TEMPLATES:
-        sessions = core.TEMPLATES[track].get("sessions", [])
-        if idx < len(sessions):
-            session_def = sessions[idx]
+    # Microcycle expansion: calculate per-movement rewards using new formula,
+    # then pass the sum as reward_override to process_workout for correct
+    # tracking (week_log, laurels, workout_log) and buff application.
+    std_kg  = float((session_info.get("std_kg") or 16))
+    std_lbs = std_kg * 2.20462
+    wl      = weights_lbs or {}
+    main_lbs = float(wl.get("main") or 0) or std_lbs
+    acc0_lbs = float(wl.get("acc_0") or 0) or (std_lbs * 0.75)
+    acc1_lbs = float(wl.get("acc_1") or 0) or (std_lbs * 0.75)
+    acc2_lbs = float(wl.get("acc_2") or 0) or (std_lbs * 0.75)
+    fin_lbs  = float(wl.get("finisher") or 0) or (std_lbs * 0.50)
 
-    volume = _session_volume_lbs(session_def, weights_lbs)
+    raw_session_reward = round(sum([
+        workout_engine.calculate_reward("strength", weight_lbs=main_lbs, reps=5, sets=5),
+        workout_engine.calculate_reward("strength", weight_lbs=acc0_lbs, reps=10, sets=3),
+        workout_engine.calculate_reward("strength", weight_lbs=acc1_lbs, reps=10, sets=3),
+        workout_engine.calculate_reward("strength", weight_lbs=acc2_lbs, reps=10, sets=3),
+        workout_engine.calculate_reward("strength", weight_lbs=fin_lbs,  reps=15, sets=3),
+    ]), 2)
 
-    raw_evts     = workout_engine.process_workout(estate, "strength", buffs=buffs, volume=volume)
-    trophy_award = None
-    events       = []
-    for e in raw_evts:
-        if isinstance(e, dict) and e.get("type") == "trophy":
-            trophy_award = e["trophy"]
-            events.append(e["msg"])
-        else:
-            events.append(e)
+    drachmae_before = estate.drachmae
+    raw_evts = workout_engine.process_workout(
+        estate, "strength", buffs=buffs, reward_override=raw_session_reward
+    )
+    earned = round(estate.drachmae - drachmae_before, 2)
+    events = list(raw_evts)
 
-    if buffs.get("blessing_hephaestus"):
+    # Farm production (first workout of day)
+    farm_events = farm_engine.produce_farms(estate, buffs=buffs)
+    events.extend(farm_events)
+    if buffs.get("blessing_demeter") and farm_events and "No farms" not in (farm_events[0] if farm_events else ""):
+        estate.active_blessings["demeter"] = max(0, estate.active_blessings.get("demeter", 1) - 1)
+        events.append("  🌾 Blessing of Demeter consumed.")
+
+    if buffs.get("blessing_hephaestus") and earned > 0:
         estate.active_blessings["hephaestus"] = max(
             0, estate.active_blessings.get("hephaestus", 1) - 1
         )
+        events.append("  🔥 Blessing of Hephaestus consumed.")
+
     oracle_evt = oracle_engine.maybe_oracle_visit(estate, chance=0.10)
     _save_estate(uid, estate)
 
-    today  = str(dt.date.today())
-    earned = estate.drachmae  # post-mutation value reflects what was added
-    db.insert_workout(uid, today, "strength", round(volume * 0.035, 2),
-                      notes=msg[:200] if msg else None)
+    if earned > 0:
+        today = str(dt.date.today())
+        movement_name = ""
+        if state.get("workouts"):
+            movement_name = state["workouts"][-1].get("details", "")
+        db.insert_workout(uid, today, "recommended", earned, notes=movement_name)
 
     return {
         "status": "ok", "msg": msg, "state": state,
-        "events": events, "trophy_award": trophy_award,
-        "oracle_event": oracle_evt, "estate_state": estate.to_dict(),
+        "events": events, "oracle_event": oracle_evt,
+        "estate_state": estate.to_dict(),
     }
 
 @app.post("/api/workout/custom")
@@ -385,30 +400,44 @@ async def log_custom(req: Request, u: dict = CurrentUser):
     text    = payload.get("text", "").strip()
     if not text:
         raise HTTPException(400, "Empty workout description")
-    uid          = u["user_id"]
-    state        = _load_legacy(uid)
-    old_treasury = state.get("treasury", 0.0)
-    msg          = core.log_custom(state, text)
+    uid   = u["user_id"]
+    state = _load_legacy(uid)
+    msg   = core.log_custom(state, text)
     _save_legacy(uid, state)
-    base_coins   = round(state.get("treasury", 0.0) - old_treasury, 2)
 
-    # Credit estate drachmae, apply strength buff, consume Hephaestus blessing
+    # Custom workout: use a standard single-movement reward via process_workout
+    # for correct estate tracking (week_log, laurels, farm production).
     estate = _load_estate(uid)
     buffs  = buff_engine.get_all_buffs(estate)
-    earned = buff_engine.apply_workout_buff(buffs, "strength", base_coins)
-    if base_coins > 0:
-        estate.drachmae = round(estate.drachmae + earned, 2)
-    if buffs.get("blessing_hephaestus") and base_coins > 0:
+    # Default: moderate custom workout reward (35 lbs, 5×5)
+    custom_reward = workout_engine.calculate_reward("strength", weight_lbs=35.0, reps=5, sets=5)
+    drachmae_before = estate.drachmae
+    raw_evts = workout_engine.process_workout(
+        estate, "strength", buffs=buffs, reward_override=custom_reward
+    )
+    earned = round(estate.drachmae - drachmae_before, 2)
+    events = list(raw_evts)
+
+    # Farm production (first workout of day)
+    farm_events = farm_engine.produce_farms(estate, buffs=buffs)
+    events.extend(farm_events)
+    if buffs.get("blessing_demeter") and farm_events and "No farms" not in (farm_events[0] if farm_events else ""):
+        estate.active_blessings["demeter"] = max(0, estate.active_blessings.get("demeter", 1) - 1)
+        events.append("  🌾 Blessing of Demeter consumed.")
+
+    if buffs.get("blessing_hephaestus") and earned > 0:
         estate.active_blessings["hephaestus"] = max(
             0, estate.active_blessings.get("hephaestus", 1) - 1
         )
+        events.append("  🔥 Blessing of Hephaestus consumed.")
+
     _save_estate(uid, estate)
 
-    if base_coins > 0:
+    if earned > 0:
         today = str(dt.date.today())
         db.insert_workout(uid, today, "custom", earned, notes=text[:200])
 
-    return {"status": "ok", "msg": msg, "state": state}
+    return {"status": "ok", "msg": msg, "state": state, "events": events}
 
 @app.post("/api/ruck")
 async def log_ruck(req: Request, u: dict = CurrentUser):
@@ -442,6 +471,12 @@ async def log_ruck(req: Request, u: dict = CurrentUser):
             0, estate.active_blessings.get("poseidon", 1) - 1
         )
         events.append("  🌊 Blessing of Poseidon consumed.")
+    # Farm production (first workout of day)
+    farm_events = farm_engine.produce_farms(estate, buffs=buffs)
+    events.extend(farm_events)
+    if buffs.get("blessing_demeter") and farm_events and "No farms" not in (farm_events[0] if farm_events else ""):
+        estate.active_blessings["demeter"] = max(0, estate.active_blessings.get("demeter", 1) - 1)
+        events.append("  🌾 Blessing of Demeter consumed.")
     _save_estate(uid, estate)
     oracle_evt = oracle_engine.maybe_oracle_visit(estate, chance=0.10)
     if oracle_evt:
@@ -480,6 +515,12 @@ async def log_walk(req: Request, u: dict = CurrentUser):
             events.append(e["msg"])
         else:
             events.append(e)
+    # Farm production (first workout of day)
+    farm_events = farm_engine.produce_farms(estate, buffs=buffs)
+    events.extend(farm_events)
+    if buffs.get("blessing_demeter") and farm_events and "No farms" not in (farm_events[0] if farm_events else ""):
+        estate.active_blessings["demeter"] = max(0, estate.active_blessings.get("demeter", 1) - 1)
+        events.append("  🌾 Blessing of Demeter consumed.")
     _save_estate(uid, estate)
     oracle_evt = oracle_engine.maybe_oracle_visit(estate, chance=0.10)
     if oracle_evt:
@@ -528,6 +569,12 @@ async def log_run(req: Request, u: dict = CurrentUser):
             0, estate.active_blessings.get("hermes", 1) - 1
         )
         events.append("  🪶 Blessing of Hermes consumed.")
+    # Farm production (first workout of day)
+    farm_events = farm_engine.produce_farms(estate, buffs=buffs)
+    events.extend(farm_events)
+    if buffs.get("blessing_demeter") and farm_events and "No farms" not in (farm_events[0] if farm_events else ""):
+        estate.active_blessings["demeter"] = max(0, estate.active_blessings.get("demeter", 1) - 1)
+        events.append("  🌾 Blessing of Demeter consumed.")
     _save_estate(uid, estate)
     oracle_evt = oracle_engine.maybe_oracle_visit(estate, chance=0.10)
     if oracle_evt:
@@ -573,6 +620,12 @@ async def log_hike(req: Request, u: dict = CurrentUser):
             0, estate.active_blessings.get("poseidon", 1) - 1
         )
         events.append("  🌊 Blessing of Poseidon consumed.")
+    # Farm production (first workout of day)
+    farm_events = farm_engine.produce_farms(estate, buffs=buffs)
+    events.extend(farm_events)
+    if buffs.get("blessing_demeter") and farm_events and "No farms" not in (farm_events[0] if farm_events else ""):
+        estate.active_blessings["demeter"] = max(0, estate.active_blessings.get("demeter", 1) - 1)
+        events.append("  🌾 Blessing of Demeter consumed.")
     _save_estate(uid, estate)
     oracle_evt = oracle_engine.maybe_oracle_visit(estate, chance=0.10)
     if oracle_evt:
@@ -598,12 +651,17 @@ async def log_strength(req: Request, u: dict = CurrentUser):
         raise HTTPException(400, "movement is required")
     if sets_n < 1 or reps_n < 1:
         raise HTTPException(400, "sets and reps must be at least 1")
-    # volume in lbs for reward calculation
-    volume = weight_kg * 2.20462 * sets_n * reps_n
+    # Use normalized weight scaling: sqrt(weight_lbs) × reps × sets × 0.03
+    weight_lbs = weight_kg * 2.20462
     uid    = u["user_id"]
     estate = _load_estate(uid)
     buffs  = buff_engine.get_all_buffs(estate)
-    raw_evts = workout_engine.process_workout(estate, "strength", buffs=buffs, volume=volume)
+    drachmae_before = estate.drachmae
+    raw_evts = workout_engine.process_workout(
+        estate, "strength", buffs=buffs,
+        weight_lbs=weight_lbs, reps=reps_n, sets=sets_n
+    )
+    earned = round(estate.drachmae - drachmae_before, 2)
     trophy_award = None
     events = []
     for e in raw_evts:
@@ -617,13 +675,17 @@ async def log_strength(req: Request, u: dict = CurrentUser):
             0, estate.active_blessings.get("hephaestus", 1) - 1
         )
         events.append("  🔥 Blessing of Hephaestus consumed.")
+    # Farm production (first workout of day)
+    farm_events = farm_engine.produce_farms(estate, buffs=buffs)
+    events.extend(farm_events)
+    if buffs.get("blessing_demeter") and farm_events and "No farms" not in (farm_events[0] if farm_events else ""):
+        estate.active_blessings["demeter"] = max(0, estate.active_blessings.get("demeter", 1) - 1)
+        events.append("  🌾 Blessing of Demeter consumed.")
     _save_estate(uid, estate)
     oracle_evt = oracle_engine.maybe_oracle_visit(estate, chance=0.10)
     if oracle_evt:
         _save_estate(uid, estate)
-    today  = str(dt.date.today())
-    earned = next((float(ev.split("+")[1].split(" ")[0]) for ev in events
-                   if isinstance(ev, str) and "drachmae" in ev), 0.0)
+    today = str(dt.date.today())
     db.insert_workout(uid, today, "strength", earned,
                       movement=movement, weight_kg=weight_kg,
                       sets=sets_n, reps=reps_n)
@@ -899,8 +961,26 @@ def get_estate_state(u: dict = CurrentUser):
 async def _run_estate_workout(user_id: int, p: dict) -> dict:
     workout_type = p.get("workout_type", "strength")
     kwargs = {k: v for k, v in p.items() if k != "workout_type"}
-    if workout_type == "strength" and "volume" not in kwargs:
-        kwargs["volume"] = 5000.0
+
+    # Normalise strength kwargs for new formula (weight_lbs, reps, sets).
+    # If the caller still sends legacy "volume", convert it to a single movement
+    # equivalent using a representative weight (sqrt keeps it bounded).
+    if workout_type == "strength":
+        if "weight_lbs" not in kwargs:
+            if "volume" in kwargs:
+                # Derive representative weight from volume (weight_lbs × reps × sets)
+                # Use 5×3=15 as assumed rep-set, solve for weight_lbs
+                assumed_reps_sets = 15.0
+                kwargs["weight_lbs"] = max(1.0, float(kwargs.pop("volume", 5000.0)) / assumed_reps_sets)
+                kwargs.setdefault("reps", 5)
+                kwargs.setdefault("sets", 3)
+            else:
+                # Default: moderate single movement
+                kwargs["weight_lbs"] = 100.0
+                kwargs.setdefault("reps", 5)
+                kwargs.setdefault("sets", 3)
+        # Remove legacy 'volume' key if it snuck through
+        kwargs.pop("volume", None)
     elif workout_type in ("walking", "running", "rucking") and "miles" not in kwargs:
         kwargs["miles"] = 2.0
 
