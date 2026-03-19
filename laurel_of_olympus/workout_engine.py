@@ -1,20 +1,21 @@
 """
 workout_engine.py – Drachmae reward calculations and weekly laurel tracking.
 
-All drachmae formulas come directly from balance_table.txt.
-Laurel rule: 3 workouts in one ISO calendar week (Mon–Sun) → +1 laurel.
-
 Public API:
     calculate_reward(workout_type, **kwargs) -> float
-    process_workout(state, workout_type, buffs=None, **kwargs) -> list[str]
+    process_workout(state, workout_type, buffs=None, reward_override=None, **kwargs) -> list[str]
         Mutates state, returns list of event strings for the event log.
         buffs: optional dict from buff_engine.get_all_buffs(state).
                Key "workout_{workout_type}" scales the final drachmae reward.
+        reward_override: if provided, skip reward calculation and use this value
+               (still applies buff multipliers). Used by endpoints that calculate
+               per-movement rewards externally (e.g. microcycle expansion).
 """
 
 from __future__ import annotations
 
 import datetime as dt
+import math
 from typing import Dict, List, Optional
 
 from laurel_of_olympus.game_state import PlayerState
@@ -31,30 +32,31 @@ def _dr_multiplier(workout_number: int) -> float:
 
 
 # ---------------------------------------------------------------------------
-# Reward formulas (balance_table.txt)
+# Reward formulas
 # ---------------------------------------------------------------------------
 
 def _reward_walking(miles: float = 1.0) -> float:
-    """12 drachmae per mile."""
-    return round(miles * 12.0, 2)
+    """miles × 12. Target: 1 mile → 12 drachmae."""
+    return miles * 12.0
 
 
 def _reward_running(miles: float = 2.0) -> float:
-    """18 drachmae per mile."""
-    return round(miles * 18.0, 2)
+    """miles × 18. Target: 1 mile → 18 drachmae."""
+    return miles * 18.0
 
 
-def _reward_rucking(miles: float = 2.0, lbs: float = 20.0) -> float:
-    """20 drachmae per mile."""
-    return round(miles * 20.0, 2)
+def _reward_rucking(miles: float = 2.0, lbs: float = 0.0) -> float:
+    """miles × 20. Target: 1 mile → 20 drachmae."""
+    return miles * 20.0
 
 
-def _reward_strength(volume: float = 5000.0) -> float:
-    """volume × 0.035 — pure volume scaling, no flat base.
-    Volume = weight_lbs × sets × reps (sum across all movements in session).
-    Example single movement: 35 lbs × 5 sets × 5 reps = 875 → 30.6 🪙
-    Example full session (4 movements): ~3500 → 122.5 🪙"""
-    return round(volume * 0.035, 2)
+def _reward_strength(weight_lbs: float = 35.0, reps: int = 5, sets: int = 3) -> float:
+    """
+    Normalized weight scaling: sqrt(weight_lbs) × reps × sets × 0.03.
+    Single movement target: 5–12 drachmae.
+    """
+    effective_weight = math.sqrt(max(1.0, float(weight_lbs)))
+    return effective_weight * int(reps) * int(sets) * 0.03
 
 
 # Rate per minute for time-based workouts (before 60 🪙 cap)
@@ -74,9 +76,9 @@ def _reward_timed(minutes: float = 30.0, workout_subtype: str = "general") -> fl
 
 
 _REWARD_FN = {
-    "walking": _reward_walking,
-    "running": _reward_running,
-    "rucking": _reward_rucking,
+    "walking":  _reward_walking,
+    "running":  _reward_running,
+    "rucking":  _reward_rucking,
     "strength": _reward_strength,
     "timed": _reward_timed,
 }
@@ -84,13 +86,13 @@ _REWARD_FN = {
 
 def calculate_reward(workout_type: str, **kwargs) -> float:
     """
-    Return raw drachmae reward (before diminishing returns).
+    Return raw drachmae reward (before diminishing returns or buffs).
 
     kwargs per type:
         walking:  miles (float)
         running:  miles (float)
         rucking:  miles (float), lbs (float)
-        strength: volume (float)  [weight × reps × sets]
+        strength: weight_lbs (float), reps (int), sets (int)
     """
     fn = _REWARD_FN.get(workout_type)
     if fn is None:
@@ -106,6 +108,7 @@ def process_workout(
     state: PlayerState,
     workout_type: str,
     buffs: Optional[dict] = None,
+    reward_override: Optional[float] = None,
     **kwargs,
 ) -> List[str]:
     """
@@ -114,6 +117,11 @@ def process_workout(
 
     buffs: dict from buff_engine.get_all_buffs(state).
            "workout_{workout_type}" multiplier is applied after DR scaling.
+
+    reward_override: if set, skip reward calculation and use this pre-computed
+           value as the base reward. Buff multipliers (blessings, sanctuary,
+           relics) are still applied on top of this value. Use for microcycle
+           expansion where per-movement rewards are summed externally.
     """
     events: List[str] = []
     today = str(dt.date.today())
@@ -128,12 +136,16 @@ def process_workout(
     workout_number = state.workouts_today
 
     # ── Calculate reward ────────────────────────────────────────────────────
-    raw = calculate_reward(workout_type, **kwargs)
-    multiplier = _dr_multiplier(workout_number)
-    base_final = round(raw * multiplier, 2)
+    if reward_override is not None:
+        # Pre-computed reward (e.g. microcycle expansion); still apply buffs.
+        base_final = round(float(reward_override), 2)
+    else:
+        raw = calculate_reward(workout_type, **kwargs)
+        multiplier = _dr_multiplier(workout_number)
+        base_final = round(raw * multiplier, 2)
 
-    # Apply sanctuary / relic workout buffs
-    # type-specific multiplier (e.g. running_rewards) × all-workout multiplier
+    # Apply sanctuary / relic / blessing workout buffs to the reward ONLY —
+    # never to the player's total balance.
     workout_mult = buffs.get(f"workout_{workout_type}", 1.0) * buffs.get("workout_all", 1.0)
     final = round(base_final * workout_mult, 2)
     buff_bonus = round(final - base_final, 2)
@@ -145,10 +157,10 @@ def process_workout(
 
     # ── Log the workout ─────────────────────────────────────────────────────
     state.workout_log.append({
-        "date": today,
-        "workout_type": workout_type,
+        "date":            today,
+        "workout_type":    workout_type,
         "drachmae_earned": final,
-        "params": kwargs,
+        "params":          kwargs,
     })
 
     # ── Build event messages ─────────────────────────────────────────────────
@@ -160,23 +172,26 @@ def process_workout(
     }
     label = type_labels.get(workout_type, workout_type.title())
 
-    # Param summary
     param_parts = []
     if "miles" in kwargs:
         param_parts.append(f"{kwargs['miles']} mi")
-    if "lbs" in kwargs:
+    if "lbs" in kwargs and kwargs["lbs"]:
         param_parts.append(f"{kwargs['lbs']} lbs")
-    if "volume" in kwargs:
-        param_parts.append(f"vol {int(kwargs['volume'])}")
+    if "weight_lbs" in kwargs:
+        param_parts.append(f"{kwargs['weight_lbs']:.0f} lbs")
+    if "reps" in kwargs and "sets" in kwargs:
+        param_parts.append(f"{kwargs['sets']}×{kwargs['reps']}")
+    if reward_override is not None:
+        param_parts.append("(full session)")
     param_str = ", ".join(param_parts)
 
-    buff_str = f"  ✨ +{buff_bonus} from sanctuary/relics" if buff_bonus > 0 else ""
+    buff_str = f"  ✨ +{buff_bonus} from sanctuary/relics/blessings" if buff_bonus > 0 else ""
     events.append(f"[{label}] {param_str}  →  +{final} drachmae{buff_str}")
 
     if workout_number > 1:
         events.append(
             f"  ↳ Workout #{workout_number} today — "
-            f"diminishing returns ×{multiplier:.1f} applied"
+            f"diminishing returns ×{_dr_multiplier(workout_number):.1f} applied"
         )
 
     # ── Check weekly laurel progress ─────────────────────────────────────────
@@ -186,29 +201,43 @@ def process_workout(
 
 
 # ---------------------------------------------------------------------------
-# Laurel logic  (3 workouts within an ISO calendar week Mon–Sun → +1 laurel)
+# Laurel logic
+# 3 distinct workout DAYS in an ISO calendar week (Mon–Sun) → +1 laurel.
+# Multiple workouts on the same day count as ONE day.
 # ---------------------------------------------------------------------------
 
-_WK_TARGET = 3  # workouts per calendar week for a laurel
+_WK_TARGET = 3  # distinct workout days per calendar week for a laurel
 
 
 def _update_weekly_laurel(
     state: PlayerState, today: str, events: List[str]
 ) -> None:
     """
-    Award a laurel on the 3rd workout of any ISO calendar week (Mon–Sun).
-    Uses state.week_log {"YYYY-Www": count} to track progress.
+    Award a laurel on the 3rd distinct workout DAY of any ISO calendar week.
+    Multiple workouts logged on the same day count as a single day.
+
+    Uses state.week_log {"YYYY-Www": count} where count = distinct days worked.
     """
     today_date = dt.date.fromisoformat(today)
     iso_year, iso_week, _ = today_date.isocalendar()
     week_key = f"{iso_year}-W{iso_week:02d}"
 
-    state.week_log[week_key] = state.week_log.get(week_key, 0) + 1
-    count = state.week_log[week_key]
+    # Check if today already counted — look at previous entries in workout_log
+    # (current workout was just appended, so exclude workout_log[-1])
+    already_counted_today = any(
+        entry.get("date") == today
+        for entry in state.workout_log[:-1]
+    )
+
+    if not already_counted_today:
+        # First workout of this day — count it toward the weekly tally
+        state.week_log[week_key] = state.week_log.get(week_key, 0) + 1
+
+    count = state.week_log.get(week_key, 0)
 
     if count == _WK_TARGET:
         state.laurels += 1
         events.append(
-            f"  ★ LAUREL EARNED! ({_WK_TARGET} workouts this week) "
+            f"  ★ LAUREL EARNED! ({_WK_TARGET} distinct workout days this week) "
             f"→ Total laurels: {state.laurels}"
         )

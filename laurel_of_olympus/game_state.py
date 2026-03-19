@@ -80,8 +80,10 @@ class PlayerState:
     workout_log: List[Dict] = field(default_factory=list)
 
     # ── Laurel tracking ──────────────────────────────────────────────────────
-    # Week-based: 3 workouts in an ISO calendar week (Mon–Sun) → +1 laurel.
-    # {"YYYY-Www": count}  e.g. {"2024-W12": 2}
+    # Week-based: 3 distinct workout DAYS in an ISO calendar week (Mon–Sun)
+    # → +1 laurel.  Multiple workouts on the same day count as ONE day.
+    # {"YYYY-Www": count}  where count = distinct days worked that week.
+    # e.g. {"2024-W12": 2} means 2 different days worked in week 12.
     week_log: Dict[str, int] = field(default_factory=dict)
 
     # Legacy rolling-window list (no longer written to; kept so old save files

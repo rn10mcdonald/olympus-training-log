@@ -480,6 +480,60 @@ TEMPLATES = {
             },
         ],
     },
+
+    "quick_and_the_dead": {
+        "name": "Quick and the Dead (2-week / 6 sessions)",
+        "sessions": [
+            {   # Session 1
+                "main":     "KB Swings — 10 reps (explosive) EMOM",
+                "std_kg":   24,
+                "accessory": [
+                    "Pushups — 5 reps (explosive) alternating EMOM",
+                ],
+                "finisher": "Alternate EMOM for 20 min — rest is your recovery",
+            },
+            {   # Session 2
+                "main":     "KB Swings — 10 reps (explosive) EMOM",
+                "std_kg":   24,
+                "accessory": [
+                    "Pushups — 5 reps (explosive) alternating EMOM",
+                ],
+                "finisher": "Alternate EMOM for 20 min — push the pace",
+            },
+            {   # Session 3
+                "main":     "KB Swings — 10 reps (explosive) EMOM",
+                "std_kg":   24,
+                "accessory": [
+                    "Pushups — 5 reps (explosive) alternating EMOM",
+                ],
+                "finisher": "Alternate EMOM for 25 min — settle into the rhythm",
+            },
+            {   # Session 4
+                "main":     "KB Swings — 10 reps (explosive) EMOM",
+                "std_kg":   24,
+                "accessory": [
+                    "Pushups — 5 reps (explosive) alternating EMOM",
+                ],
+                "finisher": "Alternate EMOM for 25 min — maintain crisp technique",
+            },
+            {   # Session 5
+                "main":     "KB Swings — 10 reps (explosive) EMOM",
+                "std_kg":   24,
+                "accessory": [
+                    "Pushups — 5 reps (explosive) alternating EMOM",
+                ],
+                "finisher": "Alternate EMOM for 30 min — power, not grind",
+            },
+            {   # Session 6
+                "main":     "KB Swings — 10 reps (explosive) EMOM",
+                "std_kg":   24,
+                "accessory": [
+                    "Pushups — 5 reps (explosive) alternating EMOM",
+                ],
+                "finisher": "Alternate EMOM for 30 min — finish strong",
+            },
+        ],
+    },
 }
 
 TRACK_KEYS      = list(TEMPLATES.keys())
