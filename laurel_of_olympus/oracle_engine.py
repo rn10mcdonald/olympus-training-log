@@ -4,7 +4,7 @@ oracle_engine.py – Oracle phase system and Kassandra ultra-rare event.
 The Oracle tracks a 5-phase relationship with the player, advancing as they
 accumulate oracle_visits.  A separate channel from the regular event system:
   • 0.10% per workout → Kassandra Breaks Composure (requires phase >= 4)
-  • 10.0% per workout → Oracle visit (normal oracle encounter)
+  • 25.0% per workout → Oracle visit (normal oracle encounter)
 
 Phase thresholds (oracle_visits to reach each phase):
   0  Stranger          – not yet encountered
@@ -95,7 +95,7 @@ def _pick(pool: list, k: int = 2) -> list:
 # ---------------------------------------------------------------------------
 
 def maybe_oracle_visit(
-    state: PlayerState, chance: float = 0.10
+    state: PlayerState, chance: float = 0.25
 ) -> Optional[dict]:
     """
     Roll for an oracle encounter.  If it fires:

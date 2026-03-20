@@ -66,21 +66,24 @@ def should_produce_today(state: PlayerState) -> bool:
     return state.last_farm_date != str(dt.date.today())
 
 
-def produce_farms(state: PlayerState, buffs: Optional[dict] = None) -> List[str]:
+def produce_farms(
+    state: PlayerState, buffs: Optional[dict] = None
+) -> Tuple[List[str], Dict[str, int]]:
     """
     Run farm production if this is the first workout of the day.
     Mutates state's resource fields and last_farm_date.
-    Returns event strings for the log.
+    Returns (event_strings, produced_dict) where produced_dict maps
+    resource name → total amount produced (empty dict if nothing produced).
 
     buffs: dict from buff_engine.get_all_buffs(state).  Keys used:
         "farm_{farm_type}" – multiplier for a specific farm type
         "all_farms"        – multiplier applied to every farm
     """
     if not should_produce_today(state):
-        return []
+        return [], {}
 
     if not state.farms:
-        return []
+        return [], {}
 
     events: List[str] = []
     state.last_farm_date = str(dt.date.today())
@@ -124,7 +127,7 @@ def produce_farms(state: PlayerState, buffs: Optional[dict] = None) -> List[str]
     else:
         events.append("[Farm harvest] No farms built yet.")
 
-    return events
+    return events, produced
 
 
 # ---------------------------------------------------------------------------
