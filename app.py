@@ -332,31 +332,29 @@ async def log_recommended(req: Request, u: dict = CurrentUser):
 
     # Get session info BEFORE logging (log_rec increments sessions_completed)
     session_info = core.get_today_workout(state)
+    badges_before = len(state.get("badges", []))
     msg = core.log_rec(state, weights_lbs=weights_lbs)
     _save_legacy(uid, state)
+
+    # Detect if a cycle-completion monster trophy was just awarded
+    trophy_award = None
+    if len(state.get("badges", [])) > badges_before:
+        newest = state["badges"][-1]
+        if newest.get("type") == "monster":
+            gilded = "★" in newest.get("name", "")
+            trophy_award = {
+                "name":      newest["name"],
+                "emoji":     "🏆",
+                "rarity":    "legendary" if gilded else "rare",
+                "buff_label": "Microcycle complete!",
+                "image_path": newest.get("image_path"),
+            }
 
     estate = _load_estate(uid)
     buffs  = buff_engine.get_all_buffs(estate)
 
-    # Microcycle expansion: calculate per-movement rewards using new formula,
-    # then pass the sum as reward_override to process_workout for correct
-    # tracking (week_log, laurels, workout_log) and buff application.
-    std_kg  = float((session_info.get("std_kg") or 16))
-    std_lbs = std_kg * 2.20462
-    wl      = weights_lbs or {}
-    main_lbs = float(wl.get("main") or 0) or std_lbs
-    acc0_lbs = float(wl.get("acc_0") or 0) or (std_lbs * 0.75)
-    acc1_lbs = float(wl.get("acc_1") or 0) or (std_lbs * 0.75)
-    acc2_lbs = float(wl.get("acc_2") or 0) or (std_lbs * 0.75)
-    fin_lbs  = float(wl.get("finisher") or 0) or (std_lbs * 0.50)
-
-    raw_session_reward = round(sum([
-        workout_engine.calculate_reward("strength", weight_lbs=main_lbs, reps=5, sets=5),
-        workout_engine.calculate_reward("strength", weight_lbs=acc0_lbs, reps=10, sets=3),
-        workout_engine.calculate_reward("strength", weight_lbs=acc1_lbs, reps=10, sets=3),
-        workout_engine.calculate_reward("strength", weight_lbs=acc2_lbs, reps=10, sets=3),
-        workout_engine.calculate_reward("strength", weight_lbs=fin_lbs,  reps=15, sets=3),
-    ]), 2)
+    # Flat 50 drachmae per microcycle session — buff multipliers still apply.
+    raw_session_reward = 50.0
 
     drachmae_before = estate.drachmae
     raw_evts = workout_engine.process_workout(
@@ -400,6 +398,7 @@ async def log_recommended(req: Request, u: dict = CurrentUser):
         "estate_state": estate.to_dict(),
         "farm_harvest": farm_harvest, "farm_events": farm_events,
         "newly_unlocked": newly_unlocked,
+        "trophy_award": trophy_award,
     }
 
 @app.post("/api/workout/custom")
@@ -506,7 +505,8 @@ async def log_ruck(req: Request, u: dict = CurrentUser):
                       duration_min=float(p.get("duration_min") or 0) or None)
     return {"status": "ok", "msg": msg, "state": state,
             "events": events, "trophy_award": trophy_award, "oracle_event": oracle_evt,
-            "farm_harvest": farm_harvest, "newly_unlocked": newly_unlocked}
+            "farm_harvest": farm_harvest, "farm_events": farm_events,
+            "newly_unlocked": newly_unlocked}
 
 @app.post("/api/walk")
 async def log_walk(req: Request, u: dict = CurrentUser):
@@ -556,7 +556,8 @@ async def log_walk(req: Request, u: dict = CurrentUser):
                       duration_min=float(p.get("duration_min") or 0) or None)
     return {"status": "ok", "msg": msg, "state": state,
             "events": events, "trophy_award": trophy_award, "oracle_event": oracle_evt,
-            "farm_harvest": farm_harvest, "newly_unlocked": newly_unlocked}
+            "farm_harvest": farm_harvest, "farm_events": farm_events,
+            "newly_unlocked": newly_unlocked}
 
 @app.post("/api/run")
 async def log_run(req: Request, u: dict = CurrentUser):
@@ -617,7 +618,8 @@ async def log_run(req: Request, u: dict = CurrentUser):
                       duration_min=float(p.get("duration_min") or 0) or None)
     return {"status": "ok", "msg": msg, "state": state,
             "events": events, "trophy_award": trophy_award, "oracle_event": oracle_evt,
-            "farm_harvest": farm_harvest, "newly_unlocked": newly_unlocked}
+            "farm_harvest": farm_harvest, "farm_events": farm_events,
+            "newly_unlocked": newly_unlocked}
 
 @app.post("/api/hike")
 async def log_hike(req: Request, u: dict = CurrentUser):
@@ -675,7 +677,8 @@ async def log_hike(req: Request, u: dict = CurrentUser):
                       duration_min=float(p.get("duration_min") or 0) or None)
     return {"status": "ok", "msg": f"⛰️ Hike logged! {msg}", "state": state,
             "events": events, "trophy_award": trophy_award, "oracle_event": oracle_evt,
-            "farm_harvest": farm_harvest, "newly_unlocked": newly_unlocked}
+            "farm_harvest": farm_harvest, "farm_events": farm_events,
+            "newly_unlocked": newly_unlocked}
 
 @app.post("/api/strength")
 async def log_strength(req: Request, u: dict = CurrentUser):
@@ -743,6 +746,7 @@ async def log_strength(req: Request, u: dict = CurrentUser):
         "oracle_event": oracle_evt,
         "estate_state": estate.to_dict(),
         "farm_harvest": farm_harvest,
+        "farm_events": farm_events,
         "newly_unlocked": newly_unlocked,
     }
 

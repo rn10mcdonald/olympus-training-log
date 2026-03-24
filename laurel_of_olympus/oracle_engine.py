@@ -54,14 +54,14 @@ _PHASES = [
     (20, 5, "Kassandra"),
 ]
 
-# oracle_lines per phase — drawn from flavor_text or defined inline
+# oracle_lines per phase — each phase draws ONLY from its own pool (no mixing).
 _PHASE_POOLS = {
-    0: [],   # never called (phase 0 = no visit yet)
-    1: _FLAVOR["oracle_lines"],
-    2: _FLAVOR["oracle_lines"] + _FLAVOR["oracle_irritated_lines"],
-    3: _FLAVOR["oracle_irritated_lines"],
-    4: _FLAVOR["oracle_impressed_lines"],
-    5: _FLAVOR["oracle_impressed_lines"] + _FLAVOR["kassandra_lines"],
+    0: [],                                   # never visited
+    1: _FLAVOR["oracle_lines"],              # cryptic / neutral stranger
+    2: _FLAVOR["oracle_irritated_lines"],    # irritated — recognises you
+    3: _FLAVOR["oracle_irritated_lines"],    # still irritated
+    4: _FLAVOR["oracle_impressed_lines"],    # grudging respect
+    5: _FLAVOR["kassandra_lines"],           # Kassandra speaks directly
 }
 
 _PHASE_TITLES = {
@@ -115,10 +115,6 @@ def maybe_oracle_visit(
 
     pool = _PHASE_POOLS.get(new_phase, _FLAVOR["oracle_lines"])
     lines = _pick(pool, 2)
-
-    # At phase 4+ there's a 40% chance Kassandra adds a line
-    if new_phase >= 4 and random.random() < 0.40:
-        lines.append(random.choice(_FLAVOR["kassandra_lines"]))
 
     title = _PHASE_TITLES.get(new_phase, "The Oracle Appears")
 
