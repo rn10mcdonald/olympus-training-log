@@ -119,13 +119,11 @@ def produce_farms(
 
     if produced:
         parts = [f"+{v} {k}" for k, v in sorted(produced.items())]
-        msg   = f"[Farm harvest] {', '.join(parts)}"
+        msg   = f"🌾 Harvest: {', '.join(parts)}"
         if buffed:
-            bonus_parts = [f"+{v} {k} (creature/relic)" for k, v in sorted(buffed.items())]
+            bonus_parts = [f"+{v} {k} (bonus)" for k, v in sorted(buffed.items())]
             msg += f"  ✨ {', '.join(bonus_parts)}"
         events.append(msg)
-    else:
-        events.append("[Farm harvest] No farms built yet.")
 
     return events, produced
 

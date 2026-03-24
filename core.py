@@ -952,17 +952,26 @@ def _maybe_award_cycle_badge(state: dict) -> None:
 
 
 def _increment_weekly_streak(state: dict) -> None:
-    """Award an Olympian Laurel after WK_TARGET activities in a calendar week.
-    Any activity type (lift, ruck, run) counts."""
-    today    = dt.date.today().isocalendar()[:2]   # (year, week_number)
-    week_key = str(today)
+    """Award an Olympian Laurel after WK_TARGET distinct workout DAYS in a calendar week.
+    Multiple workouts on the same day count as ONE day (Monday–Sunday ISO week)."""
+    today_date = dt.date.today()
+    iso_year, iso_week, _ = today_date.isocalendar()
+    week_key = f"{iso_year}-W{iso_week:02d}"
+    today_str = str(today_date)
+
     state.setdefault("week_log", {})
-    count = state["week_log"].get(week_key, 0) + 1
+    # Track distinct days in the week via a set stored alongside the count
+    distinct_key = f"{week_key}_days"
+    days_set = set(state["week_log"].get(distinct_key, []))
+    days_set.add(today_str)
+    state["week_log"][distinct_key] = list(days_set)
+    count = len(days_set)
     state["week_log"][week_key] = count
+
     if count == WK_TARGET:
         god, icon = random.choice(OLYMPIANS)
         state["badges"].append({
-            "date":       str(dt.date.today()),
+            "date":       today_str,
             "name":       f"{icon} {god} Laurel",
             "type":       "laurel",
             "image_path": None,
