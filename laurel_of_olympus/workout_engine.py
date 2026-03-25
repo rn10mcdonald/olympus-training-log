@@ -217,10 +217,16 @@ def _update_weekly_laurel(
     Multiple workouts logged on the same day count as a single day.
 
     Uses state.week_log {"YYYY-Www": count} where count = distinct days worked.
+    A "{week_key}_laurel_given" flag prevents re-awarding after the target is reached.
     """
     today_date = dt.date.fromisoformat(today)
     iso_year, iso_week, _ = today_date.isocalendar()
     week_key = f"{iso_year}-W{iso_week:02d}"
+    laurel_key = f"{week_key}_laurel_given"
+
+    # Already awarded a laurel this week — do not fire again.
+    if state.week_log.get(laurel_key):
+        return
 
     # Check if today already counted — look at previous entries in workout_log
     # (current workout was just appended, so exclude workout_log[-1])
@@ -235,8 +241,9 @@ def _update_weekly_laurel(
 
     count = state.week_log.get(week_key, 0)
 
-    if count == _WK_TARGET:
+    if count >= _WK_TARGET:
         state.laurels += 1
+        state.week_log[laurel_key] = 1  # guard: only one laurel per week
         events.append(
             f"  ★ LAUREL EARNED! ({_WK_TARGET} distinct workout days this week) "
             f"→ Total laurels: {state.laurels}"

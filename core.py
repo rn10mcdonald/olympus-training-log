@@ -953,13 +953,20 @@ def _maybe_award_cycle_badge(state: dict) -> None:
 
 def _increment_weekly_streak(state: dict) -> None:
     """Award an Olympian Laurel after WK_TARGET distinct workout DAYS in a calendar week.
-    Multiple workouts on the same day count as ONE day (Monday–Sunday ISO week)."""
+    Multiple workouts on the same day count as ONE day (Monday–Sunday ISO week).
+    A "{week_key}_laurel_given" flag prevents re-awarding within the same week."""
     today_date = dt.date.today()
     iso_year, iso_week, _ = today_date.isocalendar()
     week_key = f"{iso_year}-W{iso_week:02d}"
     today_str = str(today_date)
 
     state.setdefault("week_log", {})
+    laurel_key = f"{week_key}_laurel_given"
+
+    # Already awarded a laurel this week — do not fire again.
+    if state["week_log"].get(laurel_key):
+        return
+
     # Track distinct days in the week via a set stored alongside the count
     distinct_key = f"{week_key}_days"
     days_set = set(state["week_log"].get(distinct_key, []))
@@ -968,7 +975,7 @@ def _increment_weekly_streak(state: dict) -> None:
     count = len(days_set)
     state["week_log"][week_key] = count
 
-    if count == WK_TARGET:
+    if count >= WK_TARGET:
         god, icon = random.choice(OLYMPIANS)
         state["badges"].append({
             "date":       today_str,
@@ -976,6 +983,7 @@ def _increment_weekly_streak(state: dict) -> None:
             "type":       "laurel",
             "image_path": None,
         })
+        state["week_log"][laurel_key] = 1  # guard: only one laurel per week
 
 
 def _check_journey_milestone(state: dict,
