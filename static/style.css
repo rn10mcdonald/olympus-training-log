@@ -905,6 +905,10 @@ body {
 }
 .dialog-overlay[hidden] { display: none !important; }
 
+/* Track-preview dialog must paint above the program-picker dialog (same z-index
+   300, but preview-dialog is earlier in the DOM so it would lose without this). */
+#preview-dialog { z-index: 350; }
+
 .dialog {
   background: var(--surface);
   border: 1px solid var(--border);

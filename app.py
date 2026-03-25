@@ -381,7 +381,7 @@ async def log_recommended(req: Request, u: dict = CurrentUser):
     for tid in newly_unlocked:
         events.append(f"  🏅 Title unlocked: {tid.replace('_', ' ').title()}")
     laurel_earned = any(isinstance(e, str) and "LAUREL EARNED" in e for e in events)
-    oracle_chance = 1.0 if (laurel_earned or newly_unlocked) else 0.25
+    oracle_chance = 1.0 if (laurel_earned or newly_unlocked or trophy_award) else 0.25
     oracle_evt = oracle_engine.maybe_oracle_visit(estate, chance=oracle_chance)
     _save_estate(uid, estate)
 
@@ -491,7 +491,7 @@ async def log_ruck(req: Request, u: dict = CurrentUser):
     for tid in newly_unlocked:
         events.append(f"  🏅 Title unlocked: {tid.replace('_', ' ').title()}")
     laurel_earned = any(isinstance(e, str) and "LAUREL EARNED" in e for e in events)
-    oracle_chance = 1.0 if (laurel_earned or newly_unlocked) else 0.25
+    oracle_chance = 1.0 if (laurel_earned or newly_unlocked or trophy_award) else 0.25
     _save_estate(uid, estate)
     oracle_evt = oracle_engine.maybe_oracle_visit(estate, chance=oracle_chance)
     if oracle_evt:
@@ -543,7 +543,7 @@ async def log_walk(req: Request, u: dict = CurrentUser):
     for tid in newly_unlocked:
         events.append(f"  🏅 Title unlocked: {tid.replace('_', ' ').title()}")
     laurel_earned = any(isinstance(e, str) and "LAUREL EARNED" in e for e in events)
-    oracle_chance = 1.0 if (laurel_earned or newly_unlocked) else 0.25
+    oracle_chance = 1.0 if (laurel_earned or newly_unlocked or trophy_award) else 0.25
     _save_estate(uid, estate)
     oracle_evt = oracle_engine.maybe_oracle_visit(estate, chance=oracle_chance)
     if oracle_evt:
@@ -605,7 +605,7 @@ async def log_run(req: Request, u: dict = CurrentUser):
     for tid in newly_unlocked:
         events.append(f"  🏅 Title unlocked: {tid.replace('_', ' ').title()}")
     laurel_earned = any(isinstance(e, str) and "LAUREL EARNED" in e for e in events)
-    oracle_chance = 1.0 if (laurel_earned or newly_unlocked) else 0.25
+    oracle_chance = 1.0 if (laurel_earned or newly_unlocked or trophy_award) else 0.25
     _save_estate(uid, estate)
     oracle_evt = oracle_engine.maybe_oracle_visit(estate, chance=oracle_chance)
     if oracle_evt:
@@ -664,7 +664,7 @@ async def log_hike(req: Request, u: dict = CurrentUser):
     for tid in newly_unlocked:
         events.append(f"  🏅 Title unlocked: {tid.replace('_', ' ').title()}")
     laurel_earned = any(isinstance(e, str) and "LAUREL EARNED" in e for e in events)
-    oracle_chance = 1.0 if (laurel_earned or newly_unlocked) else 0.25
+    oracle_chance = 1.0 if (laurel_earned or newly_unlocked or trophy_award) else 0.25
     _save_estate(uid, estate)
     oracle_evt = oracle_engine.maybe_oracle_visit(estate, chance=oracle_chance)
     if oracle_evt:
@@ -727,7 +727,7 @@ async def log_strength(req: Request, u: dict = CurrentUser):
     for tid in newly_unlocked:
         events.append(f"  🏅 Title unlocked: {tid.replace('_', ' ').title()}")
     laurel_earned = any(isinstance(e, str) and "LAUREL EARNED" in e for e in events)
-    oracle_chance = 1.0 if (laurel_earned or newly_unlocked) else 0.25
+    oracle_chance = 1.0 if (laurel_earned or newly_unlocked or trophy_award) else 0.25
     _save_estate(uid, estate)
     oracle_evt = oracle_engine.maybe_oracle_visit(estate, chance=oracle_chance)
     if oracle_evt:

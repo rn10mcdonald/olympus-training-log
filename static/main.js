@@ -907,7 +907,6 @@ async function logCardio() {
   try {
     const r = await api(endpoint, payload);
     toast(r.msg || `${emoji} Cardio logged!`, 3000, "drachmae");
-    checkLaurelEvents(r.events);
     appState = r.state;
     const workout = await api("/api/workout/today");
     renderAll(appState, workout);
@@ -1135,7 +1134,6 @@ async function submitSession() {
       if (r.estate_state) lastEstateState = r.estate_state;
       allEvents = allEvents.concat(r.events || []);
       (r.farm_events || []).forEach(evt => pushEstateLog(evt, "farm"));
-      checkLaurelEvents(r.events || []);
       if (r.farm_harvest) enqueuePopup(() => showFarmHarvestPopup(r.farm_harvest));
       if (r.newly_unlocked?.length) enqueuePopup(() => showTitleUnlockPopup(r.newly_unlocked));
       if (r.oracle_event) enqueuePopup(() => showEventPopup(r.oracle_event));
@@ -1168,7 +1166,6 @@ async function logExercise() {
     if (ex.needsWeight && ex.weightKg > 0) payload.weight_kg = ex.weightKg;
     const r = await api("/api/strength", payload);
     toast(r.msg || "💪 Exercise logged!", 3000, "drachmae");
-    checkLaurelEvents(r.events);
     if (r.estate_state) { estateState = r.estate_state; renderEstateResources(); }
     const workout = await api("/api/workout/today");
     renderAll(appState, workout);
