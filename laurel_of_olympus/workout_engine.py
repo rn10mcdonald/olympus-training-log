@@ -236,14 +236,24 @@ def _update_weekly_laurel(
     )
 
     if not already_counted_today:
+        current_count = state.week_log.get(week_key, 0)
+        if current_count == 0:
+            # First workout of this week — check if the previous week was
+            # completed. If not, the streak is broken.
+            prev_date = today_date - dt.timedelta(weeks=1)
+            p_yr, p_wk, _ = prev_date.isocalendar()
+            prev_laurel_key = f"{p_yr}-W{p_wk:02d}_laurel_given"
+            if not state.week_log.get(prev_laurel_key):
+                state.weekly_streak = 0
         # First workout of this day — count it toward the weekly tally
-        state.week_log[week_key] = state.week_log.get(week_key, 0) + 1
+        state.week_log[week_key] = current_count + 1
 
     count = state.week_log.get(week_key, 0)
 
     if count >= _WK_TARGET:
         state.laurels += 1
         state.week_log[laurel_key] = 1  # guard: only one laurel per week
+        state.weekly_streak = (state.weekly_streak or 0) + 1
         events.append(
             f"  ★ LAUREL EARNED! ({_WK_TARGET} distinct workout days this week) "
             f"→ Total laurels: {state.laurels}"

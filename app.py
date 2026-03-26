@@ -843,11 +843,8 @@ async def log_session(req: Request, u: dict = CurrentUser):
             events.append(e["msg"])
         else:
             events.append(e)
+    post = _post_workout_events(estate, buffs, events, raw_evts, trophy_award=trophy_award)
     _save_estate(uid, estate)
-
-    oracle_evt = oracle_engine.maybe_oracle_visit(estate, chance=0.10)
-    if oracle_evt:
-        _save_estate(uid, estate)
 
     # Persist: create session row, then one workout row per exercise
     total_earned = next(
@@ -887,8 +884,8 @@ async def log_session(req: Request, u: dict = CurrentUser):
         "events":       events,
         "session_id":   session_id,
         "trophy_award": trophy_award,
-        "oracle_event": oracle_evt,
         "estate_state": estate.to_dict(),
+        **post,
     }
 
 @app.put("/api/workout/{workout_id}")

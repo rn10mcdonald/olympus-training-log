@@ -173,6 +173,7 @@ let _loadingSlowTimer   = null;
 let _loadingActive      = false;
 
 function showLoadingScreen() {
+  if (_loadingActive) return; // already running — don't restart timers
   const screen   = document.getElementById("loading-screen");
   const flavorEl = document.getElementById("loading-flavor-text");
   const slowEl   = document.getElementById("loading-slow-msg");
@@ -251,11 +252,57 @@ function renderHeader(state) {
   }
   // If estateState is loaded, renderEstateResources() handles #drachma instead
 
+  // ── Weekly circles ───────────────────────────────────────────────────────
+  // Prefer estate week_log (ISO 8601 key e.g. "2025-W12") over legacy state.
+  const src = estateState || state;
   const today = new Date();
   const [yr, wk] = isoWeek(today);
-  const weekKey = `(${yr}, ${wk})`;
-  const wkCount = Math.min((state.week_log || {})[weekKey] || 0, WEEK_TARGET);
-  document.getElementById("week-count").textContent = `${wkCount}/${WEEK_TARGET}`;
+  const weekKey = `${yr}-W${String(wk).padStart(2, "0")}`;
+  const wkCount = Math.min((src.week_log || {})[weekKey] || 0, WEEK_TARGET);
+
+  for (let i = 0; i < WEEK_TARGET; i++) {
+    const dot = document.getElementById(`wk-d${i}`);
+    if (!dot) continue;
+    const shouldFill = i < wkCount;
+    const wasFilled  = dot.classList.contains("filled");
+    if (shouldFill && !wasFilled) {
+      dot.classList.add("filled");
+      // Trigger bounce by toggling new-fill
+      dot.classList.remove("new-fill");
+      void dot.offsetWidth; // reflow
+      dot.classList.add("new-fill");
+      setTimeout(() => dot.classList.remove("new-fill"), 500);
+    } else if (!shouldFill && wasFilled) {
+      dot.classList.remove("filled", "new-fill");
+    }
+  }
+
+  const pill = document.getElementById("wk-pill");
+  if (pill) pill.classList.toggle("complete", wkCount >= WEEK_TARGET);
+
+  // ── Weekly streak ────────────────────────────────────────────────────────
+  renderWeeklyStreak();
+}
+
+function renderWeeklyStreak() {
+  const streak = estateState?.weekly_streak || 0;
+  const el     = document.getElementById("wk-streak");
+  if (!el) return;
+  const prev = parseInt(el.dataset.streak || "0", 10);
+  el.dataset.streak = streak;
+  if (streak > 0) {
+    el.textContent = `🔥${streak}`;
+    el.classList.add("active");
+    if (streak > prev) {
+      el.classList.remove("streak-bump");
+      void el.offsetWidth;
+      el.classList.add("streak-bump");
+      setTimeout(() => el.classList.remove("streak-bump"), 550);
+    }
+  } else {
+    el.textContent = "";
+    el.classList.remove("active", "streak-bump");
+  }
 }
 
 // ── Train section ─────────────────────────────────────────────────────────────
@@ -578,6 +625,7 @@ async function loadHistory() {
     const workouts = Array.isArray(data) ? data : (data.workouts || []);
     _recentWorkouts = workouts;
     renderActivityCalendar(workouts);
+    renderWeeklyCalHistory(workouts);
     renderHistoryList(workouts, historyFilter);
     renderRecentCardio();
   } catch (e) {
@@ -627,6 +675,84 @@ function renderActivityCalendar(workouts) {
   }).join("");
 
   el.innerHTML = `<div class="cal-week">${cells}</div>`;
+}
+
+// ── Weekly calendar history (History tab) ─────────────────────────────────────
+function renderWeeklyCalHistory(workouts) {
+  const el = document.getElementById("weekly-cal-history");
+  if (!el) return;
+
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const workedSet = new Set((workouts || []).map(w => w.date));
+
+  // Build a map: week_key → Set of worked date strings (Mon–Sun)
+  // We compute week keys for each worked date
+  function getMondayStr(dateStr) {
+    const d = new Date(dateStr + "T00:00:00");
+    const dow = d.getDay() || 7; // Mon=1…Sun=7
+    d.setDate(d.getDate() - (dow - 1));
+    return d.toISOString().slice(0, 10);
+  }
+
+  // Collect all week Mondays from workouts + current week
+  const mondaySet = new Set();
+  for (const dateStr of workedSet) mondaySet.add(getMondayStr(dateStr));
+  mondaySet.add(getMondayStr(todayStr)); // always include current week
+
+  const mondays = Array.from(mondaySet).sort().reverse(); // newest first
+
+  // Week key format matches backend: YYYY-Www
+  function isoWeekKey(mondayStr) {
+    const d = new Date(mondayStr + "T00:00:00");
+    const [yr, wk] = isoWeek(d);
+    return `${yr}-W${String(wk).padStart(2, "0")}`;
+  }
+
+  const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+  const html = mondays.map(mondayStr => {
+    const monday = new Date(mondayStr + "T00:00:00");
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+
+    const monLabel = monday.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    const sunLabel = sunday.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    const wkKey = isoWeekKey(mondayStr);
+
+    // Check laurel from estate week_log
+    const laurelGiven = (estateState?.week_log || {})[`${wkKey}_laurel_given`];
+    const laurelBadge = laurelGiven ? '<span class="wcal-laurel-badge">🌿 Laurel</span>' : "";
+
+    const dayCells = DAY_LABELS.map((label, i) => {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      const dateStr = d.toISOString().slice(0, 10);
+      const isToday  = dateStr === todayStr;
+      const isFuture = dateStr > todayStr;
+      const isDone   = workedSet.has(dateStr);
+
+      let cls = "wcal-day";
+      if (isDone)   cls += " done";
+      if (isToday)  cls += " today";
+      if (isFuture) cls += " future";
+
+      const icon = isDone ? "✓" : (isFuture ? "○" : "○");
+      return `<div class="${cls}">
+        <span class="wcal-day-label">${label}</span>
+        <span class="wcal-day-icon">${icon}</span>
+      </div>`;
+    }).join("");
+
+    return `<div class="wcal-week">
+      <div class="wcal-header">
+        <span class="wcal-header-range">${monLabel} – ${sunLabel}</span>
+        ${laurelBadge}
+      </div>
+      <div class="wcal-days">${dayCells}</div>
+    </div>`;
+  }).join("");
+
+  el.innerHTML = html || '<p class="dim-msg">No workout history yet.</p>';
 }
 
 function workoutTypeLabel(type) {
@@ -1864,9 +1990,10 @@ function renderEstateResources() {
   // Keep top-banner drachma in sync (estate is the single source of truth)
   const bannerDrachEl = document.getElementById("drachma");
   if (bannerDrachEl) bannerDrachEl.textContent = formatted;
-  // Keep top banner laurel count in sync
+  // Keep top banner laurel count and weekly streak in sync
   const laurelCountEl = document.getElementById("laurel-count");
   if (laurelCountEl) laurelCountEl.textContent = estateState.laurels ?? 0;
+  renderWeeklyStreak();
   el.innerHTML = ESTATE_RES.map(r => {
     const val = estateState[r.key] ?? 0;
     return `<div class="estate-res-pill">
@@ -3419,10 +3546,17 @@ window.addEventListener("load", () => {
   initAuth();
   initCardioTypeRow();
   if (getToken()) {
+    // Loading screen is already visible from HTML (no hidden class);
+    // start the flavor-rotation timers now.
     showLoadingScreen();
     refresh();
     initEstate();
     initCustomWorkSelector();
     loadHistory();
+  } else {
+    // Not logged in — hide the loading screen immediately so the auth
+    // overlay can show without the loading screen on top.
+    const ls = document.getElementById("loading-screen");
+    if (ls) ls.classList.add("hidden");
   }
 });

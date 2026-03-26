@@ -3579,3 +3579,157 @@ input, select, textarea {
   margin: 0 auto;
   opacity: 0.6;
 }
+
+/* ── Weekly circles (header stat-pill) ───────────────────────────────────── */
+.wk-pill {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  cursor: default;
+}
+
+.wk-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1.5px solid var(--gold-dim);
+  background: transparent;
+  flex-shrink: 0;
+  transition: background 0.25s ease, border-color 0.25s ease,
+              box-shadow 0.25s ease;
+}
+
+.wk-dot.filled {
+  background: var(--gold);
+  border-color: var(--gold);
+}
+
+/* Bounce animation when a circle newly fills */
+.wk-dot.new-fill {
+  animation: wk-dot-bounce 0.45s ease;
+}
+
+@keyframes wk-dot-bounce {
+  0%   { transform: scale(1); }
+  35%  { transform: scale(1.55); }
+  65%  { transform: scale(0.88); }
+  100% { transform: scale(1); }
+}
+
+/* Pulsing glow on all three dots when week is complete */
+.wk-pill.complete .wk-dot {
+  box-shadow: 0 0 7px rgba(201, 176, 55, 0.65);
+  animation: wk-dot-glow 2.2s ease-in-out infinite;
+}
+
+@keyframes wk-dot-glow {
+  0%, 100% { box-shadow: 0 0 4px rgba(201, 176, 55, 0.40); }
+  50%       { box-shadow: 0 0 12px rgba(201, 176, 55, 0.85); }
+}
+
+/* Weekly streak counter (🔥2) */
+.wk-streak {
+  font-size: 0.74rem;
+  color: var(--text-dim);
+  letter-spacing: 0.01em;
+  min-width: 0;
+  white-space: nowrap;
+  transition: color 0.2s ease;
+}
+
+.wk-streak.active {
+  color: var(--gold);
+  font-weight: bold;
+}
+
+/* Brief highlight when streak increments */
+.wk-streak.streak-bump {
+  animation: streak-bump 0.5s ease;
+}
+
+@keyframes streak-bump {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.3); color: #ffd700; }
+  100% { transform: scale(1); }
+}
+
+/* ── Weekly Calendar History (History tab) ───────────────────────────────── */
+.weekly-cal-scroll {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 420px;
+  overflow-y: auto;
+  padding: 4px 0 2px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.weekly-cal-scroll::-webkit-scrollbar { width: 4px; }
+.weekly-cal-scroll::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 2px;
+}
+
+.wcal-week {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.wcal-header {
+  background: var(--surface-hi);
+  padding: 6px 12px;
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.wcal-header-range {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.wcal-laurel-badge {
+  font-size: 0.72rem;
+  color: var(--gold);
+  opacity: 0.85;
+}
+
+.wcal-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0;
+}
+
+.wcal-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 7px 2px 6px;
+  border-right: 1px solid var(--border);
+  gap: 3px;
+  min-width: 0;
+}
+
+.wcal-day:last-child { border-right: none; }
+
+.wcal-day-label {
+  font-size: 0.65rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.wcal-day-icon {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.wcal-day.done .wcal-day-icon { color: var(--gold); }
+.wcal-day.today .wcal-day-label { color: var(--accent); font-weight: bold; }
+.wcal-day.future .wcal-day-icon { opacity: 0.25; }

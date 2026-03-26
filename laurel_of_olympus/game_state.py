@@ -86,6 +86,11 @@ class PlayerState:
     # e.g. {"2024-W12": 2} means 2 different days worked in week 12.
     week_log: Dict[str, int] = field(default_factory=dict)
 
+    # Consecutive weeks where the weekly laurel was earned (3 distinct days).
+    # Incremented when a laurel is awarded; reset when a new week starts and
+    # the previous week had no laurel.
+    weekly_streak: int = 0
+
     # Legacy rolling-window list (no longer written to; kept so old save files
     # deserialise without errors).
     laurel_windows: List[Dict] = field(default_factory=list)
