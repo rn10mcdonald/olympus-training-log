@@ -3461,3 +3461,121 @@ input, select, textarea {
   color: var(--gold, #d4a017);
   font-weight: 600;
 }
+
+/* ── Loading Screen ──────────────────────────────────────────────────────── */
+#loading-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  /* Fade-out transition applied via .fade-out class */
+  transition: opacity 0.35s ease;
+}
+
+#loading-screen.fade-out {
+  opacity: 0;
+  pointer-events: none;
+}
+
+#loading-screen.hidden {
+  display: none;
+}
+
+.loading-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  max-width: 380px;
+  width: 100%;
+  text-align: center;
+}
+
+.loading-emblem {
+  font-size: 3rem;
+  line-height: 1;
+  animation: loading-emblem-pulse 2.4s ease-in-out infinite;
+  filter: drop-shadow(0 0 14px rgba(201, 176, 55, 0.45));
+}
+
+@keyframes loading-emblem-pulse {
+  0%, 100% { transform: scale(1);    opacity: 0.75; }
+  50%       { transform: scale(1.12); opacity: 1;   }
+}
+
+.loading-title {
+  font-family: var(--font);
+  font-size: clamp(1.6rem, 6vw, 2.4rem);
+  font-weight: bold;
+  color: var(--gold);
+  letter-spacing: 0.05em;
+  line-height: 1.2;
+  text-shadow: 0 0 24px rgba(201, 176, 55, 0.35);
+}
+
+/* Pulsing animated dots */
+.loading-dots {
+  display: inline-flex;
+  gap: 1px;
+  vertical-align: baseline;
+}
+
+.loading-dots span {
+  display: inline-block;
+  animation: loading-dot-bounce 1.5s ease-in-out infinite;
+  opacity: 0.2;
+  color: var(--gold);
+}
+
+.loading-dots span:nth-child(2) { animation-delay: 0.18s; }
+.loading-dots span:nth-child(3) { animation-delay: 0.36s; }
+
+@keyframes loading-dot-bounce {
+  0%, 60%, 100% { opacity: 0.2; transform: translateY(0); }
+  30%           { opacity: 1;   transform: translateY(-5px); }
+}
+
+/* "Still waking Olympus..." slow-load message */
+.loading-slow {
+  font-family: var(--font);
+  font-size: 0.82rem;
+  color: var(--text-dim);
+  font-style: italic;
+  letter-spacing: 0.04em;
+  opacity: 0.75;
+  animation: loading-slow-appear 0.6s ease forwards;
+}
+
+@keyframes loading-slow-appear {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 0.75; transform: translateY(0); }
+}
+
+/* Rotating flavor text */
+.loading-flavor {
+  font-family: var(--font);
+  font-size: clamp(0.9rem, 3vw, 1rem);
+  color: var(--text-dim);
+  font-style: italic;
+  line-height: 1.5;
+  min-height: 3em;
+  letter-spacing: 0.02em;
+  transition: opacity 0.3s ease;
+}
+
+.loading-flavor.fading {
+  opacity: 0;
+}
+
+/* Decorative divider under the title */
+.loading-divider {
+  width: 60px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold-dim), transparent);
+  margin: 0 auto;
+  opacity: 0.6;
+}

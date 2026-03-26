@@ -144,6 +144,78 @@ function switchSection(name) {
     b.classList.toggle("active", b.dataset.section === name));
 }
 
+// ── Loading Screen ────────────────────────────────────────────────────────────
+const _LOADING_FLAVOR = [
+  "The gods stir as your training is recorded...",
+  "Kassandra is watching...",
+  "Sharpening blades...",
+  "Preparing the trials ahead...",
+  "The Oracle whispers in fragments...",
+  "Fate threads itself anew...",
+  "Counting your victories...",
+  "Even now, Olympus takes notice...",
+  "Steel, sweat, and discipline...",
+  "Your legend is being written...",
+  "The trials await your return...",
+  "Mortals train. Legends persist.",
+  "Another day, another test...",
+  "The path is long, but you walk it.",
+  "Your name echoes in the halls of Olympus...",
+  "Strength is forged in silence...",
+  "Even the gods respect consistency.",
+  "The arena remembers...",
+  "One step closer to legend...",
+  "Your effort does not go unseen...",
+];
+
+let _loadingFlavorTimer = null;
+let _loadingSlowTimer   = null;
+let _loadingActive      = false;
+
+function showLoadingScreen() {
+  const screen   = document.getElementById("loading-screen");
+  const flavorEl = document.getElementById("loading-flavor-text");
+  const slowEl   = document.getElementById("loading-slow-msg");
+  if (!screen) return;
+
+  _loadingActive = true;
+  screen.classList.remove("fade-out", "hidden");
+  if (slowEl) slowEl.hidden = true;
+
+  // Start at a random flavor line, then rotate every 2.5s
+  let idx = Math.floor(Math.random() * _LOADING_FLAVOR.length);
+  if (flavorEl) flavorEl.textContent = _LOADING_FLAVOR[idx];
+
+  _loadingFlavorTimer = setInterval(() => {
+    if (!flavorEl) return;
+    flavorEl.classList.add("fading");
+    setTimeout(() => {
+      idx = (idx + 1) % _LOADING_FLAVOR.length;
+      flavorEl.textContent = _LOADING_FLAVOR[idx];
+      flavorEl.classList.remove("fading");
+    }, 300);
+  }, 2500);
+
+  // After 5s reveal the "Still waking Olympus…" message
+  _loadingSlowTimer = setTimeout(() => {
+    if (slowEl) slowEl.hidden = false;
+  }, 5000);
+}
+
+function hideLoadingScreen() {
+  if (!_loadingActive) return;
+  _loadingActive = false;
+  clearInterval(_loadingFlavorTimer);
+  clearTimeout(_loadingSlowTimer);
+  _loadingFlavorTimer = null;
+  _loadingSlowTimer   = null;
+
+  const screen = document.getElementById("loading-screen");
+  if (!screen || screen.classList.contains("hidden")) return;
+  screen.classList.add("fade-out");
+  setTimeout(() => screen.classList.add("hidden"), 400);
+}
+
 // ── Full refresh ──────────────────────────────────────────────────────────────
 async function refresh() {
   try {
@@ -155,7 +227,9 @@ async function refresh() {
     renderAll(state, workout);
     await populateTracks(state);
     prevBadgeCount = (state.badges || []).length;
+    hideLoadingScreen();
   } catch (e) {
+    hideLoadingScreen();
     toast("⚠ Error loading state: " + e.message);
   }
 }
@@ -3294,6 +3368,7 @@ function initAuth() {
       if (!r.ok) throw new Error(data.detail || (r.status === 500 ? "Server error — check deployment logs" : "Request failed"));
       setAuth(data.token, data.username);
       hideAuthOverlay();
+      showLoadingScreen();
       refresh();
       initEstate();
       initCustomWorkSelector();
@@ -3344,6 +3419,7 @@ window.addEventListener("load", () => {
   initAuth();
   initCardioTypeRow();
   if (getToken()) {
+    showLoadingScreen();
     refresh();
     initEstate();
     initCustomWorkSelector();
