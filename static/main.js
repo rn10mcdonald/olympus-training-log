@@ -174,26 +174,33 @@ let _loadingActive      = false;
 
 function showLoadingScreen() {
   if (_loadingActive) return; // already running — don't restart timers
-  const screen   = document.getElementById("loading-screen");
-  const flavorEl = document.getElementById("loading-flavor-text");
-  const slowEl   = document.getElementById("loading-slow-msg");
+  const screen     = document.getElementById("loading-screen");
+  const flavorEl   = document.getElementById("loading-flavor-text");
+  // Also sync the initial-loader flavor text (visible before CSS loads)
+  const ilFlavorEl = document.getElementById("loader-flavor-text");
+  const slowEl     = document.getElementById("loading-slow-msg");
   if (!screen) return;
 
   _loadingActive = true;
   screen.classList.remove("fade-out", "hidden");
   if (slowEl) slowEl.hidden = true;
 
+  // Helper: update both flavor text elements so whichever is visible stays current
+  const _setFlavor = (text) => {
+    if (flavorEl)   flavorEl.textContent   = text;
+    if (ilFlavorEl) ilFlavorEl.textContent = text;
+  };
+
   // Start at a random flavor line, then rotate every 2.5s
   let idx = Math.floor(Math.random() * _LOADING_FLAVOR.length);
-  if (flavorEl) flavorEl.textContent = _LOADING_FLAVOR[idx];
+  _setFlavor(_LOADING_FLAVOR[idx]);
 
   _loadingFlavorTimer = setInterval(() => {
-    if (!flavorEl) return;
-    flavorEl.classList.add("fading");
+    if (flavorEl) flavorEl.classList.add("fading");
     setTimeout(() => {
       idx = (idx + 1) % _LOADING_FLAVOR.length;
-      flavorEl.textContent = _LOADING_FLAVOR[idx];
-      flavorEl.classList.remove("fading");
+      _setFlavor(_LOADING_FLAVOR[idx]);
+      if (flavorEl) flavorEl.classList.remove("fading");
     }, 300);
   }, 2500);
 
@@ -211,6 +218,14 @@ function hideLoadingScreen() {
   _loadingFlavorTimer = null;
   _loadingSlowTimer   = null;
 
+  // Fade out and remove the zero-dependency initial-loader
+  const initialLoader = document.getElementById("initial-loader");
+  if (initialLoader) {
+    initialLoader.style.opacity = "0";
+    setTimeout(() => initialLoader.remove(), 350);
+  }
+
+  // Also fade out the JS-driven loading-screen (needs style.css)
   const screen = document.getElementById("loading-screen");
   if (!screen || screen.classList.contains("hidden")) return;
   screen.classList.add("fade-out");
@@ -3554,8 +3569,9 @@ window.addEventListener("load", () => {
     initCustomWorkSelector();
     loadHistory();
   } else {
-    // Not logged in — hide the loading screen immediately so the auth
-    // overlay can show without the loading screen on top.
+    // Not logged in — remove both loaders immediately so the auth overlay shows.
+    const il = document.getElementById("initial-loader");
+    if (il) il.remove();
     const ls = document.getElementById("loading-screen");
     if (ls) ls.classList.add("hidden");
   }
