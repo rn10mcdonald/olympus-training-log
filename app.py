@@ -109,6 +109,61 @@ def _save_estate(user_id: int, state: gs.PlayerState) -> None:
     db.save_estate(user_id, state.to_dict())
 
 
+def _post_workout_events(
+    estate: gs.PlayerState,
+    buffs: dict,
+    events: list,
+    raw_workout_events: list,
+    trophy_award=None,
+) -> dict:
+    """
+    Centralised post-workout side-effect handler.  Appends to *events* in place.
+    Called after process_workout() and any workout-specific blessing consumption.
+
+    Detects laurel from *raw_workout_events* only (before farm/title strings are
+    mixed in) to prevent false positives from any string that contains "laurel".
+
+    Returns extra keys to merge into the endpoint JSON response:
+        farm_harvest, farm_events, newly_unlocked, oracle_event, laurel_earned
+    """
+    # ── Laurel detection (raw process_workout output only) ───────────────────
+    laurel_earned: bool = any(
+        isinstance(e, str) and "LAUREL EARNED" in e
+        for e in raw_workout_events
+    )
+
+    # ── Farm production (once per calendar day) ──────────────────────────────
+    farm_events, farm_produced = farm_engine.produce_farms(estate, buffs=buffs)
+    events.extend(farm_events)
+    farm_harvest = {"resources": farm_produced} if farm_produced else None
+
+    # Demeter blessing: consume only when farm actually produced this call
+    if buffs.get("blessing_demeter") and farm_produced:
+        estate.active_blessings["demeter"] = max(
+            0, estate.active_blessings.get("demeter", 1) - 1
+        )
+        events.append("  🌾 Blessing of Demeter consumed.")
+
+    # ── Title unlocks ─────────────────────────────────────────────────────────
+    newly_unlocked = title_engine.check_and_unlock_titles(estate)
+    for tid in newly_unlocked:
+        events.append(f"  🏅 Title unlocked: {tid.replace('_', ' ').title()}")
+
+    # ── Oracle roll ───────────────────────────────────────────────────────────
+    # Guaranteed on laurel earned / title unlock / microcycle trophy.
+    # ~25 % chance on standard workouts.
+    oracle_chance = 1.0 if (laurel_earned or newly_unlocked or trophy_award) else 0.25
+    oracle_evt = oracle_engine.maybe_oracle_visit(estate, chance=oracle_chance)
+
+    return {
+        "farm_harvest":   farm_harvest,
+        "farm_events":    farm_events,
+        "newly_unlocked": newly_unlocked,
+        "oracle_event":   oracle_evt,
+        "laurel_earned":  laurel_earned,
+    }
+
+
 def _load_legacy(user_id: int) -> dict:
     raw = db.load_legacy(user_id)
     if raw is None:
@@ -363,26 +418,14 @@ async def log_recommended(req: Request, u: dict = CurrentUser):
     earned = round(estate.drachmae - drachmae_before, 2)
     events = list(raw_evts)
 
-    # Farm production (first workout of day)
-    farm_events, farm_produced = farm_engine.produce_farms(estate, buffs=buffs)
-    events.extend(farm_events)
-    farm_harvest = {"resources": farm_produced} if farm_produced else None
-    if buffs.get("blessing_demeter") and farm_events and "No farms" not in (farm_events[0] if farm_events else ""):
-        estate.active_blessings["demeter"] = max(0, estate.active_blessings.get("demeter", 1) - 1)
-        events.append("  🌾 Blessing of Demeter consumed.")
-
+    # Hephaestus blessing: consumed on strength sessions that earn drachmae
     if buffs.get("blessing_hephaestus") and earned > 0:
         estate.active_blessings["hephaestus"] = max(
             0, estate.active_blessings.get("hephaestus", 1) - 1
         )
         events.append("  🔥 Blessing of Hephaestus consumed.")
 
-    newly_unlocked = title_engine.check_and_unlock_titles(estate)
-    for tid in newly_unlocked:
-        events.append(f"  🏅 Title unlocked: {tid.replace('_', ' ').title()}")
-    laurel_earned = any(isinstance(e, str) and "LAUREL EARNED" in e for e in events)
-    oracle_chance = 1.0 if (laurel_earned or newly_unlocked or trophy_award) else 0.25
-    oracle_evt = oracle_engine.maybe_oracle_visit(estate, chance=oracle_chance)
+    post = _post_workout_events(estate, buffs, events, raw_evts, trophy_award=trophy_award)
     _save_estate(uid, estate)
 
     if earned > 0:
@@ -394,11 +437,10 @@ async def log_recommended(req: Request, u: dict = CurrentUser):
 
     return {
         "status": "ok", "msg": msg, "state": state,
-        "events": events, "oracle_event": oracle_evt,
+        "events": events,
         "estate_state": estate.to_dict(),
-        "farm_harvest": farm_harvest, "farm_events": farm_events,
-        "newly_unlocked": newly_unlocked,
         "trophy_award": trophy_award,
+        **post,
     }
 
 @app.post("/api/workout/custom")
@@ -480,22 +522,8 @@ async def log_ruck(req: Request, u: dict = CurrentUser):
             0, estate.active_blessings.get("poseidon", 1) - 1
         )
         events.append("  🌊 Blessing of Poseidon consumed.")
-    # Farm production (first workout of day)
-    farm_events, farm_produced = farm_engine.produce_farms(estate, buffs=buffs)
-    events.extend(farm_events)
-    farm_harvest = {"resources": farm_produced} if farm_produced else None
-    if buffs.get("blessing_demeter") and farm_events and "No farms" not in (farm_events[0] if farm_events else ""):
-        estate.active_blessings["demeter"] = max(0, estate.active_blessings.get("demeter", 1) - 1)
-        events.append("  🌾 Blessing of Demeter consumed.")
-    newly_unlocked = title_engine.check_and_unlock_titles(estate)
-    for tid in newly_unlocked:
-        events.append(f"  🏅 Title unlocked: {tid.replace('_', ' ').title()}")
-    laurel_earned = any(isinstance(e, str) and "LAUREL EARNED" in e for e in events)
-    oracle_chance = 1.0 if (laurel_earned or newly_unlocked or trophy_award) else 0.25
+    post = _post_workout_events(estate, buffs, events, raw_evts, trophy_award=trophy_award)
     _save_estate(uid, estate)
-    oracle_evt = oracle_engine.maybe_oracle_visit(estate, chance=oracle_chance)
-    if oracle_evt:
-        _save_estate(uid, estate)
     # Persist to workouts table
     today  = str(dt.date.today())
     earned = next((float(ev.split("+")[1].split(" ")[0]) for ev in events
@@ -504,9 +532,7 @@ async def log_ruck(req: Request, u: dict = CurrentUser):
                       distance_miles=miles, weight_lbs=pounds,
                       duration_min=float(p.get("duration_min") or 0) or None)
     return {"status": "ok", "msg": msg, "state": state,
-            "events": events, "trophy_award": trophy_award, "oracle_event": oracle_evt,
-            "farm_harvest": farm_harvest, "farm_events": farm_events,
-            "newly_unlocked": newly_unlocked}
+            "events": events, "trophy_award": trophy_award, **post}
 
 @app.post("/api/walk")
 async def log_walk(req: Request, u: dict = CurrentUser):
@@ -532,22 +558,8 @@ async def log_walk(req: Request, u: dict = CurrentUser):
             events.append(e["msg"])
         else:
             events.append(e)
-    # Farm production (first workout of day)
-    farm_events, farm_produced = farm_engine.produce_farms(estate, buffs=buffs)
-    events.extend(farm_events)
-    farm_harvest = {"resources": farm_produced} if farm_produced else None
-    if buffs.get("blessing_demeter") and farm_events and "No farms" not in (farm_events[0] if farm_events else ""):
-        estate.active_blessings["demeter"] = max(0, estate.active_blessings.get("demeter", 1) - 1)
-        events.append("  🌾 Blessing of Demeter consumed.")
-    newly_unlocked = title_engine.check_and_unlock_titles(estate)
-    for tid in newly_unlocked:
-        events.append(f"  🏅 Title unlocked: {tid.replace('_', ' ').title()}")
-    laurel_earned = any(isinstance(e, str) and "LAUREL EARNED" in e for e in events)
-    oracle_chance = 1.0 if (laurel_earned or newly_unlocked or trophy_award) else 0.25
+    post = _post_workout_events(estate, buffs, events, raw_evts, trophy_award=trophy_award)
     _save_estate(uid, estate)
-    oracle_evt = oracle_engine.maybe_oracle_visit(estate, chance=oracle_chance)
-    if oracle_evt:
-        _save_estate(uid, estate)
     today  = str(dt.date.today())
     earned = next((float(ev.split("+")[1].split(" ")[0]) for ev in events
                    if isinstance(ev, str) and "drachmae" in ev), 0.0)
@@ -555,9 +567,7 @@ async def log_walk(req: Request, u: dict = CurrentUser):
                       distance_miles=miles,
                       duration_min=float(p.get("duration_min") or 0) or None)
     return {"status": "ok", "msg": msg, "state": state,
-            "events": events, "trophy_award": trophy_award, "oracle_event": oracle_evt,
-            "farm_harvest": farm_harvest, "farm_events": farm_events,
-            "newly_unlocked": newly_unlocked}
+            "events": events, "trophy_award": trophy_award, **post}
 
 @app.post("/api/run")
 async def log_run(req: Request, u: dict = CurrentUser):
@@ -594,22 +604,8 @@ async def log_run(req: Request, u: dict = CurrentUser):
             0, estate.active_blessings.get("hermes", 1) - 1
         )
         events.append("  🪶 Blessing of Hermes consumed.")
-    # Farm production (first workout of day)
-    farm_events, farm_produced = farm_engine.produce_farms(estate, buffs=buffs)
-    events.extend(farm_events)
-    farm_harvest = {"resources": farm_produced} if farm_produced else None
-    if buffs.get("blessing_demeter") and farm_events and "No farms" not in (farm_events[0] if farm_events else ""):
-        estate.active_blessings["demeter"] = max(0, estate.active_blessings.get("demeter", 1) - 1)
-        events.append("  🌾 Blessing of Demeter consumed.")
-    newly_unlocked = title_engine.check_and_unlock_titles(estate)
-    for tid in newly_unlocked:
-        events.append(f"  🏅 Title unlocked: {tid.replace('_', ' ').title()}")
-    laurel_earned = any(isinstance(e, str) and "LAUREL EARNED" in e for e in events)
-    oracle_chance = 1.0 if (laurel_earned or newly_unlocked or trophy_award) else 0.25
+    post = _post_workout_events(estate, buffs, events, raw_evts, trophy_award=trophy_award)
     _save_estate(uid, estate)
-    oracle_evt = oracle_engine.maybe_oracle_visit(estate, chance=oracle_chance)
-    if oracle_evt:
-        _save_estate(uid, estate)
     today  = str(dt.date.today())
     earned = next((float(ev.split("+")[1].split(" ")[0]) for ev in events
                    if isinstance(ev, str) and "drachmae" in ev), 0.0)
@@ -617,9 +613,7 @@ async def log_run(req: Request, u: dict = CurrentUser):
                       distance_miles=miles,
                       duration_min=float(p.get("duration_min") or 0) or None)
     return {"status": "ok", "msg": msg, "state": state,
-            "events": events, "trophy_award": trophy_award, "oracle_event": oracle_evt,
-            "farm_harvest": farm_harvest, "farm_events": farm_events,
-            "newly_unlocked": newly_unlocked}
+            "events": events, "trophy_award": trophy_award, **post}
 
 @app.post("/api/hike")
 async def log_hike(req: Request, u: dict = CurrentUser):
@@ -653,22 +647,8 @@ async def log_hike(req: Request, u: dict = CurrentUser):
             0, estate.active_blessings.get("poseidon", 1) - 1
         )
         events.append("  🌊 Blessing of Poseidon consumed.")
-    # Farm production (first workout of day)
-    farm_events, farm_produced = farm_engine.produce_farms(estate, buffs=buffs)
-    events.extend(farm_events)
-    farm_harvest = {"resources": farm_produced} if farm_produced else None
-    if buffs.get("blessing_demeter") and farm_events and "No farms" not in (farm_events[0] if farm_events else ""):
-        estate.active_blessings["demeter"] = max(0, estate.active_blessings.get("demeter", 1) - 1)
-        events.append("  🌾 Blessing of Demeter consumed.")
-    newly_unlocked = title_engine.check_and_unlock_titles(estate)
-    for tid in newly_unlocked:
-        events.append(f"  🏅 Title unlocked: {tid.replace('_', ' ').title()}")
-    laurel_earned = any(isinstance(e, str) and "LAUREL EARNED" in e for e in events)
-    oracle_chance = 1.0 if (laurel_earned or newly_unlocked or trophy_award) else 0.25
+    post = _post_workout_events(estate, buffs, events, raw_evts, trophy_award=trophy_award)
     _save_estate(uid, estate)
-    oracle_evt = oracle_engine.maybe_oracle_visit(estate, chance=oracle_chance)
-    if oracle_evt:
-        _save_estate(uid, estate)
     today  = str(dt.date.today())
     earned = next((float(ev.split("+")[1].split(" ")[0]) for ev in events
                    if isinstance(ev, str) and "drachmae" in ev), 0.0)
@@ -676,9 +656,7 @@ async def log_hike(req: Request, u: dict = CurrentUser):
                       distance_miles=miles, weight_lbs=pounds or None,
                       duration_min=float(p.get("duration_min") or 0) or None)
     return {"status": "ok", "msg": f"⛰️ Hike logged! {msg}", "state": state,
-            "events": events, "trophy_award": trophy_award, "oracle_event": oracle_evt,
-            "farm_harvest": farm_harvest, "farm_events": farm_events,
-            "newly_unlocked": newly_unlocked}
+            "events": events, "trophy_award": trophy_award, **post}
 
 @app.post("/api/strength")
 async def log_strength(req: Request, u: dict = CurrentUser):
@@ -716,22 +694,8 @@ async def log_strength(req: Request, u: dict = CurrentUser):
             0, estate.active_blessings.get("hephaestus", 1) - 1
         )
         events.append("  🔥 Blessing of Hephaestus consumed.")
-    # Farm production (first workout of day)
-    farm_events, farm_produced = farm_engine.produce_farms(estate, buffs=buffs)
-    events.extend(farm_events)
-    farm_harvest = {"resources": farm_produced} if farm_produced else None
-    if buffs.get("blessing_demeter") and farm_events and "No farms" not in (farm_events[0] if farm_events else ""):
-        estate.active_blessings["demeter"] = max(0, estate.active_blessings.get("demeter", 1) - 1)
-        events.append("  🌾 Blessing of Demeter consumed.")
-    newly_unlocked = title_engine.check_and_unlock_titles(estate)
-    for tid in newly_unlocked:
-        events.append(f"  🏅 Title unlocked: {tid.replace('_', ' ').title()}")
-    laurel_earned = any(isinstance(e, str) and "LAUREL EARNED" in e for e in events)
-    oracle_chance = 1.0 if (laurel_earned or newly_unlocked or trophy_award) else 0.25
+    post = _post_workout_events(estate, buffs, events, raw_evts, trophy_award=trophy_award)
     _save_estate(uid, estate)
-    oracle_evt = oracle_engine.maybe_oracle_visit(estate, chance=oracle_chance)
-    if oracle_evt:
-        _save_estate(uid, estate)
     today = str(dt.date.today())
     db.insert_workout(uid, today, "strength", earned,
                       movement=movement, weight_kg=weight_kg,
@@ -743,11 +707,8 @@ async def log_strength(req: Request, u: dict = CurrentUser):
         "msg": f"💪 {move_name} — {sets_n}×{reps_n} @ {weight_kg}kg logged! +{earned:.2f} ⚡",
         "events": events,
         "trophy_award": trophy_award,
-        "oracle_event": oracle_evt,
         "estate_state": estate.to_dict(),
-        "farm_harvest": farm_harvest,
-        "farm_events": farm_events,
-        "newly_unlocked": newly_unlocked,
+        **post,
     }
 
 @app.post("/api/workout/timed")
@@ -790,7 +751,7 @@ async def log_timed(req: Request, u: dict = CurrentUser):
         else:
             events.append(e)
 
-    oracle_evt = oracle_engine.maybe_oracle_visit(estate, chance=0.08)
+    post = _post_workout_events(estate, buffs, events, raw_evts, trophy_award=trophy_award)
     _save_estate(uid, estate)
 
     # Parse earned amount from events
@@ -815,8 +776,8 @@ async def log_timed(req: Request, u: dict = CurrentUser):
     return {
         "status": "ok", "msg": msg,
         "events": events, "trophy_award": trophy_award,
-        "oracle_event": oracle_evt,
         "estate_state": estate.to_dict(),
+        **post,
     }
 
 
@@ -1088,7 +1049,7 @@ async def _run_estate_workout(user_id: int, p: dict) -> dict:
                     "She says nothing more. But the thought lingers.",
                 ],
             }
-        laurel_earned = any(isinstance(e, str) and "LAUREL EARNED" in e for e in events)
+        laurel_earned = any(isinstance(e, str) and "LAUREL EARNED" in e for e in raw_events)
         oracle_sim_chance = 1.0 if (laurel_earned or newly_unlocked) else 0.25
         if narrative_event is None:
             narrative_event = oracle_engine.maybe_oracle_visit(state, chance=oracle_sim_chance)
@@ -1109,6 +1070,7 @@ async def _run_estate_workout(user_id: int, p: dict) -> dict:
             relic_find = candidate if ok_r else {**candidate, "not_added": True}
 
     _save_estate(user_id, state)
+    laurel_earned = any(isinstance(e, str) and "LAUREL EARNED" in e for e in raw_events)
     return {
         "status":             "ok",
         "events":             events,
@@ -1119,6 +1081,7 @@ async def _run_estate_workout(user_id: int, p: dict) -> dict:
         "trophy_award":       trophy_award,
         "farm_harvest":       farm_harvest,
         "newly_unlocked":     newly_unlocked,
+        "laurel_earned":      laurel_earned,
     }
 
 
