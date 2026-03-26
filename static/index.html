@@ -5,13 +5,63 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <title>Olympus Training Log</title>
 <link rel="manifest" href="static/manifest.json">
-<link rel="stylesheet" href="static/style.css?v=16">
-<!-- Inline: prevent white-flash before external CSS loads -->
-<style>body{background:#0d1b2a}#loading-screen{display:flex}</style>
+<link rel="stylesheet" href="static/style.css?v=17">
+<!-- ── Critical inline styles: zero dependency on any external file ──────── -->
+<style>
+  html, body {
+    margin: 0; padding: 0;
+    background: #0d1b2a;
+    height: 100%;
+  }
+  #initial-loader {
+    position: fixed;
+    inset: 0;
+    background: #0d1b2a;
+    color: #c9b037;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    font-family: Georgia, 'Times New Roman', serif;
+    transition: opacity 0.35s ease;
+  }
+  #initial-loader .loader-content {
+    text-align: center;
+    animation: il-fade-in 0.5s ease-in;
+    padding: 24px;
+  }
+  #initial-loader h1 {
+    font-size: clamp(1.5rem, 5vw, 2.2rem);
+    margin: 0 0 16px;
+    letter-spacing: 0.05em;
+    text-shadow: 0 0 20px rgba(201,176,55,0.4);
+  }
+  #initial-loader p {
+    font-size: clamp(0.85rem, 3vw, 1rem);
+    color: #8a9ab0;
+    font-style: italic;
+    margin: 0;
+  }
+  @keyframes il-fade-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  /* Keep dark background visible while #loading-screen classes are applied */
+  #loading-screen { display: flex; }
+</style>
 </head>
 <body>
 
-<!-- ═══ LOADING SCREEN ═══════════════════════════════════════════════════════ -->
+<!-- ═══ INITIAL LOADER — renders immediately, zero external deps ═══════════ -->
+<!-- Removed by JS (hideLoadingScreen) after first successful API response   -->
+<div id="initial-loader" role="status" aria-live="polite">
+  <div class="loader-content">
+    <h1>Olympus Awakens...</h1>
+    <p id="loader-flavor-text">The gods stir as your training is recorded...</p>
+  </div>
+</div>
+
+<!-- ═══ LOADING SCREEN (JS-driven, needs style.css) ═════════════════════════ -->
 <div id="loading-screen" aria-live="polite" role="status">
   <div class="loading-inner">
     <div class="loading-emblem">⚔️</div>
@@ -823,7 +873,7 @@
   </div>
 </div>
 
-<script src="static/main.js?v=20"></script>
+<script src="static/main.js?v=21"></script>
 <script>
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("service-worker.js");
