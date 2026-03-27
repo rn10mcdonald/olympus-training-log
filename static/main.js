@@ -528,8 +528,14 @@ function postcardHtml(b) {
            onerror="this.replaceWith(Object.assign(document.createElement('div'),
              {className:'postcard-placeholder',textContent:'📜'}))">`
     : `<div class="postcard-placeholder">📜</div>`;
+  // data attributes allow the click handler to open the modal
   return `
-    <div class="postcard">
+    <div class="postcard postcard-clickable"
+         data-stop="${escHtml(b.stop || b.name)}"
+         data-caption="${escHtml(b.caption || "")}"
+         data-date="${escHtml(b.date || "")}"
+         data-img="${escHtml(b.image_path || "")}"
+         title="Click to view full postcard">
       ${imgEl}
       <div>
         <div class="postcard-city">${escHtml(b.stop || b.name)}</div>
@@ -538,6 +544,19 @@ function postcardHtml(b) {
       </div>
     </div>`;
 }
+
+// Click-to-modal for postcards — delegated listener on the document
+document.addEventListener("click", e => {
+  const card = e.target.closest(".postcard-clickable");
+  if (!card) return;
+  showEventPopup({
+    type:       "postcard",
+    icon:       "📜",
+    title:      card.dataset.stop || "Journey Waypoint",
+    image_path: card.dataset.img  || null,
+    lines:      [card.dataset.caption, card.dataset.date].filter(Boolean),
+  });
+});
 
 // (renderRunSection / renderWalkSection replaced by renderCardioSection + loadHistory)
 
@@ -1051,14 +1070,7 @@ async function logRecommended() {
     renderAll(appState, workout);
     checkNewBadges(appState);
     loadHistory();
-    // Push farm events to estate log
-    (r.farm_events || []).forEach(evt => pushEstateLog(evt, "farm"));
-    // Queue all reward popups — each shows after the previous is dismissed
-    checkLaurelEvents(r.events, r.laurel_earned);
-    if (r.trophy_award) enqueuePopup(() => showTrophyPopup(r.trophy_award));
-    if (r.farm_harvest) enqueuePopup(() => showFarmHarvestPopup(r.farm_harvest));
-    if (r.newly_unlocked?.length) enqueuePopup(() => showTitleUnlockPopup(r.newly_unlocked));
-    if (r.oracle_event) enqueuePopup(() => showEventPopup(r.oracle_event));
+    handleWorkoutResponse(r);
   } catch (e) { toast("⚠ " + e.message); }
   finally { if (btn) btn.disabled = false; }
 }
@@ -1132,14 +1144,8 @@ async function logCardio() {
     if (dMin) dMin.value = "";
     if (dSec) dSec.value = "";
     prevBadgeCount = (appState.badges || []).length;
-    // loadHistory fetches workouts, then calls renderActivityCalendar + renderRecentCardio internally
     loadHistory();
-    // Push farm events to estate log, then queue all reward popups
-    (r.farm_events || []).forEach(evt => pushEstateLog(evt, "farm"));
-    checkLaurelEvents(r.events, r.laurel_earned);
-    if (r.farm_harvest) enqueuePopup(() => showFarmHarvestPopup(r.farm_harvest));
-    if (r.newly_unlocked?.length) enqueuePopup(() => showTitleUnlockPopup(r.newly_unlocked));
-    if (r.oracle_event) enqueuePopup(() => showEventPopup(r.oracle_event));
+    handleWorkoutResponse(r);
   } catch (e) { toast("⚠ " + e.message); }
 }
 
@@ -1340,23 +1346,13 @@ async function submitSession() {
   const btn = document.getElementById("submit-session-btn");
   if (btn) btn.disabled = true;
   try {
-    let lastEstateState = null;
-    let allEvents = [];
-    let laurelEarnedAny = false;
+    let lastR = null;
     for (const ex of _sessionQueue) {
       const payload = { movement: ex.movement, sets: ex.sets, reps: ex.reps };
       if (ex.needsWeight && ex.weightKg > 0) payload.weight_kg = ex.weightKg;
-      const r = await api("/api/strength", payload);
-      if (r.estate_state) lastEstateState = r.estate_state;
-      allEvents = allEvents.concat(r.events || []);
-      if (r.laurel_earned) laurelEarnedAny = true;
-      (r.farm_events || []).forEach(evt => pushEstateLog(evt, "farm"));
-      if (r.farm_harvest) enqueuePopup(() => showFarmHarvestPopup(r.farm_harvest));
-      if (r.newly_unlocked?.length) enqueuePopup(() => showTitleUnlockPopup(r.newly_unlocked));
-      if (r.oracle_event) enqueuePopup(() => showEventPopup(r.oracle_event));
+      lastR = await api("/api/strength", payload);
+      handleWorkoutResponse(lastR);
     }
-    if (lastEstateState) { estateState = lastEstateState; renderEstateResources(); }
-    checkLaurelEvents(allEvents, laurelEarnedAny);
     toast(`⚔️ Session logged — ${_sessionQueue.length} exercise${_sessionQueue.length > 1 ? "s" : ""}`, 3000, "drachmae");
     _sessionQueue = [];
     renderSessionQueue();
@@ -1383,18 +1379,13 @@ async function logExercise() {
     if (ex.needsWeight && ex.weightKg > 0) payload.weight_kg = ex.weightKg;
     const r = await api("/api/strength", payload);
     toast(r.msg || "💪 Exercise logged!", 3000, "drachmae");
-    if (r.estate_state) { estateState = r.estate_state; renderEstateResources(); }
     const workout = await api("/api/workout/today");
     renderAll(appState, workout);
     checkNewBadges(appState);
     prevBadgeCount = (appState.badges || []).length;
     _clearExerciseInputs();
     loadHistory();
-    (r.farm_events || []).forEach(evt => pushEstateLog(evt, "farm"));
-    checkLaurelEvents(r.events, r.laurel_earned);
-    if (r.farm_harvest) enqueuePopup(() => showFarmHarvestPopup(r.farm_harvest));
-    if (r.newly_unlocked?.length) enqueuePopup(() => showTitleUnlockPopup(r.newly_unlocked));
-    if (r.oracle_event) enqueuePopup(() => showEventPopup(r.oracle_event));
+    handleWorkoutResponse(r);
   } catch (e) { toast("⚠ " + e.message); }
   finally { if (btn) btn.disabled = false; }
 }
@@ -1423,13 +1414,7 @@ async function logTimed() {
     if (minEl) minEl.value = "";
     if (secEl) secEl.value = "";
     loadHistory();
-    // Queue all reward popups — each shows after the previous is dismissed
-    (r.farm_events || []).forEach(evt => pushEstateLog(evt, "farm"));
-    checkLaurelEvents(r.events, r.laurel_earned);
-    if (r.trophy_award) enqueuePopup(() => showTrophyPopup(r.trophy_award));
-    if (r.farm_harvest) enqueuePopup(() => showFarmHarvestPopup(r.farm_harvest));
-    if (r.newly_unlocked?.length) enqueuePopup(() => showTitleUnlockPopup(r.newly_unlocked));
-    if (r.oracle_event) enqueuePopup(() => showEventPopup(r.oracle_event));
+    handleWorkoutResponse(r);
   } catch (e) { toast("⚠ " + e.message); }
   finally { if (btn) btn.disabled = false; }
 }
@@ -1442,6 +1427,72 @@ function checkNewBadges(state) {
     if (newest) toast(`🎉 ${newest.name} unlocked!`, 5000, "trophy");
   }
   prevBadgeCount = count;
+}
+
+// ── Shared post-workout event handler ────────────────────────────────────────
+// Called after ANY workout endpoint response. Handles farm log, trophy,
+// waypoint, oracle, and creature events in a consistent, queued order.
+function handleWorkoutResponse(r) {
+  // Push all event strings to the estate log
+  (r.events || []).forEach(evt => {
+    const t = (evt.includes("Farm") || evt.includes("harvest")) ? "farm"
+            : (evt.includes("drachma") || evt.includes("LAUREL"))  ? "reward"
+            : (evt.includes("Trophy") || evt.includes("trophy"))    ? "trophy"
+            : "system";
+    pushEstateLog(evt, t);
+  });
+
+  // Sync estate_log if server returned it
+  if (Array.isArray(r.estate_log) && r.estate_log.length) {
+    syncEstateLogFromServer(r.estate_log);
+  }
+
+  // Refresh estate resources if estate state is in response
+  if (r.estate_state) {
+    estateState = r.estate_state;
+    renderEstateResources();
+  }
+
+  // Queued popups — ordered: waypoint → laurel → trophy → oracle/encounter
+  if (r.waypoint_event) enqueuePopup(r.waypoint_event);
+  if (r.events) checkLaurelEvents(r.events);
+  if (r.trophy_award) {
+    const t = r.trophy_award;
+    pushEstateLog(`⚔️ Trophy earned: ${t.emoji} ${t.name} — ${t.buff_label || ""}`, "reward");
+    showTrophyAwardBanner(t);
+    // Refresh vault trophy list
+    if (typeof renderVaultSection === "function") renderVaultSection(appState || {});
+  }
+  if (r.creature_encounter) {
+    const enc = { ...r.creature_encounter, _qtype: "encounter" };
+    enqueuePopup(enc);
+  } else if (r.event) {
+    enqueuePopup(r.event);
+  } else if (r.oracle_event) {
+    enqueuePopup(r.oracle_event);
+  }
+}
+
+// Merge server estate_log entries into in-memory estateLog (newest first, no duplicates)
+function syncEstateLogFromServer(serverLog) {
+  if (!serverLog || !serverLog.length) return;
+  // Build set of existing timestamps
+  const existing = new Set(estateLog.map(e => e.timestamp));
+  const COLOR = { reward: "var(--gold)", farm: "var(--success)", trophy: "var(--accent)", waypoint: "#a0c4ff", system: "var(--accent)" };
+  serverLog.forEach(entry => {
+    if (!existing.has(entry.timestamp)) {
+      estateLog.push({
+        text:      entry.description,
+        type:      entry.type,
+        time:      new Date(entry.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        timestamp: entry.timestamp,
+      });
+    }
+  });
+  // Re-sort newest first
+  estateLog.sort((a, b) => (b.timestamp || "").localeCompare(a.timestamp || ""));
+  if (estateLog.length > 60) estateLog.length = 60;
+  renderEstateLog();
 }
 
 // ── Laurel popup ──────────────────────────────────────────────────────────────
@@ -1973,6 +2024,11 @@ let estateLog   = [];  // [{text, type, time}]  newest first
 async function initEstate() {
   try {
     estateState = await api("/api/estate/state");
+    // Seed the in-memory log from the server's persistent log (newest first)
+    if (Array.isArray(estateState.estate_log) && estateState.estate_log.length) {
+      estateLog = [];
+      syncEstateLogFromServer(estateState.estate_log);
+    }
     renderEstateResources();
     renderEstateGridInteractive();
     // Load all estate sub-systems in parallel
@@ -2043,8 +2099,9 @@ function renderEstateGrid() {
 }
 
 function pushEstateLog(text, type = "system") {
-  const time = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  estateLog.unshift({ text, type, time });
+  const now  = new Date();
+  const time = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  estateLog.unshift({ text, type, time, timestamp: now.toISOString() });
   if (estateLog.length > 60) estateLog.pop();
   renderEstateLog();
 }
@@ -2076,6 +2133,8 @@ const EVENT_TYPE_LABELS = {
   harvest:     "harvest",
   title:       "title earned",
   trophy:      "trophy",
+  waypoint:    "waypoint",
+  postcard:    "journey",
 };
 
 const RESOURCE_LABELS = {
@@ -2149,17 +2208,52 @@ function showTitleUnlockPopup(titleIds) {
   });
 }
 
+// ── Popup Queue ───────────────────────────────────────────────────────────────
+// All popups go through this queue so they never suppress each other.
+let _popupQueue = [];
+let _popupActive = false;
+
+function enqueuePopup(evt) {
+  if (!evt) return;
+  _popupQueue.push(evt);
+  if (!_popupActive) _drainPopupQueue();
+}
+
+function _drainPopupQueue() {
+  if (!_popupQueue.length) { _popupActive = false; return; }
+  _popupActive = true;
+  const evt = _popupQueue.shift();
+  if (evt._qtype === "encounter") {
+    showEncounterDialog(evt);
+  } else {
+    showEventPopup(evt);
+  }
+}
+
 function showEventPopup(event) {
   if (!event) return;
 
   document.getElementById("event-icon").textContent       = event.icon  || "✨";
   document.getElementById("event-title").textContent      = event.title || "Something happens…";
-  document.getElementById("event-type-badge").textContent = EVENT_TYPE_LABELS[event.type] || event.type;
+  document.getElementById("event-type-badge").textContent = EVENT_TYPE_LABELS[event.type] || event.type || "";
 
   const linesEl = document.getElementById("event-lines");
   linesEl.innerHTML = (event.lines || [])
+    .filter(Boolean)
     .map(l => `<p class="event-line">${escHtml(l)}</p>`)
     .join("");
+
+  // Postcard / waypoint image
+  const imgEl = document.getElementById("event-image");
+  if (imgEl) {
+    if (event.image_path) {
+      imgEl.src    = `/img/${event.image_path}`;
+      imgEl.hidden = false;
+    } else {
+      imgEl.hidden = true;
+      imgEl.src    = "";
+    }
+  }
 
   const cardEl = document.getElementById("event-creature-card");
   if (event.creature) {
@@ -2175,28 +2269,10 @@ function showEventPopup(event) {
   document.getElementById("event-dismiss-btn").focus();
 }
 
-// ── Popup queue ───────────────────────────────────────────────────────────────
-// Multiple rewards (harvest, laurel, title, oracle) may fire from a single
-// workout. Queue them so each is shown after the previous is dismissed.
-let _popupQueue = [];
-let _popupActive = false;
-
-function enqueuePopup(showFn) {
-  _popupQueue.push(showFn);
-  if (!_popupActive) _drainPopupQueue();
-}
-
-function _drainPopupQueue() {
-  if (!_popupQueue.length) { _popupActive = false; return; }
-  _popupActive = true;
-  const fn = _popupQueue.shift();
-  fn();
-}
-
 function hideEventPopup() {
   document.getElementById("event-overlay").hidden = true;
-  _popupActive = false;
-  _drainPopupQueue();
+  // Drain next popup in queue after a short pause
+  setTimeout(_drainPopupQueue, 120);
 }
 
 // Show a temporary trophy award banner in the estate log area
@@ -2239,7 +2315,7 @@ document.getElementById("event-overlay").addEventListener("click", e => {
   if (e.target === e.currentTarget) hideEventPopup();
 });
 document.addEventListener("keydown", e => {
-  if (e.key === "Escape") hideEventPopup();
+  if (e.key === "Escape" && !document.getElementById("event-overlay").hidden) hideEventPopup();
 });
 
 document.getElementById("simulate-workout-btn")?.addEventListener("click", async () => {
@@ -2251,12 +2327,6 @@ document.getElementById("simulate-workout-btn")?.addEventListener("click", async
     estateState = res.state;
     renderEstateResources();
     renderEstateGridInteractive();
-    (res.events || []).forEach(evt => {
-      const t = evt.includes("Farm") || evt.includes("harvest") ? "farm"
-              : evt.includes("drachma") || evt.includes("LAUREL")  ? "reward"
-              : "system";
-      pushEstateLog(evt, t);
-    });
     toast(`⚔️ ${res.events?.[0] || "Workout logged!"}`);
     // Refresh sub-systems that may have changed
     initSanctuary();
@@ -2267,23 +2337,11 @@ document.getElementById("simulate-workout-btn")?.addEventListener("click", async
       pushEstateLog(`⚗️ Relic found: ${r.name} (${r.rarity})!`, "reward");
       await initRelics();
     }
-    // Show trophy award notification if a microcycle was completed
-    if (res.trophy_award) {
-      const t = res.trophy_award;
-      pushEstateLog(`⚔️ Trophy earned: ${t.emoji} ${t.name} — ${t.buff_label || ""}`, "reward");
-      showTrophyAwardBanner(t);
-      // Refresh vault trophy list + buff summary
-      renderVaultSection(appState || {});
-    }
-    // Queue all reward popups — each shows after the previous is dismissed
-    checkLaurelEvents(res.events, res.laurel_earned);
-    if (res.farm_harvest) enqueuePopup(() => showFarmHarvestPopup(res.farm_harvest));
-    if (res.newly_unlocked?.length) enqueuePopup(() => showTitleUnlockPopup(res.newly_unlocked));
-    if (res.creature_encounter) enqueuePopup(() => showEncounterDialog(res.creature_encounter));
-    else if (res.event) enqueuePopup(() => showEventPopup(res.event));
+    // Handle all post-workout events via unified pipeline
+    handleWorkoutResponse({ ...res, oracle_event: null });  // oracle is in res.event
     // Check barracks requirements after each workout (laurels/farms may have changed)
     if (!estateState?.barracks_built) {
-      api("/api/estate/army").then(armyData => {
+      api("/api/estate/army").then(() => {
         renderBarracksRequirements({ state: estateState });
       }).catch(() => {});
     }
@@ -2459,6 +2517,8 @@ function showEncounterDialog(creature) {
 function hideEncounterDialog() {
   document.getElementById("encounter-overlay").hidden = true;
   _pendingEncounter = null;
+  // Continue popup queue after encounter is dismissed
+  setTimeout(_drainPopupQueue, 120);
 }
 
 document.getElementById("encounter-recruit-btn")?.addEventListener("click", async () => {
