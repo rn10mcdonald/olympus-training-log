@@ -549,13 +549,12 @@ function postcardHtml(b) {
 document.addEventListener("click", e => {
   const card = e.target.closest(".postcard-clickable");
   if (!card) return;
-  showEventPopup({
-    type:       "postcard",
-    icon:       "📜",
-    title:      card.dataset.stop || "Journey Waypoint",
-    image_path: card.dataset.img  || null,
-    lines:      [card.dataset.caption, card.dataset.date].filter(Boolean),
-  });
+  showWaypointReveal({
+    type:        "waypoint",
+    title:       card.dataset.stop    || "Journey Waypoint",
+    image_path:  card.dataset.img     || null,
+    description: card.dataset.caption || "",
+  }, false);
 });
 
 // (renderRunSection / renderWalkSection replaced by renderCardioSection + loadHistory)
@@ -2225,10 +2224,64 @@ function _drainPopupQueue() {
   const evt = _popupQueue.shift();
   if (evt._qtype === "encounter") {
     showEncounterDialog(evt);
+  } else if (evt.type === "waypoint") {
+    showWaypointReveal(evt, true);
   } else {
     showEventPopup(evt);
   }
 }
+
+// ── Waypoint Reveal Modal ──────────────────────────────────────────────────
+
+function showWaypointReveal(event, animated = true) {
+  if (!event) return;
+  const overlay = document.getElementById("waypoint-reveal");
+  if (!overlay) return;
+
+  // Populate content
+  const img = document.getElementById("waypoint-reveal-img");
+  if (event.image_path) {
+    img.src = event.image_path;
+    img.hidden = false;
+    overlay.querySelector(".waypoint-reveal-image-wrap").hidden = false;
+  } else {
+    img.src = "";
+    overlay.querySelector(".waypoint-reveal-image-wrap").hidden = true;
+  }
+  document.getElementById("waypoint-reveal-name").textContent = event.title || "Waypoint";
+  document.getElementById("waypoint-reveal-desc").textContent = event.description || "";
+
+  // Toggle animation
+  overlay.classList.toggle("no-anim", !animated);
+
+  // Force animation restart when animated
+  if (animated) {
+    overlay.querySelectorAll(".waypoint-reveal-card, .waypoint-reveal-image-wrap, .waypoint-reveal-shimmer").forEach(el => {
+      el.style.animation = "none";
+      el.offsetHeight; // reflow
+      el.style.animation = "";
+    });
+    overlay.style.animation = "none";
+    overlay.offsetHeight;
+    overlay.style.animation = "";
+  }
+
+  overlay.hidden = false;
+}
+
+function hideWaypointReveal() {
+  const overlay = document.getElementById("waypoint-reveal");
+  if (!overlay) return;
+  overlay.hidden = true;
+  _popupActive = false;
+  _drainPopupQueue();
+}
+
+// Dismiss on button or backdrop click
+document.addEventListener("click", e => {
+  if (e.target.id === "waypoint-reveal-btn") { hideWaypointReveal(); return; }
+  if (e.target.id === "waypoint-reveal") { hideWaypointReveal(); return; }
+});
 
 function showEventPopup(event) {
   if (!event) return;
