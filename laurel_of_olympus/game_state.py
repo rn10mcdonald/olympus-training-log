@@ -136,6 +136,12 @@ class PlayerState:
     # Awarded when a program microcycle is completed.
     trophies: List[Dict] = field(default_factory=list)
 
+    # ── Persistent estate event log ───────────────────────────────────────────
+    # Append-only; capped at 200 entries. Each entry:
+    #   {timestamp: ISO str, type: "farm"|"reward"|"trophy"|"waypoint"|"system",
+    #    description: str}
+    estate_log: List[Dict] = field(default_factory=list)
+
     # ── Version for future migrations ────────────────────────────────────────
     version: int = 1
 

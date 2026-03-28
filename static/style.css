@@ -819,6 +819,8 @@ body {
   transition: border-color 0.2s;
 }
 .postcard:hover { border-color: var(--gold-dim); }
+.postcard-clickable { cursor: pointer; }
+.postcard-clickable:hover { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold-dim); }
 
 .postcard img {
   width: 54px;
@@ -1503,6 +1505,16 @@ body {
   font-style: italic;
 }
 .event-line:first-child { font-style: normal; font-weight: 600; }
+
+.event-image {
+  width: 100%;
+  max-height: 220px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  margin-bottom: 8px;
+}
+.event-image[hidden] { display: none; }
 
 .event-creature-card {
   background: var(--surface-hi);
