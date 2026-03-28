@@ -1516,6 +1516,76 @@ body {
 }
 .event-image[hidden] { display: none; }
 
+/* ── Waypoint Reveal Modal ──────────────────────────────────────────────── */
+.waypoint-reveal {
+  position: fixed; inset: 0; z-index: 300;
+  background: rgba(0,0,0,0);
+  display: flex; align-items: center; justify-content: center; padding: 20px;
+  backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+  animation: waypointFadeIn 0.25s ease forwards;
+}
+.waypoint-reveal[hidden] { display: none; }
+@keyframes waypointFadeIn {
+  from { background: rgba(0,0,0,0); }
+  to   { background: rgba(0,0,0,0.85); }
+}
+.waypoint-reveal-card {
+  background: var(--surface); border: 1px solid var(--gold-dim); border-radius: 16px;
+  box-shadow: 0 0 0 1px var(--gold-dim), 0 8px 48px rgba(0,0,0,0.8), 0 0 40px rgba(201,176,55,0.2);
+  max-width: 420px; width: 100%; padding: 28px 24px 24px;
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+  animation: waypointCardIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s both;
+}
+@keyframes waypointCardIn {
+  from { opacity: 0; transform: scale(0.8); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.waypoint-reveal-tag {
+  font-size: 0.68rem; font-family: var(--mono); text-transform: uppercase;
+  letter-spacing: 0.14em; color: var(--gold); background: rgba(201,176,55,0.12);
+  border: 1px solid var(--gold-dim); border-radius: 20px; padding: 3px 12px;
+}
+.waypoint-reveal-image-wrap {
+  position: relative; width: 100%; border-radius: 10px; overflow: hidden;
+  border: 1px solid var(--gold-dim);
+  animation: waypointGlow 0.6s ease 0.65s both;
+}
+@keyframes waypointGlow {
+  from { box-shadow: 0 0 0 rgba(201,176,55,0); }
+  to   { box-shadow: 0 0 24px rgba(201,176,55,0.4); }
+}
+.waypoint-reveal-img { display: block; width: 100%; max-height: 240px; object-fit: cover; }
+.waypoint-reveal-shimmer {
+  position: absolute; inset: 0;
+  background: linear-gradient(105deg,
+    transparent 20%, rgba(255,220,100,0.35) 45%,
+    rgba(255,255,255,0.15) 50%, rgba(255,220,100,0.35) 55%, transparent 80%);
+  transform: translateX(-100%);
+  animation: waypointShimmer 0.7s ease 0.65s both;
+  pointer-events: none;
+}
+@keyframes waypointShimmer {
+  from { transform: translateX(-100%); opacity: 1; }
+  to   { transform: translateX(100%); opacity: 0; }
+}
+.waypoint-reveal-name {
+  font-size: 1.3rem; font-weight: 700; color: var(--gold);
+  text-align: center; letter-spacing: 0.02em; margin-top: 4px;
+}
+.waypoint-reveal-desc {
+  font-size: 0.9rem; color: var(--text-dim);
+  text-align: center; line-height: 1.55; font-style: italic; max-width: 340px;
+}
+.waypoint-reveal-collection {
+  font-size: 0.72rem; font-family: var(--mono);
+  color: var(--text-dim); opacity: 0.7; letter-spacing: 0.08em; text-transform: uppercase;
+}
+.waypoint-reveal-btn { width: 100%; justify-content: center; margin-top: 4px; }
+.waypoint-reveal.no-anim { animation: none; background: rgba(0,0,0,0.85); }
+.waypoint-reveal.no-anim .waypoint-reveal-card { animation: none; opacity: 1; transform: scale(1); }
+.waypoint-reveal.no-anim .waypoint-reveal-shimmer { animation: none; display: none; }
+.waypoint-reveal.no-anim .waypoint-reveal-image-wrap { animation: none; box-shadow: 0 0 24px rgba(201,176,55,0.4); }
+
 .event-creature-card {
   background: var(--surface-hi);
   border: 1px solid var(--border);
