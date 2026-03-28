@@ -460,7 +460,7 @@ async def log_recommended(req: Request, u: dict = CurrentUser):
         "oracle_event": oracle_evt,
         "trophy_award": trophy_award,
         "events":       events,
-        "estate_log":   estate.estate_log[-30:],
+        "estate_log":   estate.estate_log,
     }
 
 @app.post("/api/workout/custom")
@@ -525,7 +525,7 @@ async def log_custom(req: Request, u: dict = CurrentUser):
         "oracle_event": oracle_evt,
         "trophy_award": trophy_award,
         "events":       events,
-        "estate_log":   estate.estate_log[-30:],
+        "estate_log":   estate.estate_log,
     }
 
 @app.post("/api/ruck")
@@ -548,7 +548,8 @@ async def log_ruck(req: Request, u: dict = CurrentUser):
     estate = _load_estate(uid)
     buffs  = buff_engine.get_all_buffs(estate)
     events = workout_engine.process_workout(estate, "rucking", buffs=buffs,
-                                            miles=miles, lbs=pounds)
+                                            miles=miles, lbs=pounds,
+                                            count_as_workout=False)
     if buffs.get("blessing_poseidon"):
         estate.active_blessings["poseidon"] = max(
             0, estate.active_blessings.get("poseidon", 1) - 1
@@ -594,7 +595,7 @@ async def log_ruck(req: Request, u: dict = CurrentUser):
         "trophy_award":    None,
         "oracle_event":    oracle_evt,
         "waypoint_event":  waypoint_event,
-        "estate_log":      estate.estate_log[-30:],
+        "estate_log":      estate.estate_log,
     }
 
 @app.post("/api/walk")
@@ -615,7 +616,8 @@ async def log_walk(req: Request, u: dict = CurrentUser):
 
     estate = _load_estate(uid)
     buffs  = buff_engine.get_all_buffs(estate)
-    events = workout_engine.process_workout(estate, "walking", buffs=buffs, miles=miles)
+    events = workout_engine.process_workout(estate, "walking", buffs=buffs, miles=miles,
+                                            count_as_workout=False)
 
     # Farm production (once per day)
     farm_events, _ = farm_engine.produce_farms(estate, buffs=buffs)
@@ -656,7 +658,7 @@ async def log_walk(req: Request, u: dict = CurrentUser):
         "trophy_award":   None,
         "oracle_event":   oracle_evt,
         "waypoint_event": waypoint_event,
-        "estate_log":     estate.estate_log[-30:],
+        "estate_log":     estate.estate_log,
     }
 
 @app.post("/api/run")
@@ -683,7 +685,8 @@ async def log_run(req: Request, u: dict = CurrentUser):
 
     estate = _load_estate(uid)
     buffs  = buff_engine.get_all_buffs(estate)
-    events = workout_engine.process_workout(estate, "running", buffs=buffs, miles=miles)
+    events = workout_engine.process_workout(estate, "running", buffs=buffs, miles=miles,
+                                            count_as_workout=False)
     if buffs.get("blessing_hermes"):
         estate.active_blessings["hermes"] = max(
             0, estate.active_blessings.get("hermes", 1) - 1
@@ -729,7 +732,7 @@ async def log_run(req: Request, u: dict = CurrentUser):
         "trophy_award":   None,
         "oracle_event":   oracle_evt,
         "waypoint_event": waypoint_event,
-        "estate_log":     estate.estate_log[-30:],
+        "estate_log":     estate.estate_log,
     }
 
 @app.post("/api/hike")
@@ -753,7 +756,8 @@ async def log_hike(req: Request, u: dict = CurrentUser):
     estate = _load_estate(uid)
     buffs  = buff_engine.get_all_buffs(estate)
     events = workout_engine.process_workout(estate, "rucking", buffs=buffs,
-                                            miles=miles, lbs=pounds)
+                                            miles=miles, lbs=pounds,
+                                            count_as_workout=False)
     if buffs.get("blessing_poseidon"):
         estate.active_blessings["poseidon"] = max(
             0, estate.active_blessings.get("poseidon", 1) - 1
@@ -799,7 +803,7 @@ async def log_hike(req: Request, u: dict = CurrentUser):
         "trophy_award":   None,
         "oracle_event":   oracle_evt,
         "waypoint_event": waypoint_event,
-        "estate_log":     estate.estate_log[-30:],
+        "estate_log":     estate.estate_log,
     }
 
 @app.post("/api/strength")
@@ -822,7 +826,8 @@ async def log_strength(req: Request, u: dict = CurrentUser):
     drachmae_before = estate.drachmae
     events = list(workout_engine.process_workout(
         estate, "strength", buffs=buffs,
-        weight_lbs=weight_lbs, reps=reps_n, sets=sets_n
+        weight_lbs=weight_lbs, reps=reps_n, sets=sets_n,
+        count_as_workout=False
     ))
     earned = round(estate.drachmae - drachmae_before, 2)
     if buffs.get("blessing_hephaestus"):
@@ -855,7 +860,7 @@ async def log_strength(req: Request, u: dict = CurrentUser):
         "trophy_award": None,
         "oracle_event": oracle_evt,
         "estate_state": estate.to_dict(),
-        "estate_log":   estate.estate_log[-30:],
+        "estate_log":   estate.estate_log,
     }
 
 @app.post("/api/workout/timed")
@@ -888,6 +893,7 @@ async def log_timed(req: Request, u: dict = CurrentUser):
     raw_evts = workout_engine.process_workout(
         estate, "timed", buffs=buffs,
         minutes=total_minutes, workout_subtype=workout_subtype,
+        count_as_workout=False
     )
     trophy_award = None
     events = []
@@ -1243,7 +1249,7 @@ async def _run_estate_workout(user_id: int, p: dict) -> dict:
         "creature_encounter": creature_encounter,
         "relic_find":         relic_find,
         "trophy_award":       None,   # trophies only via recommended/custom microcycle
-        "estate_log":         state.estate_log[-30:],
+        "estate_log":         state.estate_log,
     }
 
 
