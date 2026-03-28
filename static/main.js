@@ -1490,7 +1490,6 @@ function syncEstateLogFromServer(serverLog) {
   });
   // Re-sort newest first
   estateLog.sort((a, b) => (b.timestamp || "").localeCompare(a.timestamp || ""));
-  if (estateLog.length > 60) estateLog.length = 60;
   renderEstateLog();
 }
 
@@ -2020,6 +2019,7 @@ const FARM_COLOR = {
 let estateState = null;
 let estateLog   = [];  // [{text, type, time}]  newest first
 
+
 async function initEstate() {
   try {
     estateState = await api("/api/estate/state");
@@ -2101,7 +2101,6 @@ function pushEstateLog(text, type = "system") {
   const now  = new Date();
   const time = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   estateLog.unshift({ text, type, time, timestamp: now.toISOString() });
-  if (estateLog.length > 60) estateLog.pop();
   renderEstateLog();
 }
 
@@ -2380,6 +2379,11 @@ document.getElementById("simulate-workout-btn")?.addEventListener("click", async
     estateState = res.state;
     renderEstateResources();
     renderEstateGridInteractive();
+    // Sync full persistent log from returned state (includes all history)
+    if (res.state?.estate_log) {
+      estateLog = [];
+      syncEstateLogFromServer(res.state.estate_log);
+    }
     toast(`⚔️ ${res.events?.[0] || "Workout logged!"}`);
     // Refresh sub-systems that may have changed
     initSanctuary();

@@ -109,6 +109,7 @@ def process_workout(
     workout_type: str,
     buffs: Optional[dict] = None,
     reward_override: Optional[float] = None,
+    count_as_workout: bool = True,
     **kwargs,
 ) -> List[str]:
     """
@@ -122,18 +123,27 @@ def process_workout(
            value as the base reward. Buff multipliers (blessings, sanctuary,
            relics) are still applied on top of this value. Use for microcycle
            expansion where per-movement rewards are summed externally.
+
+    count_as_workout: when False, skips the workouts_today increment and the
+        weekly-laurel check.  Use this for side-channel reward calls (e.g.
+        per-exercise strength logging) so that only the estate workout flow
+        controls the daily counter and farm-production gate.
     """
     events: List[str] = []
     today = str(dt.date.today())
     buffs = buffs or {}
 
-    # ── Reset daily counter if it's a new day ───────────────────────────────
-    if state.last_workout_date != today:
-        state.last_workout_date = today
-        state.workouts_today = 0
+    if count_as_workout:
+        # ── Reset daily counter if it's a new day ────────────────────────────
+        if state.last_workout_date != today:
+            state.last_workout_date = today
+            state.workouts_today = 0
 
-    state.workouts_today += 1
-    workout_number = state.workouts_today
+        state.workouts_today += 1
+        workout_number = state.workouts_today
+    else:
+        # Not an estate workout — no DR, no daily counter change
+        workout_number = 1
 
     # ── Calculate reward ────────────────────────────────────────────────────
     if reward_override is not None:
@@ -195,7 +205,8 @@ def process_workout(
         )
 
     # ── Check weekly laurel progress ─────────────────────────────────────────
-    _update_weekly_laurel(state, today, events)
+    if count_as_workout:
+        _update_weekly_laurel(state, today, events)
 
     return events
 
