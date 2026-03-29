@@ -115,13 +115,21 @@ def _post_workout_events(
     events: list,
     raw_workout_events: list,
     trophy_award=None,
+    include_oracle: bool = True,
 ) -> dict:
     """
     Centralised post-workout side-effect handler.  Appends to *events* in place.
     Called after process_workout() and any workout-specific blessing consumption.
 
+    This is the ONLY place produce_farms() is called.  All workout endpoints
+    must route through here for farm production — never call produce_farms()
+    directly from an endpoint or startup code.
+
     Detects laurel from *raw_workout_events* only (before farm/title strings are
     mixed in) to prevent false positives from any string that contains "laurel".
+
+    include_oracle: set False when the caller handles oracle/narrative separately
+        (e.g. _run_estate_workout which has Kassandra-specific oracle logic).
 
     Returns extra keys to merge into the endpoint JSON response:
         farm_harvest, farm_events, newly_unlocked, oracle_event, laurel_earned
@@ -133,8 +141,13 @@ def _post_workout_events(
     )
 
     # ── Farm production (once per calendar day) ──────────────────────────────
+    # This is the single authoritative call site for produce_farms().
+    # Farm production is strictly tied to real user workout actions — never to
+    # background jobs, app initialisation, or login/session load.
     farm_events, farm_produced = farm_engine.produce_farms(estate, buffs=buffs)
     events.extend(farm_events)
+    for fe in farm_events:
+        _append_estate_log(estate, fe, "farm")
     farm_harvest = {"resources": farm_produced} if farm_produced else None
 
     # Demeter blessing: consume only when farm actually produced this call
@@ -152,8 +165,12 @@ def _post_workout_events(
     # ── Oracle roll ───────────────────────────────────────────────────────────
     # Guaranteed on laurel earned / title unlock / microcycle trophy.
     # ~25 % chance on standard workouts.
-    oracle_chance = 1.0 if (laurel_earned or newly_unlocked or trophy_award) else 0.25
-    oracle_evt = oracle_engine.maybe_oracle_visit(estate, chance=oracle_chance)
+    # Skipped when the caller manages oracle/narrative itself (include_oracle=False).
+    if include_oracle:
+        oracle_chance = 1.0 if (laurel_earned or newly_unlocked or trophy_award) else 0.25
+        oracle_evt = oracle_engine.maybe_oracle_visit(estate, chance=oracle_chance)
+    else:
+        oracle_evt = None
 
     return {
         "farm_harvest":   farm_harvest,
@@ -424,12 +441,6 @@ async def log_recommended(req: Request, u: dict = CurrentUser):
             0, estate.active_blessings.get("hephaestus", 1) - 1
         )
 
-    # Farm production (once per day, guarded inside produce_farms)
-    farm_events, _ = farm_engine.produce_farms(estate, buffs=buffs)
-    events.extend(farm_events)
-    for fe in farm_events:
-        _append_estate_log(estate, fe, "farm")
-
     # Trophy: awarded only when a microcycle just completed
     trophy_award = None
     if cycle_just_completed:
@@ -440,8 +451,9 @@ async def log_recommended(req: Request, u: dict = CurrentUser):
             _append_estate_log(estate, desc, "trophy")
             events.append(f"⚔️ Microcycle complete! {desc}")
 
-    # Oracle (single visit)
-    oracle_evt = oracle_engine.maybe_oracle_visit(estate, chance=0.10)
+    # Farm production, title unlocks, oracle via _post_workout_events
+    post = _post_workout_events(estate, buffs, events, events[:], trophy_award=trophy_award)
+    oracle_evt = post["oracle_event"]
 
     # Single save
     _save_estate(uid, estate)
@@ -493,12 +505,6 @@ async def log_custom(req: Request, u: dict = CurrentUser):
             0, estate.active_blessings.get("hephaestus", 1) - 1
         )
 
-    # Farm production (once per day)
-    farm_events, _ = farm_engine.produce_farms(estate, buffs=buffs)
-    events.extend(farm_events)
-    for fe in farm_events:
-        _append_estate_log(estate, fe, "farm")
-
     # Trophy: microcycle completion
     trophy_award = None
     if cycle_just_completed:
@@ -509,7 +515,9 @@ async def log_custom(req: Request, u: dict = CurrentUser):
             _append_estate_log(estate, desc, "trophy")
             events.append(f"⚔️ Microcycle complete! {desc}")
 
-    oracle_evt = oracle_engine.maybe_oracle_visit(estate, chance=0.10)
+    # Farm production, title unlocks, oracle via _post_workout_events
+    post = _post_workout_events(estate, buffs, events, events[:], trophy_award=trophy_award)
+    oracle_evt = post["oracle_event"]
 
     # Single save
     _save_estate(uid, estate)
@@ -550,17 +558,15 @@ async def log_ruck(req: Request, u: dict = CurrentUser):
     events = workout_engine.process_workout(estate, "rucking", buffs=buffs,
                                             miles=miles, lbs=pounds,
                                             count_as_workout=False)
+    raw_evts = list(events)
     if buffs.get("blessing_poseidon"):
         estate.active_blessings["poseidon"] = max(
             0, estate.active_blessings.get("poseidon", 1) - 1
         )
         events.append("  🌊 Blessing of Poseidon consumed.")
 
-    # Farm production (once per day)
-    farm_events, _ = farm_engine.produce_farms(estate, buffs=buffs)
-    events.extend(farm_events)
-    for fe in farm_events:
-        _append_estate_log(estate, fe, "farm")
+    # Farm production, title unlocks, oracle via _post_workout_events
+    post = _post_workout_events(estate, buffs, events, raw_evts)
 
     # Waypoint event
     waypoint_event = None
@@ -575,8 +581,6 @@ async def log_ruck(req: Request, u: dict = CurrentUser):
             "waypoint":   w,
         }
         _append_estate_log(estate, f"📜 Waypoint reached: {w['stop']}", "waypoint")
-
-    oracle_evt = oracle_engine.maybe_oracle_visit(estate, chance=0.10)
 
     # Single save
     _save_estate(uid, estate)
@@ -593,7 +597,7 @@ async def log_ruck(req: Request, u: dict = CurrentUser):
         "state":           state,
         "events":          events,
         "trophy_award":    None,
-        "oracle_event":    oracle_evt,
+        "oracle_event":    post["oracle_event"],
         "waypoint_event":  waypoint_event,
         "estate_log":      estate.estate_log,
     }
@@ -618,12 +622,10 @@ async def log_walk(req: Request, u: dict = CurrentUser):
     buffs  = buff_engine.get_all_buffs(estate)
     events = workout_engine.process_workout(estate, "walking", buffs=buffs, miles=miles,
                                             count_as_workout=False)
+    raw_evts = list(events)
 
-    # Farm production (once per day)
-    farm_events, _ = farm_engine.produce_farms(estate, buffs=buffs)
-    events.extend(farm_events)
-    for fe in farm_events:
-        _append_estate_log(estate, fe, "farm")
+    # Farm production, title unlocks, oracle via _post_workout_events
+    post = _post_workout_events(estate, buffs, events, raw_evts)
 
     # Waypoint event
     waypoint_event = None
@@ -638,8 +640,6 @@ async def log_walk(req: Request, u: dict = CurrentUser):
             "waypoint":   w,
         }
         _append_estate_log(estate, f"📜 Waypoint reached: {w['stop']}", "waypoint")
-
-    oracle_evt = oracle_engine.maybe_oracle_visit(estate, chance=0.10)
 
     # Single save
     _save_estate(uid, estate)
@@ -656,7 +656,7 @@ async def log_walk(req: Request, u: dict = CurrentUser):
         "state":          state,
         "events":         events,
         "trophy_award":   None,
-        "oracle_event":   oracle_evt,
+        "oracle_event":   post["oracle_event"],
         "waypoint_event": waypoint_event,
         "estate_log":     estate.estate_log,
     }
@@ -687,17 +687,15 @@ async def log_run(req: Request, u: dict = CurrentUser):
     buffs  = buff_engine.get_all_buffs(estate)
     events = workout_engine.process_workout(estate, "running", buffs=buffs, miles=miles,
                                             count_as_workout=False)
+    raw_evts = list(events)
     if buffs.get("blessing_hermes"):
         estate.active_blessings["hermes"] = max(
             0, estate.active_blessings.get("hermes", 1) - 1
         )
         events.append("  🪶 Blessing of Hermes consumed.")
 
-    # Farm production (once per day)
-    farm_events, _ = farm_engine.produce_farms(estate, buffs=buffs)
-    events.extend(farm_events)
-    for fe in farm_events:
-        _append_estate_log(estate, fe, "farm")
+    # Farm production, title unlocks, oracle via _post_workout_events
+    post = _post_workout_events(estate, buffs, events, raw_evts)
 
     # Waypoint event
     waypoint_event = None
@@ -712,8 +710,6 @@ async def log_run(req: Request, u: dict = CurrentUser):
             "waypoint":   w,
         }
         _append_estate_log(estate, f"📜 Waypoint reached: {w['stop']}", "waypoint")
-
-    oracle_evt = oracle_engine.maybe_oracle_visit(estate, chance=0.10)
 
     # Single save
     _save_estate(uid, estate)
@@ -730,7 +726,7 @@ async def log_run(req: Request, u: dict = CurrentUser):
         "state":          state,
         "events":         events,
         "trophy_award":   None,
-        "oracle_event":   oracle_evt,
+        "oracle_event":   post["oracle_event"],
         "waypoint_event": waypoint_event,
         "estate_log":     estate.estate_log,
     }
@@ -758,17 +754,15 @@ async def log_hike(req: Request, u: dict = CurrentUser):
     events = workout_engine.process_workout(estate, "rucking", buffs=buffs,
                                             miles=miles, lbs=pounds,
                                             count_as_workout=False)
+    raw_evts = list(events)
     if buffs.get("blessing_poseidon"):
         estate.active_blessings["poseidon"] = max(
             0, estate.active_blessings.get("poseidon", 1) - 1
         )
         events.append("  🌊 Blessing of Poseidon consumed.")
 
-    # Farm production (once per day)
-    farm_events, _ = farm_engine.produce_farms(estate, buffs=buffs)
-    events.extend(farm_events)
-    for fe in farm_events:
-        _append_estate_log(estate, fe, "farm")
+    # Farm production, title unlocks, oracle via _post_workout_events
+    post = _post_workout_events(estate, buffs, events, raw_evts)
 
     # Waypoint event
     waypoint_event = None
@@ -783,8 +777,6 @@ async def log_hike(req: Request, u: dict = CurrentUser):
             "waypoint":   w,
         }
         _append_estate_log(estate, f"📜 Waypoint reached: {w['stop']}", "waypoint")
-
-    oracle_evt = oracle_engine.maybe_oracle_visit(estate, chance=0.10)
 
     # Single save
     _save_estate(uid, estate)
@@ -801,7 +793,7 @@ async def log_hike(req: Request, u: dict = CurrentUser):
         "state":          state,
         "events":         events,
         "trophy_award":   None,
-        "oracle_event":   oracle_evt,
+        "oracle_event":   post["oracle_event"],
         "waypoint_event": waypoint_event,
         "estate_log":     estate.estate_log,
     }
@@ -829,6 +821,7 @@ async def log_strength(req: Request, u: dict = CurrentUser):
         weight_lbs=weight_lbs, reps=reps_n, sets=sets_n,
         count_as_workout=False
     ))
+    raw_evts = list(events)
     earned = round(estate.drachmae - drachmae_before, 2)
     if buffs.get("blessing_hephaestus"):
         estate.active_blessings["hephaestus"] = max(
@@ -836,13 +829,8 @@ async def log_strength(req: Request, u: dict = CurrentUser):
         )
         events.append("  🔥 Blessing of Hephaestus consumed.")
 
-    # Farm production (once per day)
-    farm_events, _ = farm_engine.produce_farms(estate, buffs=buffs)
-    events.extend(farm_events)
-    for fe in farm_events:
-        _append_estate_log(estate, fe, "farm")
-
-    oracle_evt = oracle_engine.maybe_oracle_visit(estate, chance=0.10)
+    # Farm production, title unlocks, oracle via _post_workout_events
+    post = _post_workout_events(estate, buffs, events, raw_evts)
 
     # Single save
     _save_estate(uid, estate)
@@ -858,7 +846,7 @@ async def log_strength(req: Request, u: dict = CurrentUser):
         "msg":          f"💪 {move_name} — {sets_n}×{reps_n} @ {weight_kg}kg logged! +{earned:.2f} ⚡",
         "events":       events,
         "trophy_award": None,
-        "oracle_event": oracle_evt,
+        "oracle_event": post["oracle_event"],
         "estate_state": estate.to_dict(),
         "estate_log":   estate.estate_log,
     }
@@ -1162,6 +1150,7 @@ async def _run_estate_workout(user_id: int, p: dict) -> dict:
 
     # 1. Workout
     events = workout_engine.process_workout(state, workout_type, buffs=buffs, **kwargs)
+    raw_workout_events = list(events)  # snapshot for laurel detection in _post_workout_events
     if events:
         _append_estate_log(state, events[0], "reward")
 
@@ -1176,20 +1165,9 @@ async def _run_estate_workout(user_id: int, p: dict) -> dict:
         state.active_blessings["hephaestus"] = max(0, state.active_blessings.get("hephaestus", 1) - 1)
         events.append("  🔥 Blessing of Hephaestus consumed.")
 
-    # 2. Farm production (once per day, guarded inside produce_farms)
-    farm_events, _ = farm_engine.produce_farms(state, buffs=buffs)
-    events.extend(farm_events)
-    for fe in farm_events:
-        _append_estate_log(state, fe, "farm")
-
-    if buffs.get("blessing_demeter") and farm_events and "No farms" not in farm_events[0]:
-        state.active_blessings["demeter"] = max(0, state.active_blessings.get("demeter", 1) - 1)
-        events.append("  🌾 Blessing of Demeter consumed.")
-
-    # 3. Title unlock
-    newly_unlocked = title_engine.check_and_unlock_titles(state)
-    for tid in newly_unlocked:
-        events.append(f"  🏅 Title unlocked: {tid.replace('_', ' ').title()}")
+    # 2-3. Farm production, Demeter blessing, title unlocks via _post_workout_events.
+    # oracle is handled separately below (Kassandra narrative logic).
+    _post_workout_events(state, buffs, events, raw_workout_events, include_oracle=False)
 
     # 4. Creature encounter
     encounter_chance = buff_engine.effective_event_chance(buffs, 0.05)
