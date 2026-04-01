@@ -32,6 +32,21 @@ from laurel_of_olympus.game_state import PlayerState
 _DATA_PATH = Path(__file__).parent / "data" / "trophies.json"
 _cache: dict | None = None
 
+# Map monster name (as stored in trophies.json) → image folder path (relative,
+# served by the /img/{path} route in app.py).
+_MONSTER_IMAGE_MAP: dict[str, str] = {
+    "Cyclops":  "Polyphemus/Vibrant/Polyphemus.png",
+    "Harpy":    "Harpies/Vibrant/Harpies.png",
+    "Satyr":    "Saytr/Vibrant/Saytr.png",
+    "Minotaur": "Minotaur/Vibrant/Minotaur.png",
+    "Medusa":   "Medusa/Vibrant/Medusa.png",
+    "Sphinx":   "Sphinx/Vibrant/Sphinx.png",
+    "Hydra":    "Lernaean_Hydra/Vibrant/Lernaean_Hydra.png",
+    "Chimera":  "Chimera/Vibrant/Chimera.png",
+    "Scylla":   "Scylla_&_Charybdis/Vibrant/Scylla_&_Charybdis.png",
+    "Typhon":   "Typhon/Vibrant/Typhon.png",
+}
+
 _RARITY_COLOURS = {
     "common":    "#a0a0a0",
     "uncommon":  "#4fc35a",
@@ -75,6 +90,7 @@ def award_random_trophy(state: PlayerState) -> Dict[str, Any]:
         **chosen,
         "date_earned": str(date.today()),
         "buff_label":  describe_buff(chosen["buff_type"], chosen["buff_value"]),
+        "image_path":  _MONSTER_IMAGE_MAP.get(chosen.get("monster", ""), None),
     }
     if not hasattr(state, "trophies") or state.trophies is None:
         state.trophies = []
@@ -109,6 +125,8 @@ def get_trophy_inventory(state: PlayerState) -> List[Dict[str, Any]]:
             entry["buff_label"] = describe_buff(t["buff_type"], t["buff_value"])
         entry["rarity_colour"] = _RARITY_COLOURS.get(t.get("rarity", "common"), "#a0a0a0")
         entry["rarity_label"]  = _RARITY_LABELS.get(t.get("rarity", "common"), "Common")
+        if "image_path" not in entry:
+            entry["image_path"] = _MONSTER_IMAGE_MAP.get(t.get("monster", ""), None)
         result.append(entry)
     return result
 

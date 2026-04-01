@@ -560,6 +560,8 @@ document.addEventListener("click", e => {
 // (renderRunSection / renderWalkSection replaced by renderCardioSection + loadHistory)
 
 // ── Vault section ─────────────────────────────────────────────────────────────
+let _vaultTrophies = [];
+
 function renderVaultSection(state) {
   const badges    = state.badges || [];
   const laurels   = [...badges].filter(b => b.type === "laurel").reverse();
@@ -568,8 +570,9 @@ function renderVaultSection(state) {
   // Monster trophies: load from estate trophy system (has buff data)
   api("/api/estate/trophies").then(data => {
     const trophies = (data.trophies || []).slice().reverse();
+    _vaultTrophies = trophies;
     document.getElementById("trophies-list").innerHTML = trophies.length
-      ? trophies.map(t => trophyCardHtml(t)).join("")
+      ? trophies.map((t, i) => trophyCardHtml(t, i)).join("")
       : `<div class="empty-msg">Complete a 6-session cycle to earn your first trophy.</div>`;
     renderTrophyBuffsSummary(data.buff_summary || []);
   }).catch(() => {
@@ -615,14 +618,15 @@ function renderTrophyBuffsSummary(buffSummary) {
 }
 
 // Trophy card with buff label and rarity indicator
-function trophyCardHtml(t) {
+function trophyCardHtml(t, idx) {
   const rarityColour = t.rarity_colour || "#a0a0a0";
   const buffLabel    = t.buff_label    || "";
   const emoji        = t.emoji         || "🏆";
   const date         = t.date_earned   || "";
   const rarity       = t.rarity_label  || (t.rarity || "").replace(/^./, c => c.toUpperCase());
+  const clickAttr    = idx !== undefined ? ` onclick="showTrophyPopup(_vaultTrophies[${idx}])" style="cursor:pointer"` : "";
   return `
-    <div class="badge-card">
+    <div class="badge-card"${clickAttr}>
       <div class="badge-emoji">${emoji}</div>
       <div class="badge-name">${escHtml(t.name || "")}</div>
       <div class="trophy-buff-label">${escHtml(buffLabel)}</div>
@@ -1406,7 +1410,6 @@ async function logTimed() {
     const r = await api("/api/workout/timed", { workout_subtype, minutes, seconds });
     toast(r.msg || "⏱ Session logged!", 3000, "drachmae");
     if (r.estate_state) { estateState = r.estate_state; renderEstateResources(); }
-    if (r.trophy_award) showTrophyAwardBanner(r.trophy_award);
     // Clear inputs
     const minEl = document.getElementById("timed-duration-min");
     const secEl = document.getElementById("timed-duration-sec");
@@ -1460,7 +1463,19 @@ function handleWorkoutResponse(r) {
   if (r.trophy_award) {
     const t = r.trophy_award;
     pushEstateLog(`⚔️ Trophy earned: ${t.emoji} ${t.name} — ${t.buff_label || ""}`, "reward");
-    showTrophyAwardBanner(t);
+    const rarity = (t.rarity_label || (t.rarity || "")).replace(/^./, c => c.toUpperCase());
+    const gilded = (t.name || "").includes("★");
+    const desc   = [
+      rarity,
+      t.buff_label || "Microcycle complete!",
+      gilded ? "✨ Gilded variant — a rare honour." : "",
+    ].filter(Boolean).join(" · ");
+    enqueuePopup({
+      type:        "trophy",
+      image_path:  t.image_path || null,
+      title:       `⚔️ ${t.name || "Monster Slain!"}`,
+      description: desc,
+    });
     if (typeof renderVaultSection === "function") renderVaultSection(appState || {});
   }
   if (r.creature_encounter) {
@@ -2158,17 +2173,19 @@ const HARVEST_FLAVOR = [
 
 function showTrophyPopup(trophy) {
   if (!trophy) return;
-  const gilded = (trophy.name || "").includes("★");
-  showEventPopup({
-    type:  "trophy",
-    title: "⚔️ Monster Slain!",
-    icon:  trophy.emoji || "🏆",
-    lines: [
-      trophy.name,
-      trophy.buff_label || "Microcycle complete!",
-      gilded ? "✨ Gilded variant — a rare honour." : "",
-    ].filter(Boolean),
-  });
+  const gilded  = (trophy.name || "").includes("★");
+  const rarity  = trophy.rarity_label || (trophy.rarity || "").replace(/^./, c => c.toUpperCase());
+  const desc    = [
+    rarity,
+    trophy.buff_label || "Microcycle complete!",
+    gilded ? "✨ Gilded variant — a rare honour." : "",
+  ].filter(Boolean).join(" · ");
+  showWaypointReveal({
+    type:       "trophy",
+    image_path: trophy.image_path || null,
+    title:      `⚔️ ${trophy.name || "Monster Slain!"}`,
+    description: desc,
+  }, true);
 }
 
 function showFarmHarvestPopup(farmHarvest) {
@@ -2228,7 +2245,7 @@ function _drainPopupQueue() {
   const evt = _popupQueue.shift();
   if (evt._qtype === "encounter") {
     showEncounterDialog(evt);
-  } else if (evt.type === "waypoint") {
+  } else if (evt.type === "waypoint" || evt.type === "trophy") {
     showWaypointReveal(evt, true);
   } else {
     showEventPopup(evt);
@@ -2245,7 +2262,7 @@ function showWaypointReveal(event, animated = true) {
   // Populate content
   const img = document.getElementById("waypoint-reveal-img");
   if (event.image_path) {
-    img.src = event.image_path;
+    img.src = "/img/" + event.image_path;
     img.hidden = false;
     overlay.querySelector(".waypoint-reveal-image-wrap").hidden = false;
   } else {
