@@ -218,7 +218,7 @@ def _save_legacy(user_id: int, d: dict) -> None:
 def _append_estate_log(
     state: gs.PlayerState, description: str, log_type: str = "system"
 ) -> None:
-    """Append one entry to the player's persistent estate log (max 200 entries)."""
+    """Append one entry to the player's persistent estate log (append-only, no cap)."""
     if not hasattr(state, "estate_log") or state.estate_log is None:
         state.estate_log = []
     state.estate_log.append({
@@ -226,8 +226,6 @@ def _append_estate_log(
         "type":      log_type,
         "description": description,
     })
-    if len(state.estate_log) > 200:
-        state.estate_log = state.estate_log[-200:]
 
 
 # ── Static serving ────────────────────────────────────────────────────────────
@@ -600,6 +598,8 @@ async def log_ruck(req: Request, u: dict = CurrentUser):
         "oracle_event":    post["oracle_event"],
         "waypoint_event":  waypoint_event,
         "estate_log":      estate.estate_log,
+        "estate_state":    estate.to_dict(),
+        "laurel_earned":   post["laurel_earned"],
     }
 
 @app.post("/api/walk")
@@ -659,6 +659,8 @@ async def log_walk(req: Request, u: dict = CurrentUser):
         "oracle_event":   post["oracle_event"],
         "waypoint_event": waypoint_event,
         "estate_log":     estate.estate_log,
+        "estate_state":   estate.to_dict(),
+        "laurel_earned":  post["laurel_earned"],
     }
 
 @app.post("/api/run")
@@ -729,6 +731,8 @@ async def log_run(req: Request, u: dict = CurrentUser):
         "oracle_event":   post["oracle_event"],
         "waypoint_event": waypoint_event,
         "estate_log":     estate.estate_log,
+        "estate_state":   estate.to_dict(),
+        "laurel_earned":  post["laurel_earned"],
     }
 
 @app.post("/api/hike")
@@ -796,6 +800,8 @@ async def log_hike(req: Request, u: dict = CurrentUser):
         "oracle_event":   post["oracle_event"],
         "waypoint_event": waypoint_event,
         "estate_log":     estate.estate_log,
+        "estate_state":   estate.to_dict(),
+        "laurel_earned":  post["laurel_earned"],
     }
 
 @app.post("/api/strength")
@@ -849,6 +855,7 @@ async def log_strength(req: Request, u: dict = CurrentUser):
         "oracle_event": post["oracle_event"],
         "estate_state": estate.to_dict(),
         "estate_log":   estate.estate_log,
+        "laurel_earned": post["laurel_earned"],
     }
 
 @app.post("/api/workout/timed")

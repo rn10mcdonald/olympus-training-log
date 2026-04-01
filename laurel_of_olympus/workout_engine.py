@@ -205,8 +205,9 @@ def process_workout(
         )
 
     # ── Check weekly laurel progress ─────────────────────────────────────────
-    if count_as_workout:
-        _update_weekly_laurel(state, today, events)
+    # All workout types (including DR-exempt cardio) count toward weekly laurels.
+    # count_as_workout only controls the daily DR counter, not the weekly tally.
+    _update_weekly_laurel(state, today, events)
 
     return events
 

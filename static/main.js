@@ -1432,34 +1432,35 @@ function checkNewBadges(state) {
 // Called after ANY workout endpoint response. Handles farm log, trophy,
 // waypoint, oracle, and creature events in a consistent, queued order.
 function handleWorkoutResponse(r) {
-  // Push all event strings to the estate log
-  (r.events || []).forEach(evt => {
-    const t = (evt.includes("Farm") || evt.includes("harvest")) ? "farm"
-            : (evt.includes("drachma") || evt.includes("LAUREL"))  ? "reward"
-            : (evt.includes("Trophy") || evt.includes("trophy"))    ? "trophy"
-            : "system";
-    pushEstateLog(evt, t);
-  });
-
-  // Sync estate_log if server returned it
+  // 1. Estate log — server log is authoritative; avoid double-entries from pushEstateLog
   if (Array.isArray(r.estate_log) && r.estate_log.length) {
     syncEstateLogFromServer(r.estate_log);
+  } else {
+    (r.events || []).forEach(evt => {
+      const t = (evt.includes("Farm") || evt.includes("harvest")) ? "farm"
+              : (evt.includes("drachma") || evt.includes("LAUREL"))  ? "reward"
+              : (evt.includes("Trophy") || evt.includes("trophy"))    ? "trophy"
+              : "system";
+      pushEstateLog(evt, t);
+    });
   }
 
-  // Refresh estate resources if estate state is in response
+  // 2. Estate state + header — update before popups so pip/streak/drachma are current
   if (r.estate_state) {
     estateState = r.estate_state;
     renderEstateResources();
+    renderHeader(appState || {});
   }
 
-  // Queued popups — ordered: waypoint → laurel → trophy → oracle/encounter
+  // 3. Queued popups — ordered: waypoint → laurel → trophy → oracle/encounter
   if (r.waypoint_event) enqueuePopup(r.waypoint_event);
-  if (r.events) checkLaurelEvents(r.events);
+  const laurelEarned = r.laurel_earned ||
+    (r.events || []).some(e => typeof e === "string" && e.includes("LAUREL EARNED"));
+  if (laurelEarned) checkLaurelEvents(r.events, true);
   if (r.trophy_award) {
     const t = r.trophy_award;
     pushEstateLog(`⚔️ Trophy earned: ${t.emoji} ${t.name} — ${t.buff_label || ""}`, "reward");
     showTrophyAwardBanner(t);
-    // Refresh vault trophy list
     if (typeof renderVaultSection === "function") renderVaultSection(appState || {});
   }
   if (r.creature_encounter) {
@@ -1480,10 +1481,13 @@ function syncEstateLogFromServer(serverLog) {
   const COLOR = { reward: "var(--gold)", farm: "var(--success)", trophy: "var(--accent)", waypoint: "#a0c4ff", system: "var(--accent)" };
   serverLog.forEach(entry => {
     if (!existing.has(entry.timestamp)) {
+      const d       = new Date(entry.timestamp);
+      const dateStr = d.toLocaleDateString([], { month: "short", day: "numeric" });
+      const timeStr = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
       estateLog.push({
         text:      entry.description,
         type:      entry.type,
-        time:      new Date(entry.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        time:      `${dateStr} — ${timeStr}`,
         timestamp: entry.timestamp,
       });
     }
@@ -2098,9 +2102,10 @@ function renderEstateGrid() {
 }
 
 function pushEstateLog(text, type = "system") {
-  const now  = new Date();
-  const time = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  estateLog.unshift({ text, type, time, timestamp: now.toISOString() });
+  const now     = new Date();
+  const dateStr = now.toLocaleDateString([], { month: "short", day: "numeric" });
+  const timeStr = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  estateLog.unshift({ text, type, time: `${dateStr} — ${timeStr}`, timestamp: now.toISOString() });
   renderEstateLog();
 }
 
@@ -2379,23 +2384,19 @@ document.getElementById("simulate-workout-btn")?.addEventListener("click", async
     estateState = res.state;
     renderEstateResources();
     renderEstateGridInteractive();
-    // Sync full persistent log from returned state (includes all history)
-    if (res.state?.estate_log) {
-      estateLog = [];
-      syncEstateLogFromServer(res.state.estate_log);
-    }
+    renderHeader(appState || {});
     toast(`⚔️ ${res.events?.[0] || "Workout logged!"}`);
     // Refresh sub-systems that may have changed
     initSanctuary();
     initBlessings();
-    // Show relic find notification if one was discovered
+    // Handle all post-workout events via unified pipeline (log sync, popups)
+    handleWorkoutResponse({ ...res, oracle_event: null });  // oracle is in res.event
+    // Show relic find notification if one was discovered (after log sync)
     if (res.relic_find) {
       const r = res.relic_find;
       pushEstateLog(`⚗️ Relic found: ${r.name} (${r.rarity})!`, "reward");
       await initRelics();
     }
-    // Handle all post-workout events via unified pipeline
-    handleWorkoutResponse({ ...res, oracle_event: null });  // oracle is in res.event
     // Check barracks requirements after each workout (laurels/farms may have changed)
     if (!estateState?.barracks_built) {
       api("/api/estate/army").then(() => {
