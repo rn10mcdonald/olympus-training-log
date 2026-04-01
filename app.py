@@ -139,6 +139,8 @@ def _post_workout_events(
         isinstance(e, str) and "LAUREL EARNED" in e
         for e in raw_workout_events
     )
+    if laurel_earned:
+        _append_estate_log(estate, "🌿 Laurel earned — weekly discipline recognized.", "reward")
 
     # ── Farm production (once per calendar day) ──────────────────────────────
     # This is the single authoritative call site for produce_farms().

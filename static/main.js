@@ -1515,10 +1515,17 @@ function syncEstateLogFromServer(serverLog) {
 // ── Laurel popup ──────────────────────────────────────────────────────────────
 function checkLaurelEvents(events, laurelEarned) {
   if (!laurelEarned) return;
-  const msg = (events || []).find(e =>
-    typeof e === "string" && e.toUpperCase().includes("LAUREL"))
-    || "🌿 Laurel earned!";
-  enqueuePopup(() => showLaurelPopup(msg));
+  const streak = estateState?.weekly_streak || 0;
+  const desc = streak > 1
+    ? `${streak} weeks in a row — a true Olympian.`
+    : "3 days of discipline this week.";
+  enqueuePopup({
+    type:        "laurel",
+    title:       "🌿 Laurel Earned!",
+    description: desc,
+  });
+  // Blessings affordability may have changed
+  initBlessings().catch(() => {});
 }
 
 function showLaurelPopup(msg) {
@@ -2245,7 +2252,7 @@ function _drainPopupQueue() {
   const evt = _popupQueue.shift();
   if (evt._qtype === "encounter") {
     showEncounterDialog(evt);
-  } else if (evt.type === "waypoint" || evt.type === "trophy") {
+  } else if (evt.type === "waypoint" || evt.type === "trophy" || evt.type === "laurel") {
     showWaypointReveal(evt, true);
   } else {
     showEventPopup(evt);
