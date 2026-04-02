@@ -93,6 +93,14 @@ function encodeURIPath(path) {
   return String(path).split("/").map(encodeURIComponent).join("/");
 }
 
+// Return today's date in the user's LOCAL timezone as YYYY-MM-DD.
+// This is the canonical date for all workout logging — avoids UTC day-boundary
+// mismatches where server UTC date ≠ user's local date.
+function localDateStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 function isoWeek(date) {
   const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
   const day = d.getUTCDay() || 7;
@@ -704,7 +712,8 @@ function renderActivityCalendar(workouts) {
     if (isToday)  cls += " cal-today";
     if (isDone)   cls += " cal-done";
     if (isFuture) cls += " cal-future";
-    return `<div class="${cls}">
+    const clickable = isDone ? ` data-date="${dateStr}" style="cursor:pointer"` : "";
+    return `<div class="${cls}"${clickable}>
       <span class="cal-label">${day}</span>
       <span class="cal-check">${isDone ? "✓" : (isFuture ? "" : "–")}</span>
     </div>`;
@@ -771,7 +780,8 @@ function renderWeeklyCalHistory(workouts) {
       if (isFuture) cls += " future";
 
       const icon = isDone ? "✓" : (isFuture ? "○" : "○");
-      return `<div class="${cls}">
+      const clickable = isDone ? ` data-date="${dateStr}" style="cursor:pointer"` : "";
+      return `<div class="${cls}"${clickable}>
         <span class="wcal-day-label">${label}</span>
         <span class="wcal-day-icon">${icon}</span>
       </div>`;
@@ -788,6 +798,43 @@ function renderWeeklyCalHistory(workouts) {
 
   el.innerHTML = html || '<p class="dim-msg">No workout history yet.</p>';
 }
+
+// ── Calendar day drill-down ───────────────────────────────────────────────────
+// Clicking a day cell that has workouts filters the history list to that date.
+let _calDrillDate = null;  // null = show all
+
+function filterHistoryByDate(dateStr) {
+  _calDrillDate = dateStr;
+  const filtered = dateStr
+    ? (_recentWorkouts || []).filter(w => w.date === dateStr)
+    : (_recentWorkouts || []);
+  renderHistoryList(filtered, historyFilter);
+  // Scroll history list into view on mobile
+  const el = document.getElementById("history-list");
+  if (el) el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+// Delegate click from either calendar (activity-calendar or weekly-cal-history)
+document.addEventListener("click", e => {
+  const cell = e.target.closest("[data-date]");
+  if (!cell) {
+    // Click outside a dated cell — if user clicked inside a calendar, clear filter
+    const insideCal = e.target.closest("#activity-calendar, #weekly-cal-history");
+    if (insideCal && _calDrillDate) {
+      _calDrillDate = null;
+      renderHistoryList(_recentWorkouts, historyFilter);
+    }
+    return;
+  }
+  const dateStr = cell.dataset.date;
+  if (!dateStr) return;
+  // Toggle: clicking the same date again clears the filter
+  if (_calDrillDate === dateStr) {
+    filterHistoryByDate(null);
+  } else {
+    filterHistoryByDate(dateStr);
+  }
+});
 
 function workoutTypeLabel(type) {
   const labels = {
@@ -1058,6 +1105,7 @@ async function logRecommended() {
   const weightsLbs = {};
   for (const [k, kg] of Object.entries(weightsKg)) weightsLbs[k] = kg * 2.20462;
   const payload = Object.keys(weightsLbs).length > 0 ? { weights_lbs: weightsLbs } : {};
+  payload.client_date = localDateStr();
 
   if (btn) btn.disabled = true;
   try {
@@ -1124,7 +1172,7 @@ async function logCardio() {
   };
   const endpoint = typeToEndpoint[activeCardioType] || "/api/run";
 
-  const payload = { miles };
+  const payload = { miles, client_date: localDateStr() };
   if (duration) payload.duration_min = duration;
   if (lbs && (activeCardioType === "rucking" || activeCardioType === "hiking")) payload.pounds = lbs;
 
@@ -1349,7 +1397,7 @@ async function submitSession() {
   try {
     let lastR = null;
     for (const ex of _sessionQueue) {
-      const payload = { movement: ex.movement, sets: ex.sets, reps: ex.reps };
+      const payload = { movement: ex.movement, sets: ex.sets, reps: ex.reps, client_date: localDateStr() };
       if (ex.needsWeight && ex.weightKg > 0) payload.weight_kg = ex.weightKg;
       lastR = await api("/api/strength", payload);
       handleWorkoutResponse(lastR);
@@ -1376,7 +1424,7 @@ async function logExercise() {
   const btn = document.getElementById("log-exercise-btn");
   if (btn) btn.disabled = true;
   try {
-    const payload = { movement: ex.movement, sets: ex.sets, reps: ex.reps };
+    const payload = { movement: ex.movement, sets: ex.sets, reps: ex.reps, client_date: localDateStr() };
     if (ex.needsWeight && ex.weightKg > 0) payload.weight_kg = ex.weightKg;
     const r = await api("/api/strength", payload);
     toast(r.msg || "💪 Exercise logged!", 3000, "drachmae");
@@ -1405,7 +1453,7 @@ async function logTimed() {
 
   if (btn) btn.disabled = true;
   try {
-    const r = await api("/api/workout/timed", { workout_subtype, minutes, seconds });
+    const r = await api("/api/workout/timed", { workout_subtype, minutes, seconds, client_date: localDateStr() });
     toast(r.msg || "⏱ Session logged!", 3000, "drachmae");
     if (r.estate_state) { estateState = r.estate_state; renderEstateResources(); }
     // Clear inputs
