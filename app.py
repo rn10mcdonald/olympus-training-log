@@ -428,20 +428,8 @@ async def log_recommended(req: Request, u: dict = CurrentUser):
     # ── Estate processing ────────────────────────────────────────────────────
     estate = _load_estate(uid)
     buffs  = buff_engine.get_all_buffs(estate)
-    events: list = []
 
-    # Credit drachmae + apply Hephaestus blessing
-    earned = buff_engine.apply_workout_buff(buffs, "strength", base_coins)
-    if base_coins > 0:
-        estate.drachmae = round(estate.drachmae + earned, 2)
-        events.append(f"[Strength] Recommended session  →  +{earned} drachmae")
-        _append_estate_log(estate, events[-1], "reward")
-    if buffs.get("blessing_hephaestus") and base_coins > 0:
-        estate.active_blessings["hephaestus"] = max(
-            0, estate.active_blessings.get("hephaestus", 1) - 1
-        )
-
-    # Trophy: awarded only when a microcycle just completed
+    # Trophy: awarded only when a microcycle just completed (detected above)
     trophy_award = None
     if cycle_just_completed:
         trophy_award = trophy_engine.award_random_trophy(estate)
@@ -449,30 +437,50 @@ async def log_recommended(req: Request, u: dict = CurrentUser):
             desc = (f"⚔️ Trophy earned: {trophy_award['emoji']} {trophy_award['name']} "
                     f"({trophy_award['rarity']}) — {trophy_award.get('buff_label', '')}")
             _append_estate_log(estate, desc, "trophy")
-            events.append(f"⚔️ Microcycle complete! {desc}")
+
+    # process_workout: flat 50 drachmae, applies buff multipliers, tracks
+    # weekly streak + laurel progress, appends to workout_log.
+    # Hephaestus blessing is keyed to "strength" so pass that type.
+    raw_evts = workout_engine.process_workout(
+        estate, "strength", buffs=buffs, reward_override=50.0
+    )
+    events: list = list(raw_evts)
+
+    if trophy_award:
+        events.append(f"⚔️ Microcycle complete! Trophy: {trophy_award['name']}")
+
+    if buffs.get("blessing_hephaestus"):
+        estate.active_blessings["hephaestus"] = max(
+            0, estate.active_blessings.get("hephaestus", 1) - 1
+        )
 
     # Farm production, title unlocks, oracle via _post_workout_events
-    post = _post_workout_events(estate, buffs, events, events[:], trophy_award=trophy_award)
-    oracle_evt = post["oracle_event"]
+    post = _post_workout_events(estate, buffs, events, raw_evts, trophy_award=trophy_award)
 
     # Single save
     _save_estate(uid, estate)
 
-    if earned > 0:
-        today = str(dt.date.today())
-        movement_name = ""
-        if state.get("workouts"):
-            movement_name = state["workouts"][-1].get("details", "")
-        db.insert_workout(uid, today, "recommended", earned, notes=movement_name)
+    earned = next(
+        (float(ev.split("+")[1].split(" ")[0]) for ev in events
+         if isinstance(ev, str) and "drachmae" in ev),
+        0.0,
+    )
+    today = str(dt.date.today())
+    movement_name = ""
+    if state.get("workouts"):
+        movement_name = state["workouts"][-1].get("details", "")
+    db.insert_workout(uid, today, "recommended", earned, notes=movement_name)
 
     return {
-        "status":       "ok",
-        "msg":          msg,
-        "state":        state,
-        "oracle_event": oracle_evt,
-        "trophy_award": trophy_award,
-        "events":       events,
-        "estate_log":   estate.estate_log,
+        "status":        "ok",
+        "msg":           msg,
+        "state":         state,
+        "oracle_event":  post["oracle_event"],
+        "trophy_award":  trophy_award,
+        "events":        events,
+        "estate_log":    estate.estate_log,
+        "estate_state":  estate.to_dict(),
+        "laurel_earned": post["laurel_earned"],
     }
 
 @app.post("/api/workout/custom")
