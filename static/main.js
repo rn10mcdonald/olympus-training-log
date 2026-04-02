@@ -675,29 +675,28 @@ function renderActivityCalendar(workouts) {
   const labelEl = document.getElementById("calendar-week-label");
   if (!el) return;
 
-  const today = new Date();
-  // Find Monday of this week
-  const dayOfWeek = today.getDay() || 7; // make Sunday = 7
-  const monday = new Date(today);
-  monday.setDate(today.getDate() - (dayOfWeek - 1));
+  // Use UTC throughout so cell dates match server-stored dates (server logs in UTC).
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayUTC = new Date(todayStr + "T00:00:00Z");
+  const dayOfWeek = todayUTC.getUTCDay() || 7; // Mon=1…Sun=7
+  const monUTC = new Date(Date.UTC(
+    todayUTC.getUTCFullYear(), todayUTC.getUTCMonth(),
+    todayUTC.getUTCDate() - (dayOfWeek - 1)
+  ));
 
   if (labelEl) {
-    const monStr = monday.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-    const sunDate = new Date(monday); sunDate.setDate(monday.getDate() + 6);
-    const sunStr = sunDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    const sunUTC = new Date(Date.UTC(monUTC.getUTCFullYear(), monUTC.getUTCMonth(), monUTC.getUTCDate() + 6));
+    const monStr = monUTC.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+    const sunStr = sunUTC.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
     labelEl.textContent = `${monStr} – ${sunStr}`;
   }
 
-  // Build set of workout dates this week
   const workedDates = new Set((workouts || []).map(w => w.date));
-
   const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-  const todayStr = today.toISOString().slice(0, 10);
 
   const cells = days.map((day, i) => {
-    const d = new Date(monday);
-    d.setDate(monday.getDate() + i);
-    const dateStr = d.toISOString().slice(0, 10);
+    const cellUTC = new Date(Date.UTC(monUTC.getUTCFullYear(), monUTC.getUTCMonth(), monUTC.getUTCDate() + i));
+    const dateStr = cellUTC.toISOString().slice(0, 10);
     const isToday  = dateStr === todayStr;
     const isDone   = workedDates.has(dateStr);
     const isFuture = dateStr > todayStr;
@@ -722,13 +721,12 @@ function renderWeeklyCalHistory(workouts) {
   const todayStr = new Date().toISOString().slice(0, 10);
   const workedSet = new Set((workouts || []).map(w => w.date));
 
-  // Build a map: week_key → Set of worked date strings (Mon–Sun)
-  // We compute week keys for each worked date
+  // UTC-based week arithmetic so dates match server-stored UTC workout dates.
   function getMondayStr(dateStr) {
-    const d = new Date(dateStr + "T00:00:00");
-    const dow = d.getDay() || 7; // Mon=1…Sun=7
-    d.setDate(d.getDate() - (dow - 1));
-    return d.toISOString().slice(0, 10);
+    const d = new Date(dateStr + "T00:00:00Z"); // parse as UTC midnight
+    const dow = d.getUTCDay() || 7;
+    const mon = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - (dow - 1)));
+    return mon.toISOString().slice(0, 10);
   }
 
   // Collect all week Mondays from workouts + current week
@@ -748,12 +746,12 @@ function renderWeeklyCalHistory(workouts) {
   const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
   const html = mondays.map(mondayStr => {
-    const monday = new Date(mondayStr + "T00:00:00");
-    const sunday = new Date(monday);
-    sunday.setDate(monday.getDate() + 6);
+    // Parse as UTC midnight so cell dates stay consistent with server-stored UTC dates.
+    const monUTC = new Date(mondayStr + "T00:00:00Z");
+    const sunUTC = new Date(Date.UTC(monUTC.getUTCFullYear(), monUTC.getUTCMonth(), monUTC.getUTCDate() + 6));
 
-    const monLabel = monday.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-    const sunLabel = sunday.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    const monLabel = monUTC.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+    const sunLabel = sunUTC.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
     const wkKey = isoWeekKey(mondayStr);
 
     // Check laurel from estate week_log
@@ -761,9 +759,8 @@ function renderWeeklyCalHistory(workouts) {
     const laurelBadge = laurelGiven ? '<span class="wcal-laurel-badge">🌿 Laurel</span>' : "";
 
     const dayCells = DAY_LABELS.map((label, i) => {
-      const d = new Date(monday);
-      d.setDate(monday.getDate() + i);
-      const dateStr = d.toISOString().slice(0, 10);
+      const cellUTC = new Date(Date.UTC(monUTC.getUTCFullYear(), monUTC.getUTCMonth(), monUTC.getUTCDate() + i));
+      const dateStr = cellUTC.toISOString().slice(0, 10);
       const isToday  = dateStr === todayStr;
       const isFuture = dateStr > todayStr;
       const isDone   = workedSet.has(dateStr);
@@ -1138,6 +1135,7 @@ async function logCardio() {
     const r = await api(endpoint, payload);
     toast(r.msg || `${emoji} Cardio logged!`, 3000, "drachmae");
     appState = r.state;
+    if (r.estate_state) estateState = r.estate_state;  // sync before renderAll so renderHeader uses fresh week_log
     const workout = await api("/api/workout/today");
     renderAll(appState, workout);
     checkNewBadges(appState);
@@ -2055,6 +2053,7 @@ async function initEstate() {
       syncEstateLogFromServer(estateState.estate_log);
     }
     renderEstateResources();
+    renderHeader(appState || {});   // refresh pips / streak from backend week_log
     renderEstateGridInteractive();
     // Load all estate sub-systems in parallel
     await Promise.allSettled([
