@@ -109,6 +109,25 @@ def _save_estate(user_id: int, state: gs.PlayerState) -> None:
     db.save_estate(user_id, state.to_dict())
 
 
+def _local_today(p: dict | None = None) -> str:
+    """Return the player's local date as YYYY-MM-DD.
+
+    Prefers client_date from the request payload (most accurate: the player's
+    device knows their timezone). Falls back to the server date, which is UTC
+    on Railway/Render. Passing the client date avoids day-boundary mismatches
+    for users in non-UTC timezones.
+    """
+    if p:
+        cd = str(p.get("client_date") or "").strip()
+        if len(cd) == 10:
+            try:
+                dt.date.fromisoformat(cd)
+                return cd
+            except ValueError:
+                pass
+    return str(dt.date.today())
+
+
 def _post_workout_events(
     estate: gs.PlayerState,
     buffs: dict,
@@ -116,6 +135,7 @@ def _post_workout_events(
     raw_workout_events: list,
     trophy_award=None,
     include_oracle: bool = True,
+    today: str | None = None,
 ) -> dict:
     """
     Centralised post-workout side-effect handler.  Appends to *events* in place.
@@ -146,7 +166,7 @@ def _post_workout_events(
     # This is the single authoritative call site for produce_farms().
     # Farm production is strictly tied to real user workout actions — never to
     # background jobs, app initialisation, or login/session load.
-    farm_events, farm_produced = farm_engine.produce_farms(estate, buffs=buffs)
+    farm_events, farm_produced = farm_engine.produce_farms(estate, buffs=buffs, today=today)
     events.extend(farm_events)
     for fe in farm_events:
         _append_estate_log(estate, fe, "farm")
@@ -426,6 +446,7 @@ async def log_recommended(req: Request, u: dict = CurrentUser):
     base_coins = round(state.get("treasury", 0.0) - old_treasury, 2)
 
     # ── Estate processing ────────────────────────────────────────────────────
+    today  = _local_today(p)
     estate = _load_estate(uid)
     buffs  = buff_engine.get_all_buffs(estate)
 
@@ -442,7 +463,7 @@ async def log_recommended(req: Request, u: dict = CurrentUser):
     # weekly streak + laurel progress, appends to workout_log.
     # Hephaestus blessing is keyed to "strength" so pass that type.
     raw_evts = workout_engine.process_workout(
-        estate, "strength", buffs=buffs, reward_override=50.0
+        estate, "strength", buffs=buffs, reward_override=50.0, today_override=today
     )
     events: list = list(raw_evts)
 
@@ -455,7 +476,7 @@ async def log_recommended(req: Request, u: dict = CurrentUser):
         )
 
     # Farm production, title unlocks, oracle via _post_workout_events
-    post = _post_workout_events(estate, buffs, events, raw_evts, trophy_award=trophy_award)
+    post = _post_workout_events(estate, buffs, events, raw_evts, trophy_award=trophy_award, today=today)
 
     # Single save
     _save_estate(uid, estate)
@@ -465,7 +486,6 @@ async def log_recommended(req: Request, u: dict = CurrentUser):
          if isinstance(ev, str) and "drachmae" in ev),
         0.0,
     )
-    today = str(dt.date.today())
     movement_name = ""
     if state.get("workouts"):
         movement_name = state["workouts"][-1].get("details", "")
@@ -499,6 +519,7 @@ async def log_custom(req: Request, u: dict = CurrentUser):
     base_coins = round(state.get("treasury", 0.0) - old_treasury, 2)
 
     # ── Estate processing ────────────────────────────────────────────────────
+    today  = _local_today(payload)
     estate = _load_estate(uid)
     buffs  = buff_engine.get_all_buffs(estate)
     events: list = []
@@ -524,14 +545,13 @@ async def log_custom(req: Request, u: dict = CurrentUser):
             events.append(f"⚔️ Microcycle complete! {desc}")
 
     # Farm production, title unlocks, oracle via _post_workout_events
-    post = _post_workout_events(estate, buffs, events, events[:], trophy_award=trophy_award)
+    post = _post_workout_events(estate, buffs, events, events[:], trophy_award=trophy_award, today=today)
     oracle_evt = post["oracle_event"]
 
     # Single save
     _save_estate(uid, estate)
 
     if earned > 0:
-        today = str(dt.date.today())
         db.insert_workout(uid, today, "custom", earned, notes=text[:200])
 
     return {
@@ -561,11 +581,13 @@ async def log_ruck(req: Request, u: dict = CurrentUser):
     _save_legacy(uid, state)
     new_waypoints = [b for b in state.get("badges", []) if b.get("type") == "ruck_quest"][waypoints_before:]
 
+    today  = _local_today(p)
     estate = _load_estate(uid)
     buffs  = buff_engine.get_all_buffs(estate)
     events = workout_engine.process_workout(estate, "rucking", buffs=buffs,
                                             miles=miles, lbs=pounds,
-                                            count_as_workout=False)
+                                            count_as_workout=False,
+                                            today_override=today)
     raw_evts = list(events)
     if buffs.get("blessing_poseidon"):
         estate.active_blessings["poseidon"] = max(
@@ -574,7 +596,7 @@ async def log_ruck(req: Request, u: dict = CurrentUser):
         events.append("  🌊 Blessing of Poseidon consumed.")
 
     # Farm production, title unlocks, oracle via _post_workout_events
-    post = _post_workout_events(estate, buffs, events, raw_evts)
+    post = _post_workout_events(estate, buffs, events, raw_evts, today=today)
 
     # Waypoint event
     waypoint_event = None
@@ -592,8 +614,6 @@ async def log_ruck(req: Request, u: dict = CurrentUser):
 
     # Single save
     _save_estate(uid, estate)
-
-    today  = str(dt.date.today())
     earned = next((float(ev.split("+")[1].split(" ")[0]) for ev in events
                    if isinstance(ev, str) and "drachmae" in ev), 0.0)
     db.insert_workout(uid, today, "rucking", earned,
@@ -628,14 +648,15 @@ async def log_walk(req: Request, u: dict = CurrentUser):
     _save_legacy(uid, state)
     new_waypoints = [b for b in state.get("badges", []) if b.get("type") == "ruck_quest"][waypoints_before:]
 
+    today  = _local_today(p)
     estate = _load_estate(uid)
     buffs  = buff_engine.get_all_buffs(estate)
     events = workout_engine.process_workout(estate, "walking", buffs=buffs, miles=miles,
-                                            count_as_workout=False)
+                                            count_as_workout=False, today_override=today)
     raw_evts = list(events)
 
     # Farm production, title unlocks, oracle via _post_workout_events
-    post = _post_workout_events(estate, buffs, events, raw_evts)
+    post = _post_workout_events(estate, buffs, events, raw_evts, today=today)
 
     # Waypoint event
     waypoint_event = None
@@ -653,8 +674,6 @@ async def log_walk(req: Request, u: dict = CurrentUser):
 
     # Single save
     _save_estate(uid, estate)
-
-    today  = str(dt.date.today())
     earned = next((float(ev.split("+")[1].split(" ")[0]) for ev in events
                    if isinstance(ev, str) and "drachmae" in ev), 0.0)
     db.insert_workout(uid, today, "walking", earned,
@@ -695,10 +714,11 @@ async def log_run(req: Request, u: dict = CurrentUser):
     _save_legacy(uid, state)
     new_waypoints = [b for b in state.get("badges", []) if b.get("type") == "ruck_quest"][waypoints_before:]
 
+    today  = _local_today(p)
     estate = _load_estate(uid)
     buffs  = buff_engine.get_all_buffs(estate)
     events = workout_engine.process_workout(estate, "running", buffs=buffs, miles=miles,
-                                            count_as_workout=False)
+                                            count_as_workout=False, today_override=today)
     raw_evts = list(events)
     if buffs.get("blessing_hermes"):
         estate.active_blessings["hermes"] = max(
@@ -707,7 +727,7 @@ async def log_run(req: Request, u: dict = CurrentUser):
         events.append("  🪶 Blessing of Hermes consumed.")
 
     # Farm production, title unlocks, oracle via _post_workout_events
-    post = _post_workout_events(estate, buffs, events, raw_evts)
+    post = _post_workout_events(estate, buffs, events, raw_evts, today=today)
 
     # Waypoint event
     waypoint_event = None
@@ -725,8 +745,6 @@ async def log_run(req: Request, u: dict = CurrentUser):
 
     # Single save
     _save_estate(uid, estate)
-
-    today  = str(dt.date.today())
     earned = next((float(ev.split("+")[1].split(" ")[0]) for ev in events
                    if isinstance(ev, str) and "drachmae" in ev), 0.0)
     db.insert_workout(uid, today, "running", earned,
@@ -763,11 +781,12 @@ async def log_hike(req: Request, u: dict = CurrentUser):
     _save_legacy(uid, state)
     new_waypoints = [b for b in state.get("badges", []) if b.get("type") == "ruck_quest"][waypoints_before:]
 
+    today  = _local_today(p)
     estate = _load_estate(uid)
     buffs  = buff_engine.get_all_buffs(estate)
     events = workout_engine.process_workout(estate, "rucking", buffs=buffs,
                                             miles=miles, lbs=pounds,
-                                            count_as_workout=False)
+                                            count_as_workout=False, today_override=today)
     raw_evts = list(events)
     if buffs.get("blessing_poseidon"):
         estate.active_blessings["poseidon"] = max(
@@ -776,7 +795,7 @@ async def log_hike(req: Request, u: dict = CurrentUser):
         events.append("  🌊 Blessing of Poseidon consumed.")
 
     # Farm production, title unlocks, oracle via _post_workout_events
-    post = _post_workout_events(estate, buffs, events, raw_evts)
+    post = _post_workout_events(estate, buffs, events, raw_evts, today=today)
 
     # Waypoint event
     waypoint_event = None
@@ -795,7 +814,6 @@ async def log_hike(req: Request, u: dict = CurrentUser):
     # Single save
     _save_estate(uid, estate)
 
-    today  = str(dt.date.today())
     earned = next((float(ev.split("+")[1].split(" ")[0]) for ev in events
                    if isinstance(ev, str) and "drachmae" in ev), 0.0)
     db.insert_workout(uid, today, "hiking", earned,
@@ -829,13 +847,14 @@ async def log_strength(req: Request, u: dict = CurrentUser):
     # Use normalized weight scaling: sqrt(weight_lbs) × reps × sets × 0.03
     weight_lbs = weight_kg * 2.20462
     uid    = u["user_id"]
+    today  = _local_today(p)
     estate = _load_estate(uid)
     buffs  = buff_engine.get_all_buffs(estate)
     drachmae_before = estate.drachmae
     events = list(workout_engine.process_workout(
         estate, "strength", buffs=buffs,
         weight_lbs=weight_lbs, reps=reps_n, sets=sets_n,
-        count_as_workout=False
+        count_as_workout=False, today_override=today
     ))
     raw_evts = list(events)
     earned = round(estate.drachmae - drachmae_before, 2)
@@ -846,12 +865,11 @@ async def log_strength(req: Request, u: dict = CurrentUser):
         events.append("  🔥 Blessing of Hephaestus consumed.")
 
     # Farm production, title unlocks, oracle via _post_workout_events
-    post = _post_workout_events(estate, buffs, events, raw_evts)
+    post = _post_workout_events(estate, buffs, events, raw_evts, today=today)
 
     # Single save
     _save_estate(uid, estate)
 
-    today  = str(dt.date.today())
     db.insert_workout(uid, today, "strength", earned,
                       movement=movement, weight_kg=weight_kg,
                       sets=sets_n, reps=reps_n)
@@ -891,6 +909,7 @@ async def log_timed(req: Request, u: dict = CurrentUser):
         raise HTTPException(400, "Duration must be greater than 0")
 
     uid    = u["user_id"]
+    today  = _local_today(p)
     estate = _load_estate(uid)
     buffs  = buff_engine.get_all_buffs(estate)
 
@@ -898,7 +917,7 @@ async def log_timed(req: Request, u: dict = CurrentUser):
     raw_evts = workout_engine.process_workout(
         estate, "timed", buffs=buffs,
         minutes=total_minutes, workout_subtype=workout_subtype,
-        count_as_workout=False
+        count_as_workout=False, today_override=today
     )
     trophy_award = None
     events = []
@@ -909,7 +928,7 @@ async def log_timed(req: Request, u: dict = CurrentUser):
         else:
             events.append(e)
 
-    post = _post_workout_events(estate, buffs, events, raw_evts, trophy_award=trophy_award)
+    post = _post_workout_events(estate, buffs, events, raw_evts, trophy_award=trophy_award, today=today)
     _save_estate(uid, estate)
 
     # Parse earned amount from events
@@ -918,8 +937,6 @@ async def log_timed(req: Request, u: dict = CurrentUser):
          if isinstance(ev, str) and "drachmae" in ev),
         0.0,
     )
-
-    today = str(dt.date.today())
     db.insert_workout(uid, today, "timed", earned,
                       duration_min=total_minutes,
                       notes=workout_subtype)
@@ -968,7 +985,7 @@ async def log_session(req: Request, u: dict = CurrentUser):
     """
     p         = await req.json()
     exercises = p.get("exercises") or []
-    date      = (p.get("date") or str(dt.date.today())).strip()
+    date      = _local_today(p)  # prefer client_date; fall back to date field, then server
 
     if not exercises:
         raise HTTPException(400, "exercises list is required")
@@ -991,7 +1008,7 @@ async def log_session(req: Request, u: dict = CurrentUser):
         total_volume += wkg * 2.20462 * sets * reps
 
     raw_evts = workout_engine.process_workout(
-        estate, "strength", buffs=buffs, volume=total_volume
+        estate, "strength", buffs=buffs, volume=total_volume, today_override=date
     )
     trophy_award = None
     events = []
@@ -1001,7 +1018,7 @@ async def log_session(req: Request, u: dict = CurrentUser):
             events.append(e["msg"])
         else:
             events.append(e)
-    post = _post_workout_events(estate, buffs, events, raw_evts, trophy_award=trophy_award)
+    post = _post_workout_events(estate, buffs, events, raw_evts, trophy_award=trophy_award, today=date)
     _save_estate(uid, estate)
 
     # Persist: create session row, then one workout row per exercise

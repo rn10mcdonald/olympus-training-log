@@ -110,6 +110,7 @@ def process_workout(
     buffs: Optional[dict] = None,
     reward_override: Optional[float] = None,
     count_as_workout: bool = True,
+    today_override: Optional[str] = None,
     **kwargs,
 ) -> List[str]:
     """
@@ -130,7 +131,7 @@ def process_workout(
         controls the daily counter and farm-production gate.
     """
     events: List[str] = []
-    today = str(dt.date.today())
+    today = today_override or str(dt.date.today())
     buffs = buffs or {}
 
     if count_as_workout:

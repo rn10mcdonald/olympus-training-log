@@ -61,13 +61,18 @@ _RESOURCE_FIELD: Dict[str, str] = {
 }
 
 
-def should_produce_today(state: PlayerState) -> bool:
-    """Return True if farms haven't produced today yet."""
-    return state.last_farm_date != str(dt.date.today())
+def should_produce_today(state: PlayerState, today: Optional[str] = None) -> bool:
+    """Return True if farms haven't produced today yet.
+
+    today: caller's local date string (YYYY-MM-DD). Falls back to server date
+    if not provided — pass the client's local date to avoid UTC/local mismatch.
+    """
+    today = today or str(dt.date.today())
+    return state.last_farm_date != today
 
 
 def produce_farms(
-    state: PlayerState, buffs: Optional[dict] = None
+    state: PlayerState, buffs: Optional[dict] = None, today: Optional[str] = None
 ) -> Tuple[List[str], Dict[str, int]]:
     """
     Run farm production if this is the first workout of the day.
@@ -78,15 +83,18 @@ def produce_farms(
     buffs: dict from buff_engine.get_all_buffs(state).  Keys used:
         "farm_{farm_type}" – multiplier for a specific farm type
         "all_farms"        – multiplier applied to every farm
+
+    today: caller's local date string (YYYY-MM-DD). Falls back to server date.
     """
-    if not should_produce_today(state):
+    today = today or str(dt.date.today())
+    if not should_produce_today(state, today):
         return [], {}
 
     if not state.farms:
         return [], {}
 
     events: List[str] = []
-    state.last_farm_date = str(dt.date.today())
+    state.last_farm_date = today
     buffs = buffs or {}
 
     produced: Dict[str, int] = {}
