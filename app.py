@@ -501,6 +501,7 @@ async def log_recommended(req: Request, u: dict = CurrentUser):
         "estate_log":    estate.estate_log,
         "estate_state":  estate.to_dict(),
         "laurel_earned": post["laurel_earned"],
+        "farm_harvest":  post["farm_harvest"],
     }
 
 @app.post("/api/workout/custom")
@@ -555,13 +556,16 @@ async def log_custom(req: Request, u: dict = CurrentUser):
         db.insert_workout(uid, today, "custom", earned, notes=text[:200])
 
     return {
-        "status":       "ok",
-        "msg":          msg,
-        "state":        state,
-        "oracle_event": oracle_evt,
-        "trophy_award": trophy_award,
-        "events":       events,
-        "estate_log":   estate.estate_log,
+        "status":        "ok",
+        "msg":           msg,
+        "state":         state,
+        "oracle_event":  oracle_evt,
+        "trophy_award":  trophy_award,
+        "events":        events,
+        "estate_log":    estate.estate_log,
+        "estate_state":  estate.to_dict(),
+        "laurel_earned": post["laurel_earned"],
+        "farm_harvest":  post["farm_harvest"],
     }
 
 @app.post("/api/ruck")
@@ -630,6 +634,7 @@ async def log_ruck(req: Request, u: dict = CurrentUser):
         "estate_log":      estate.estate_log,
         "estate_state":    estate.to_dict(),
         "laurel_earned":   post["laurel_earned"],
+        "farm_harvest":    post["farm_harvest"],
     }
 
 @app.post("/api/walk")
@@ -690,6 +695,7 @@ async def log_walk(req: Request, u: dict = CurrentUser):
         "estate_log":     estate.estate_log,
         "estate_state":   estate.to_dict(),
         "laurel_earned":  post["laurel_earned"],
+        "farm_harvest":   post["farm_harvest"],
     }
 
 @app.post("/api/run")
@@ -761,6 +767,7 @@ async def log_run(req: Request, u: dict = CurrentUser):
         "estate_log":     estate.estate_log,
         "estate_state":   estate.to_dict(),
         "laurel_earned":  post["laurel_earned"],
+        "farm_harvest":   post["farm_harvest"],
     }
 
 @app.post("/api/hike")
@@ -830,6 +837,7 @@ async def log_hike(req: Request, u: dict = CurrentUser):
         "estate_log":     estate.estate_log,
         "estate_state":   estate.to_dict(),
         "laurel_earned":  post["laurel_earned"],
+        "farm_harvest":   post["farm_harvest"],
     }
 
 @app.post("/api/strength")
@@ -880,10 +888,11 @@ async def log_strength(req: Request, u: dict = CurrentUser):
         "msg":          f"💪 {move_name} — {sets_n}×{reps_n} @ {weight_kg}kg logged! +{earned:.2f} ⚡",
         "events":       events,
         "trophy_award": None,
-        "oracle_event": post["oracle_event"],
-        "estate_state": estate.to_dict(),
-        "estate_log":   estate.estate_log,
+        "oracle_event":  post["oracle_event"],
+        "estate_state":  estate.to_dict(),
+        "estate_log":    estate.estate_log,
         "laurel_earned": post["laurel_earned"],
+        "farm_harvest":  post["farm_harvest"],
     }
 
 @app.post("/api/workout/timed")
@@ -1179,11 +1188,13 @@ async def _run_estate_workout(user_id: int, p: dict) -> dict:
     elif workout_type in ("walking", "running", "rucking") and "miles" not in kwargs:
         kwargs["miles"] = 2.0
 
-    state = _load_estate(user_id)
-    buffs = buff_engine.get_all_buffs(state)
+    today  = _local_today(p)
+    state  = _load_estate(user_id)
+    buffs  = buff_engine.get_all_buffs(state)
 
     # 1. Workout
-    events = workout_engine.process_workout(state, workout_type, buffs=buffs, **kwargs)
+    events = workout_engine.process_workout(state, workout_type, buffs=buffs,
+                                            today_override=today, **kwargs)
     raw_workout_events = list(events)  # snapshot for laurel detection in _post_workout_events
     if events:
         _append_estate_log(state, events[0], "reward")
@@ -1201,7 +1212,8 @@ async def _run_estate_workout(user_id: int, p: dict) -> dict:
 
     # 2-3. Farm production, Demeter blessing, title unlocks via _post_workout_events.
     # oracle is handled separately below (Kassandra narrative logic).
-    _post_workout_events(state, buffs, events, raw_workout_events, include_oracle=False)
+    post = _post_workout_events(state, buffs, events, raw_workout_events,
+                                include_oracle=False, today=today)
 
     # 4. Creature encounter
     encounter_chance = buff_engine.effective_event_chance(buffs, 0.05)
@@ -1229,8 +1241,8 @@ async def _run_estate_workout(user_id: int, p: dict) -> dict:
                     "She says nothing more. But the thought lingers.",
                 ],
             }
-        laurel_earned = any(isinstance(e, str) and "LAUREL EARNED" in e for e in raw_events)
-        oracle_sim_chance = 1.0 if (laurel_earned or newly_unlocked) else 0.25
+        laurel_earned = post["laurel_earned"]
+        oracle_sim_chance = 1.0 if (laurel_earned or post["newly_unlocked"]) else 0.25
         if narrative_event is None:
             narrative_event = oracle_engine.maybe_oracle_visit(state, chance=oracle_sim_chance)
         if narrative_event is None:
@@ -1252,16 +1264,18 @@ async def _run_estate_workout(user_id: int, p: dict) -> dict:
 
     # 7. Single save
     _save_estate(user_id, state)
-    laurel_earned = any(isinstance(e, str) and "LAUREL EARNED" in e for e in raw_events)
     return {
         "status":             "ok",
         "events":             events,
         "state":              state.to_dict(),
+        "estate_state":       state.to_dict(),
         "event":              narrative_event,
         "creature_encounter": creature_encounter,
         "relic_find":         relic_find,
         "trophy_award":       None,   # trophies only via recommended/custom microcycle
         "estate_log":         state.estate_log,
+        "laurel_earned":      post["laurel_earned"],
+        "farm_harvest":       post["farm_harvest"],
     }
 
 

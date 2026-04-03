@@ -1524,6 +1524,29 @@ function handleWorkoutResponse(r) {
     });
     if (typeof renderVaultSection === "function") renderVaultSection(appState || {});
   }
+  if (r.farm_harvest?.resources && Object.keys(r.farm_harvest.resources).length) {
+    const RESOURCE_LABELS = {
+      grain:     { emoji: "🌾", label: "grain" },
+      grapes:    { emoji: "🍇", label: "grapes" },
+      olives:    { emoji: "🫒", label: "olives" },
+      honey:     { emoji: "🍯", label: "honey" },
+      herbs:     { emoji: "🌿", label: "herbs" },
+      wine:      { emoji: "🍷", label: "wine" },
+      bread:     { emoji: "🍞", label: "bread" },
+      olive_oil: { emoji: "🫙", label: "olive oil" },
+      mead:      { emoji: "🥂", label: "mead" },
+    };
+    const lines = Object.entries(r.farm_harvest.resources).map(([res, amt]) => {
+      const rl = RESOURCE_LABELS[res] || { emoji: "📦", label: res };
+      return `${rl.emoji} +${amt} ${rl.label}`;
+    });
+    enqueuePopup({
+      type:  "farm",
+      icon:  "🌾",
+      title: "🌾 Farms Produce",
+      lines,
+    });
+  }
   if (r.creature_encounter) {
     const enc = { ...r.creature_encounter, _qtype: "encounter" };
     enqueuePopup(enc);
@@ -2203,6 +2226,7 @@ const EVENT_TYPE_LABELS = {
   philosopher: "philosophy",
   rare:        "rare event",
   harvest:     "harvest",
+  farm:        "harvest",
   title:       "title earned",
   trophy:      "trophy",
   waypoint:    "waypoint",
