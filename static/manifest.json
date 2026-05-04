@@ -1,12 +1,12 @@
 {
-  "name": "Olympus Training Log",
-  "short_name": "Olympus",
+  "name": "First Bell",
+  "short_name": "First Bell",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#111111",
-  "theme_color": "#111111",
+  "background_color": "#FAF7F2",
+  "theme_color": "#C4622D",
   "icons": [
-    { "src": "coin.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "coin.png", "sizes": "512x512", "type": "image/png" }
+    { "src": "/static/firstbell-logo.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/static/firstbell-logo.png", "sizes": "512x512", "type": "image/png" }
   ]
 }
