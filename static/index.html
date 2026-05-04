@@ -9,6 +9,8 @@
 <meta name="theme-color" content="#C4622D">
 <title>First Bell</title>
 <link rel="manifest" href="/static/manifest.json">
+<link rel="apple-touch-icon" href="/static/firstbell-logo.png">
+<link rel="icon" type="image/png" href="/static/firstbell-logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -70,11 +72,7 @@ html,body {
   flex-shrink:0;
   z-index:10;
 }
-.wordmark {
-  font-family:'DM Serif Display',serif;
-  font-size:22px;
-  color:var(--charcoal);
-}
+.logo-img { height:48px; width:auto; display:block; }
 .greeting {
   font-size:13px;
   color:var(--warm-gray);
@@ -256,62 +254,45 @@ main {
   margin-bottom:14px;
   line-height:1.6;
 }
-.acc-toggle {
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  background:var(--cream);
-  border:1px solid var(--border);
-  border-radius:10px;
-  padding:10px 14px;
-  cursor:pointer;
-  font-size:14px;
-  font-weight:500;
-  color:var(--warm-gray);
-  width:100%;
-  text-align:left;
-  margin-bottom:8px;
-  font-family:'DM Sans',sans-serif;
+/* ── Section cards (always visible, no accordion) ──────────────────────── */
+.session-sections { margin-top:16px; display:flex; flex-direction:column; gap:12px; }
+.section-card {
+  border-radius:12px;
+  padding:14px 16px;
 }
-.chevron { transition:transform .2s; font-size:12px; }
-.acc-toggle.expanded .chevron { transform:rotate(180deg); }
-.acc-list { display:none; margin-bottom:12px; }
-.acc-list.visible { display:block; }
-.acc-list ul { list-style:none; padding:0; margin:0 0 8px; }
-.acc-list li {
-  font-size:14px;
-  color:var(--charcoal);
-  padding:7px 0;
-  border-bottom:1px solid var(--border);
-  display:flex;
-  align-items:flex-start;
-  gap:8px;
-}
-.acc-list li::before { content:"·"; color:var(--terracotta); font-size:18px; line-height:1.2; flex-shrink:0; }
-.acc-list li:last-child { border-bottom:none; }
-.acc-section-label {
+.section-card-label {
   font-size:11px;
   font-weight:600;
   letter-spacing:0.08em;
   text-transform:uppercase;
-  color:var(--warm-gray);
-  margin:10px 0 4px;
+  margin-bottom:10px;
 }
-.finisher-section {
-  background:var(--cream);
-  border-radius:10px;
-  padding:12px 14px;
-  margin-bottom:16px;
+.section-card ul { list-style:none; padding:0; margin:0; }
+.section-card li {
+  font-size:14px;
+  color:var(--charcoal);
+  padding:7px 0;
+  border-bottom-width:1px;
+  border-bottom-style:solid;
+  line-height:1.4;
 }
-.finisher-label {
-  font-size:11px;
-  font-weight:600;
-  text-transform:uppercase;
-  letter-spacing:.8px;
-  color:var(--terracotta);
-  margin-bottom:4px;
-}
-.finisher-text { font-size:14px; color:var(--charcoal); line-height:1.5; }
+.section-card li:last-child { border-bottom:none; padding-bottom:0; }
+/* Full Body — slate */
+.section-full-body { border-left:3px solid #5B7FA6; background:#F0F4F8; }
+.section-full-body .section-card-label { color:#5B7FA6; }
+.section-full-body li { border-bottom-color:#D8E4EE; color:#2C3E50; }
+/* Focus Work — terracotta */
+.section-focus { border-left:3px solid #C4622D; background:#FDF5F1; }
+.section-focus .section-card-label { color:#C4622D; }
+.section-focus li { border-bottom-color:#F0DDD5; }
+/* Arms — gold */
+.section-arms { border-left:3px solid #8B6914; background:#FDF8EE; }
+.section-arms .section-card-label { color:#8B6914; }
+.section-arms li { border-bottom-color:#EDE3C8; }
+/* Finisher — dark */
+.section-finisher { background:#2C2C2C; border-radius:12px; padding:16px 18px; }
+.section-finisher .section-card-label { color:#C4622D; font-weight:700; letter-spacing:0.12em; margin-bottom:8px; }
+.section-finisher-text { font-size:15px; color:#FFFFFF; line-height:1.5; white-space:pre-line; }
 
 /* ── Streak dots ─────────────────────────────────────────────────────────── */
 .streak-dots { display:flex; gap:8px; margin-bottom:12px; }
@@ -615,7 +596,7 @@ main {
 
 <!-- Auth -->
 <div id="auth-screen">
-  <div class="auth-logo">First Bell</div>
+  <img src="/static/firstbell-logo.png" alt="First Bell" style="height:80px;width:auto;display:block;margin:0 auto 24px;">
   <div class="auth-tagline">Your kettlebell training journal.</div>
   <div class="auth-card">
     <div class="auth-tabs">
@@ -639,7 +620,7 @@ main {
 <div id="app">
   <div class="offline-banner" id="offline-banner">You're offline — viewing cached data</div>
   <header class="app-header">
-    <div class="wordmark">First Bell</div>
+    <img src="/static/firstbell-logo.png" alt="First Bell" class="logo-img">
     <div style="display:flex;align-items:center;gap:12px">
       <div class="greeting" id="greeting"></div>
       <button class="logout-btn" onclick="logout()">Out</button>
@@ -967,27 +948,31 @@ function renderSessionCard(wk) {
     <span class="bell-label">suggested bell</span>
   </div>
   ${wk.bell_guidance ? `<div class="bell-guidance-row">${x(wk.bell_guidance)}</div>` : ''}
-  <button class="acc-toggle" id="acc-toggle" onclick="toggleAcc()">
-    Full Session <span style="font-size:12px;color:var(--light-gray)">(${totalAcc} movements)</span>
-    <span class="chevron">▼</span>
-  </button>
-  <div class="acc-list" id="acc-list">
-    ${fbb.length ? `<div class="acc-section-label">Full Body</div><ul>${fbb.map(a => `<li>${x(a)}</li>`).join('')}</ul>` : ''}
-    ${fw.length  ? `<div class="acc-section-label">Focus Work</div><ul>${fw.map(a => `<li>${x(a)}</li>`).join('')}</ul>` : ''}
-    ${arms.length ? `<div class="acc-section-label">Arms</div><ul>${arms.map(a => `<li>${x(a)}</li>`).join('')}</ul>` : ''}
-  </div>
-  <div class="finisher-section">
-    <div class="finisher-label">Finisher</div>
-    <div class="finisher-text">${x(wk.finisher)}</div>
+  <div class="session-sections">
+    ${fbb.length ? `
+    <div class="section-card section-full-body">
+      <div class="section-card-label">Full Body</div>
+      <ul>${fbb.map(a => `<li>${x(a)}</li>`).join('')}</ul>
+    </div>` : ''}
+    ${fw.length ? `
+    <div class="section-card section-focus">
+      <div class="section-card-label">Focus</div>
+      <ul>${fw.map(a => `<li>${x(a)}</li>`).join('')}</ul>
+    </div>` : ''}
+    ${arms.length ? `
+    <div class="section-card section-arms">
+      <div class="section-card-label">Arms</div>
+      <ul>${arms.map(a => `<li>${x(a)}</li>`).join('')}</ul>
+    </div>` : ''}
+    ${wk.finisher ? `
+    <div class="section-finisher">
+      <div class="section-card-label">Finisher</div>
+      <div class="section-finisher-text">${x(wk.finisher)}</div>
+    </div>` : ''}
   </div>
   <button class="btn btn-primary btn-full" style="margin-bottom:10px" onclick="openSessionSheet()">Log This Session</button>
   <button class="btn-text" onclick="openCustomSheet()">Log Custom Workout</button>
 </div>`;
-}
-
-function toggleAcc() {
-  document.getElementById('acc-toggle').classList.toggle('expanded');
-  document.getElementById('acc-list').classList.toggle('visible');
 }
 
 function renderCycleComplete() {
