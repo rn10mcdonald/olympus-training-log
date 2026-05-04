@@ -523,6 +523,7 @@ main {
   text-align:center; appearance:none; -webkit-appearance:none;
 }
 .ex-field input:focus { outline:none; border-color:var(--terracotta); }
+.ex-hint { font-size:11px; color:var(--light-gray); margin-top:3px; line-height:1.3; }
 
 /* ── Auth ────────────────────────────────────────────────────────────────── */
 #auth-screen {
@@ -720,15 +721,18 @@ main {
 <script>
 // ── App state ─────────────────────────────────────────────────────────────────
 let TOKEN    = localStorage.getItem('fb_token');
-let appState   = null;
-let todayWk    = null;
-let streakInfo = null;
-let allWorkouts = [];
-let movements  = [];
-let logFilter  = 'all';
-let cardioType = null;
-let authMode   = 'login';
-let sessionItems = [];
+let appState        = null;
+let todayWk         = null;
+let streakInfo      = null;
+let allWorkouts     = [];
+let movements       = [];
+let movementSlugMap = {};
+let logFilter       = 'all';
+let cardioType      = null;
+let authMode        = 'login';
+let sessionItems    = [];
+let todayLogged     = false;
+let activeDayPreview = null;
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
@@ -787,16 +791,35 @@ async function api(path, method = 'GET', body = null) {
 }
 
 async function loadAll() {
-  const [s, w, st, mv] = await Promise.all([
+  const [s, w, st, mv, wl] = await Promise.all([
     api('/api/state'),
     api('/api/workout/today'),
     api('/api/streak'),
     api('/api/movements'),
+    api('/api/workouts'),
   ]);
   if (s)  appState    = s;
   if (w)  todayWk     = w;
   if (st) streakInfo  = st;
-  if (mv) movements   = mv;
+  if (mv) {
+    movements = mv;
+    movementSlugMap = Object.fromEntries(mv.map(m => [m.name, m.slug]));
+  }
+  if (wl) allWorkouts = wl.workouts || [];
+  todayLogged = checkTodayLogged();
+}
+
+function checkTodayLogged() {
+  const today = new Date().toISOString().slice(0, 10);
+  return allWorkouts.some(w => w.date === today && (w.type === 'recommended' || w.type === 'strength'));
+}
+
+function getMovementSlug(labelText) {
+  if (!labelText) return null;
+  for (const [name, slug] of Object.entries(movementSlugMap)) {
+    if (labelText.startsWith(name)) return slug;
+  }
+  return null;
 }
 
 async function loadWorkouts() {
@@ -888,6 +911,7 @@ function switchTab(tab, btn) {
 
 // ── TODAY ─────────────────────────────────────────────────────────────────────
 function renderToday() {
+  activeDayPreview = null;
   const loading = document.getElementById('today-loading');
   const content = document.getElementById('today-content');
   loading.style.display = 'none';
@@ -970,7 +994,11 @@ function renderSessionCard(wk) {
       <div class="section-finisher-text">${x(wk.finisher)}</div>
     </div>` : ''}
   </div>
-  <button class="btn btn-primary btn-full" style="margin-bottom:10px" onclick="openSessionSheet()">Log This Session</button>
+  ${todayLogged
+    ? `<button class="btn btn-full" style="background:#7A9E7E;color:#fff;margin-bottom:6px;cursor:default;font-weight:600" disabled>Completed ✓</button>
+       <div style="text-align:center;margin-bottom:8px"><a href="#" class="btn-text" onclick="event.preventDefault();openSessionSheet()" style="font-size:12px;color:var(--warm-gray)">Log again</a></div>`
+    : `<button class="btn btn-primary btn-full" style="margin-bottom:10px" onclick="openSessionSheet()">Log This Session</button>`
+  }
   <button class="btn-text" onclick="openCustomSheet()">Log Custom Workout</button>
 </div>`;
 }
@@ -1053,7 +1081,10 @@ function renderStreakCard() {
     else if (type === 'cardio') cls += ' filled-cardio';
     else if (type) cls += ' filled-strength';
     if (isToday) cls += ' today-ring';
-    return `<div class="${cls}">${lbl}</div>`;
+    const dotDate = new Date(weekStart);
+    dotDate.setDate(weekStart.getDate() + i);
+    const dateStr = dotDate.toISOString().slice(0, 10);
+    return `<div class="${cls}" onclick="previewDayWorkout('${dateStr}')" style="cursor:pointer">${lbl}</div>`;
   }).join('');
 
   const emoji = streak_weeks >= 4 ? '🔥' : streak_weeks >= 2 ? '⚡' : '✦';
@@ -1067,7 +1098,97 @@ function renderStreakCard() {
     <div class="streak-count">${this_week}/${week_target} this week${prog}</div>
     <div class="streak-weeks">${emoji} ${streak_weeks}-week streak</div>
   </div>
+  <div id="day-preview"></div>
 </div>`;
+}
+
+function closeDayPreview() {
+  activeDayPreview = null;
+  const el = document.getElementById('day-preview');
+  if (el) el.innerHTML = '';
+}
+
+async function previewDayWorkout(dateStr) {
+  const previewEl = document.getElementById('day-preview');
+  if (!previewEl) return;
+
+  // Toggle: tapping same dot closes preview
+  if (activeDayPreview === dateStr) {
+    closeDayPreview();
+    return;
+  }
+  activeDayPreview = dateStr;
+
+  previewEl.innerHTML = `<div style="border-top:1px solid var(--border);margin-top:12px;padding-top:10px;color:var(--light-gray);font-size:13px">Loading…</div>`;
+
+  const today   = new Date().toISOString().slice(0, 10);
+  const isPast  = dateStr < today;
+  const isToday = dateStr === today;
+  const isFuture = dateStr > today;
+
+  // Parse day-of-week from date string
+  const dayNames = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+  const d   = new Date(dateStr + 'T00:00:00');
+  const dow = d.getDay() === 0 ? 6 : d.getDay() - 1; // 0=Mon…6=Sun
+  const dayName = dayNames[dow];
+
+  const wk = await api(`/api/workout/today?date=${dateStr}`);
+  if (activeDayPreview !== dateStr) return; // superseded by another tap
+
+  if (!wk) {
+    previewEl.innerHTML = `<div style="border-top:1px solid var(--border);margin-top:12px;padding-top:10px;color:var(--light-gray);font-size:13px">Unable to load preview.</div>`;
+    return;
+  }
+
+  const closeBtn = `<button onclick="closeDayPreview()" style="position:absolute;right:0;top:6px;background:none;border:none;font-size:20px;color:var(--light-gray);cursor:pointer;line-height:1;padding:0">×</button>`;
+  const wrap = `position:relative;border-top:1px solid var(--border);margin-top:12px;padding-top:12px`;
+  const dayLabel = `<div style="font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--warm-gray);margin-bottom:6px;text-transform:uppercase">${dayName}</div>`;
+
+  let inner = '';
+
+  if (wk.status === 'rest') {
+    inner = `<div style="color:var(--warm-gray);font-style:italic;font-size:14px">Sunday · Rest. You earned it.</div>`;
+  } else if (wk.status === 'active') {
+    const textColor = isToday ? 'var(--terracotta)' : isFuture ? 'var(--warm-gray)' : 'var(--ink,#2C2C2C)';
+    const fontStyle = isFuture ? 'italic' : 'normal';
+    const style     = `color:${textColor};font-style:${fontStyle}`;
+
+    // Badge + Optional pill for Saturday
+    const isSaturday = dow === 5;
+    inner += `<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;flex-wrap:wrap">
+      <span class="day-badge ${badgeClass(wk.track_key)}">${badgeLabel(wk)}</span>
+      ${isSaturday ? `<span style="font-size:11px;font-weight:600;background:#e8d5a3;color:#8B6914;padding:2px 8px;border-radius:10px">Optional</span>` : ''}
+    </div>`;
+
+    // Main lift
+    inner += `<div style="font-size:14px;font-weight:600;${style};margin-bottom:5px">${x(wk.main)}</div>`;
+
+    // Focus: first item
+    if (wk.focus_work && wk.focus_work.length) {
+      inner += `<div style="font-size:12px;${style};margin-bottom:3px">Focus: ${x(wk.focus_work[0])}</div>`;
+    }
+
+    // Arms: first item
+    if (wk.arms && wk.arms.length) {
+      inner += `<div style="font-size:12px;${style};margin-bottom:3px">Arms: ${x(wk.arms[0])}</div>`;
+    }
+
+    // Finisher: first line only
+    if (wk.finisher) {
+      const finLine = wk.finisher.split('\n')[0];
+      inner += `<div style="font-size:12px;${style};margin-bottom:3px">Finisher: ${x(finLine)}</div>`;
+    }
+
+    // Past days: show logged indicator + weights
+    if (isPast) {
+      const loggedEntries = allWorkouts.filter(w => w.date === dateStr && (w.type === 'recommended' || w.type === 'strength'));
+      if (loggedEntries.length > 0) {
+        inner += `<div style="font-size:12px;color:#7A9E7E;font-weight:600;margin-top:6px">✓ Session logged</div>`;
+      }
+    }
+  }
+
+  previewEl.innerHTML = `<div style="${wrap}">${closeBtn}${dayLabel}${inner}</div>`;
 }
 
 function renderQuickCardio() {
@@ -1083,35 +1204,79 @@ function renderQuickCardio() {
 }
 
 // ── Session sheet ─────────────────────────────────────────────────────────────
-function openSessionSheet() {
+function _parsePrescription(text) {
+  const sr  = text ? text.match(/(\d+)×(\d+)/) : null;
+  const wkg = text ? text.match(/@\s*(\d+(?:\.\d+)?)\s*kg/) : null;
+  return {
+    sets:        sr  ? parseInt(sr[1])         : null,
+    reps:        sr  ? parseInt(sr[2])         : null,
+    prescribedKg: wkg ? parseFloat(wkg[1])    : null,
+  };
+}
+
+function _renderSessionBody() {
+  document.getElementById('sheet-body').innerHTML = sessionItems.map((item, idx) => {
+    const hint = (item.sets && item.reps)
+      ? `Prescribed: ${item.sets}×${item.reps}${item.prescribedKg ? ` @ ${item.prescribedKg} kg` : ''}`
+      : '';
+    return `
+    <div class="exercise-row">
+      <div class="ex-label">${x(item.label)}</div>
+      <div class="ex-inputs">
+        <div class="ex-field">
+          <label>kg</label>
+          <input type="number" id="kg-${idx}" min="0" step="0.5" value="${item.kg || ''}" placeholder="${item.kg || '—'}">
+          ${hint ? `<div class="ex-hint">${hint}</div>` : ''}
+        </div>
+        <div class="ex-field"><label>sets</label><input type="number" id="sets-${idx}" min="0" step="1" value="${item.sets || ''}" placeholder="${item.sets || '—'}"></div>
+        <div class="ex-field"><label>reps</label><input type="number" id="reps-${idx}" min="0" step="1" value="${item.reps || ''}" placeholder="${item.reps || '—'}"></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function _fillMovementHistory() {
+  await Promise.all(sessionItems.map(async (item, idx) => {
+    const slug = getMovementSlug(item.label);
+    if (!slug) return;
+    const hist = await api(`/api/movement_history/${slug}`);
+    if (hist && hist.weight_kg) {
+      const input = document.getElementById(`kg-${idx}`);
+      if (input) input.value = hist.weight_kg;
+    }
+  }));
+}
+
+async function openSessionSheet() {
   if (!todayWk || todayWk.status !== 'active') return;
-  const wk  = todayWk;
-  const sw  = wk.suggested_weight || wk.std_kg || 16;
+  const wk   = todayWk;
+  const sw   = wk.suggested_weight || wk.std_kg || 16;
   const fbb  = wk.full_body_block || [];
   const fw   = wk.focus_work || [];
   const arms = wk.arms || [];
+
+  function itemFor(label, key, defaultKg) {
+    const p = _parsePrescription(label);
+    return { label, key, kg: p.prescribedKg ?? defaultKg, ...p };
+  }
+
   sessionItems = [
-    { label: wk.main, key: 'main', kg: sw },
-    ...fbb.map((a, i)  => ({ label: a, key: `fbb_${i}`,  kg: 0 })),
-    ...fw.map((a, i)   => ({ label: a, key: `fw_${i}`,   kg: 0 })),
-    ...arms.map((a, i) => ({ label: a, key: `arm_${i}`,  kg: 0 })),
-    ...(wk.finisher ? [{ label: 'Finisher: ' + wk.finisher, key: 'finisher', kg: 0 }] : []),
+    itemFor(wk.main, 'main', sw),
+    ...fbb.map((a, i)  => itemFor(a, `fbb_${i}`,  0)),
+    ...fw.map((a, i)   => itemFor(a, `fw_${i}`,   0)),
+    ...arms.map((a, i) => itemFor(a, `arm_${i}`,  0)),
+    ...(wk.finisher ? [{ label: 'Finisher: ' + wk.finisher, key: 'finisher', kg: 0, sets: null, reps: null, prescribedKg: null }] : []),
   ];
 
   document.getElementById('sheet-title').textContent    = 'Log Session';
   document.getElementById('sheet-subtitle').textContent = wk.main || '';
-  document.getElementById('sheet-body').innerHTML = sessionItems.map((item, idx) => `
-    <div class="exercise-row">
-      <div class="ex-label">${x(item.label)}</div>
-      <div class="ex-inputs">
-        <div class="ex-field"><label>kg</label><input type="number" id="kg-${idx}" min="0" step="0.5" value="${item.kg || ''}" placeholder="${item.kg || '—'}"></div>
-        <div class="ex-field"><label>sets</label><input type="number" id="sets-${idx}" min="0" step="1" placeholder="—"></div>
-        <div class="ex-field"><label>reps</label><input type="number" id="reps-${idx}" min="0" step="1" placeholder="—"></div>
-      </div>
-    </div>`).join('');
+  _renderSessionBody();
 
   document.getElementById('session-overlay').classList.add('visible');
   document.getElementById('session-sheet').classList.add('open');
+
+  // Async: override pre-fills with last-logged weights from history
+  await _fillMovementHistory();
 }
 
 function closeSessionSheet() {
@@ -1133,9 +1298,28 @@ async function submitSession() {
   btn.disabled = false; btn.textContent = 'Complete Session';
   if (!res) { showToast('Error logging session'); return; }
 
-  appState   = res.state;
-  todayWk    = await api('/api/workout/today');
-  streakInfo = await api('/api/streak');
+  // Log per-movement entries with slugs for movement history tracking
+  const strengthEntries = sessionItems.map((item, idx) => {
+    const slug = getMovementSlug(item.label);
+    if (!slug) return null;
+    const kg   = parseFloat(document.getElementById(`kg-${idx}`)?.value || 0);
+    const sets = parseInt(document.getElementById(`sets-${idx}`)?.value || 0) || item.sets || 0;
+    const reps = parseInt(document.getElementById(`reps-${idx}`)?.value || 0) || item.reps || 0;
+    if (!kg || !sets || !reps) return null;
+    return api('/api/strength', 'POST', { movement: slug, weight_kg: kg, sets, reps });
+  }).filter(Boolean);
+  await Promise.all(strengthEntries);
+
+  appState = res.state;
+  const [wkRes, stRes, wlRes] = await Promise.all([
+    api('/api/workout/today'),
+    api('/api/streak'),
+    api('/api/workouts'),
+  ]);
+  if (wkRes) todayWk    = wkRes;
+  if (stRes) streakInfo = stRes;
+  if (wlRes) allWorkouts = wlRes.workouts || [];
+  todayLogged = checkTodayLogged();
   closeSessionSheet();
   renderToday();
   showToast('Session logged ✓');

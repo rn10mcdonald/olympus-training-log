@@ -1638,10 +1638,10 @@ def _increment_weekly_count(state: dict) -> None:
     state["week_log"][wk] = state["week_log"].get(wk, 0) + 1
 
 
-def _get_program_and_week(state: dict) -> tuple:
+def _get_program_and_week(state: dict, today: dt.date | None = None) -> tuple:
     """Returns (program_idx 0–2, current_week 1–4, weeks_elapsed).
     Derives from program_start_iso — no user action needed to advance."""
-    today     = dt.date.today()
+    today     = today or dt.date.today()
     start_iso = state.get("program_start_iso")
     if not start_iso:
         monday = today - dt.timedelta(days=today.weekday())
@@ -1668,8 +1668,8 @@ def _parse_std_kg(main_text: str, default: float = 16.0) -> float:
 
 # ── Public API ────────────────────────────────────────────────────────────────
 
-def get_today_workout(state: dict) -> dict:
-    today        = dt.date.today()
+def get_today_workout(state: dict, for_date: dt.date | None = None) -> dict:
+    today        = for_date or dt.date.today()
     dow          = today.weekday()          # 0=Mon … 6=Sun
     session_type = _DOW_TO_SESSION[dow]
 
@@ -1680,7 +1680,7 @@ def get_today_workout(state: dict) -> dict:
             "message": "Rest day — active recovery or mobility if you feel like it.",
         }
 
-    program_idx, current_week, weeks_elapsed = _get_program_and_week(state)
+    program_idx, current_week, weeks_elapsed = _get_program_and_week(state, today=today)
     program      = PROGRAMS[program_idx]
     current_prog = program_idx + 1          # 1–3
     track_key    = _SESSION_TRACK_KEY.get(session_type, "day_a_strength")

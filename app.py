@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, HTTPException, Depends
+from fastapi import FastAPI, Request, HTTPException, Depends, Query
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
@@ -146,9 +146,15 @@ def get_state(u: dict = CurrentUser):
     return _load_training(u["user_id"])
 
 @app.get("/api/workout/today")
-def get_today(u: dict = CurrentUser):
-    state   = _load_training(u["user_id"])
-    workout = core.get_today_workout(state)
+def get_today(date: str | None = Query(None), u: dict = CurrentUser):
+    state    = _load_training(u["user_id"])
+    for_date = None
+    if date:
+        try:
+            for_date = dt.date.fromisoformat(date)
+        except ValueError:
+            pass
+    workout = core.get_today_workout(state, for_date=for_date)
     # Augment suggested_weight from db history if available
     if workout.get("status") == "active":
         history = db.get_workouts(u["user_id"], limit=50)
@@ -165,8 +171,12 @@ def get_movements():
 @app.get("/api/movement_history/{movement}")
 def get_movement_history(movement: str, u: dict = CurrentUser):
     workouts = db.get_workouts(u["user_id"], limit=200)
+    # Build display-name fallback for old entries stored with names instead of slugs
+    slug_to_name = {m["slug"]: m["name"] for m in core.get_movements()}
+    display_name = slug_to_name.get(movement)
     for w in workouts:
-        if w.get("movement") == movement and w.get("sets") and w.get("reps"):
+        wm = w.get("movement")
+        if (wm == movement or (display_name and wm == display_name)) and w.get("sets") and w.get("reps"):
             return {
                 "movement":  movement,
                 "weight_kg": w.get("weight_kg"),
@@ -426,4 +436,10 @@ def get_streak(u: dict = CurrentUser):
 @app.get("/api/progress/{movement}")
 def get_progress(movement: str, u: dict = CurrentUser):
     history = db.get_movement_history_all(u["user_id"], movement, limit=20)
+    # Fallback: if no results by slug, try matching stored display name
+    if not history:
+        slug_to_name = {m["slug"]: m["name"] for m in core.get_movements()}
+        display_name = slug_to_name.get(movement)
+        if display_name:
+            history = db.get_movement_history_all(u["user_id"], display_name, limit=20)
     return {"movement": movement, "history": history}
