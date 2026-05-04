@@ -146,9 +146,15 @@ def get_state(u: dict = CurrentUser):
     return _load_training(u["user_id"])
 
 @app.get("/api/workout/today")
-def get_today(u: dict = CurrentUser):
-    state   = _load_training(u["user_id"])
-    workout = core.get_today_workout(state)
+def get_today(date: str | None = Query(None), u: dict = CurrentUser):
+    state    = _load_training(u["user_id"])
+    for_date = None
+    if date:
+        try:
+            for_date = dt.date.fromisoformat(date)
+        except ValueError:
+            pass
+    workout = core.get_today_workout(state, for_date=for_date)
     # Augment suggested_weight from db history if available
     if workout.get("status") == "active":
         history = db.get_workouts(u["user_id"], limit=50)
