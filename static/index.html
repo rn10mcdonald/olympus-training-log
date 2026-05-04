@@ -721,17 +721,18 @@ main {
 <script>
 // ── App state ─────────────────────────────────────────────────────────────────
 let TOKEN    = localStorage.getItem('fb_token');
-let appState        = null;
-let todayWk         = null;
-let streakInfo      = null;
-let allWorkouts     = [];
-let movements       = [];
-let movementSlugMap = {};
-let logFilter       = 'all';
-let cardioType      = null;
-let authMode        = 'login';
-let sessionItems    = [];
-let todayLogged     = false;
+let appState         = null;
+let todayWk          = null;
+let streakInfo       = null;
+let allWorkouts      = [];
+let movements        = [];
+let movementSlugMap  = {};
+let thisWeekDays     = new Set();
+let logFilter        = 'all';
+let cardioType       = null;
+let authMode         = 'login';
+let sessionItems     = [];
+let todayLogged      = false;
 let activeDayPreview = null;
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
@@ -806,12 +807,28 @@ async function loadAll() {
     movementSlugMap = Object.fromEntries(mv.map(m => [m.name, m.slug]));
   }
   if (wl) allWorkouts = wl.workouts || [];
+  recomputeThisWeekDays();
   todayLogged = checkTodayLogged();
 }
 
 function checkTodayLogged() {
   const today = new Date().toISOString().slice(0, 10);
   return allWorkouts.some(w => w.date === today && (w.type === 'recommended' || w.type === 'strength'));
+}
+
+function recomputeThisWeekDays() {
+  const _t = new Date();
+  const _m = new Date(_t);
+  _m.setDate(_t.getDate() - ((_t.getDay() + 6) % 7));
+  _m.setHours(0, 0, 0, 0);
+  const _s = new Date(_m);
+  _s.setDate(_m.getDate() + 6);
+  _s.setHours(23, 59, 59, 999);
+  thisWeekDays = new Set(
+    allWorkouts
+      .filter(w => { const d = new Date(w.date + 'T00:00:00'); return d >= _m && d <= _s; })
+      .map(w => w.date)
+  );
 }
 
 function getMovementSlug(labelText) {
@@ -1045,7 +1062,9 @@ async function selectTrack(key) {
 
 function renderStreakCard() {
   if (!streakInfo) return '';
-  const { week_target, this_week, streak_weeks, activities_remaining } = streakInfo;
+  const { week_target, streak_weeks } = streakInfo;
+  const thisWeekCount      = thisWeekDays.size;
+  const activities_remaining = Math.max(0, week_target - thisWeekCount);
 
   const today  = new Date();
   const isoDay = today.getDay() === 0 ? 6 : today.getDay() - 1;
@@ -1075,15 +1094,18 @@ function renderStreakCard() {
 
   const dots = labels.map((lbl, i) => {
     const isToday = i === isoDay;
-    const type    = logged.get(i);
-    let cls = 'dot';
-    if (type === 'mobility') cls += ' filled-mobility';
-    else if (type === 'cardio') cls += ' filled-cardio';
-    else if (type) cls += ' filled-strength';
-    if (isToday) cls += ' today-ring';
+    const type    = logged.get(i);  // from appState — for colour
     const dotDate = new Date(weekStart);
     dotDate.setDate(weekStart.getDate() + i);
-    const dateStr = dotDate.toISOString().slice(0, 10);
+    const dateStr  = dotDate.toISOString().slice(0, 10);
+    const isFilled = thisWeekDays.has(dateStr) || !!type;
+    let cls = 'dot';
+    if (isFilled) {
+      if (type === 'mobility')     cls += ' filled-mobility';
+      else if (type === 'cardio')  cls += ' filled-cardio';
+      else                         cls += ' filled-strength';
+    }
+    if (isToday) cls += ' today-ring';
     return `<div class="${cls}" onclick="previewDayWorkout('${dateStr}')" style="cursor:pointer">${lbl}</div>`;
   }).join('');
 
@@ -1095,7 +1117,7 @@ function renderStreakCard() {
   <div class="card-title">This Week</div>
   <div class="streak-dots">${dots}</div>
   <div class="streak-stat-row">
-    <div class="streak-count">${this_week}/${week_target} this week${prog}</div>
+    <div class="streak-count">${thisWeekCount}/${week_target} this week${prog}</div>
     <div class="streak-weeks">${emoji} ${streak_weeks}-week streak</div>
   </div>
   <div id="day-preview"></div>
@@ -1319,6 +1341,7 @@ async function submitSession() {
   if (wkRes) todayWk    = wkRes;
   if (stRes) streakInfo = stRes;
   if (wlRes) allWorkouts = wlRes.workouts || [];
+  recomputeThisWeekDays();
   todayLogged = checkTodayLogged();
   closeSessionSheet();
   renderToday();
@@ -1392,8 +1415,11 @@ async function submitCardio() {
 
   const res = await api(endpoint, 'POST', body);
   if (!res) { showToast('Error logging'); return; }
-  appState   = res.state;
-  streakInfo = await api('/api/streak');
+  appState = res.state;
+  const [stRes, wlRes] = await Promise.all([api('/api/streak'), api('/api/workouts')]);
+  if (stRes) streakInfo  = stRes;
+  if (wlRes) allWorkouts = wlRes.workouts || [];
+  recomputeThisWeekDays();
   closeCardioSheet();
   renderToday();
   showToast(`${cardioType.charAt(0).toUpperCase() + cardioType.slice(1)} logged ✓`);
