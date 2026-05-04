@@ -275,8 +275,9 @@ main {
 }
 .chevron { transition:transform .2s; font-size:12px; }
 .acc-toggle.expanded .chevron { transform:rotate(180deg); }
-.acc-list { display:none; list-style:none; margin-bottom:12px; }
+.acc-list { display:none; margin-bottom:12px; }
 .acc-list.visible { display:block; }
+.acc-list ul { list-style:none; padding:0; margin:0 0 8px; }
 .acc-list li {
   font-size:14px;
   color:var(--charcoal);
@@ -288,6 +289,14 @@ main {
 }
 .acc-list li::before { content:"·"; color:var(--terracotta); font-size:18px; line-height:1.2; flex-shrink:0; }
 .acc-list li:last-child { border-bottom:none; }
+.acc-section-label {
+  font-size:11px;
+  font-weight:600;
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+  color:var(--warm-gray);
+  margin:10px 0 4px;
+}
 .finisher-section {
   background:var(--cream);
   border-radius:10px;
@@ -942,8 +951,11 @@ function badgeLabel(wk) {
 }
 
 function renderSessionCard(wk) {
-  const acc = wk.accessory || [];
   const sw  = wk.suggested_weight || wk.std_kg || 16;
+  const fbb = wk.full_body_block || [];
+  const fw  = wk.focus_work || [];
+  const arms = wk.arms || [];
+  const totalAcc = fbb.length + fw.length + arms.length;
   return `
 <div class="card">
   <div class="day-badge ${badgeClass(wk.track_key)}">${badgeLabel(wk)}</div>
@@ -956,10 +968,14 @@ function renderSessionCard(wk) {
   </div>
   ${wk.bell_guidance ? `<div class="bell-guidance-row">${x(wk.bell_guidance)}</div>` : ''}
   <button class="acc-toggle" id="acc-toggle" onclick="toggleAcc()">
-    Accessories <span style="font-size:12px;color:var(--light-gray)">(${acc.length})</span>
+    Full Session <span style="font-size:12px;color:var(--light-gray)">(${totalAcc} movements)</span>
     <span class="chevron">▼</span>
   </button>
-  <ul class="acc-list" id="acc-list">${acc.map(a => `<li>${x(a)}</li>`).join('')}</ul>
+  <div class="acc-list" id="acc-list">
+    ${fbb.length ? `<div class="acc-section-label">Full Body</div><ul>${fbb.map(a => `<li>${x(a)}</li>`).join('')}</ul>` : ''}
+    ${fw.length  ? `<div class="acc-section-label">Focus Work</div><ul>${fw.map(a => `<li>${x(a)}</li>`).join('')}</ul>` : ''}
+    ${arms.length ? `<div class="acc-section-label">Arms</div><ul>${arms.map(a => `<li>${x(a)}</li>`).join('')}</ul>` : ''}
+  </div>
   <div class="finisher-section">
     <div class="finisher-label">Finisher</div>
     <div class="finisher-text">${x(wk.finisher)}</div>
@@ -1086,9 +1102,14 @@ function openSessionSheet() {
   if (!todayWk || todayWk.status !== 'active') return;
   const wk  = todayWk;
   const sw  = wk.suggested_weight || wk.std_kg || 16;
+  const fbb  = wk.full_body_block || [];
+  const fw   = wk.focus_work || [];
+  const arms = wk.arms || [];
   sessionItems = [
     { label: wk.main, key: 'main', kg: sw },
-    ...(wk.accessory || []).map((a, i) => ({ label: a, key: `acc_${i}`, kg: 0 })),
+    ...fbb.map((a, i)  => ({ label: a, key: `fbb_${i}`,  kg: 0 })),
+    ...fw.map((a, i)   => ({ label: a, key: `fw_${i}`,   kg: 0 })),
+    ...arms.map((a, i) => ({ label: a, key: `arm_${i}`,  kg: 0 })),
     ...(wk.finisher ? [{ label: 'Finisher: ' + wk.finisher, key: 'finisher', kg: 0 }] : []),
   ];
 
