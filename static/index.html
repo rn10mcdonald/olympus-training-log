@@ -1204,6 +1204,18 @@ async function submitSession() {
   btn.disabled = false; btn.textContent = 'Complete Session';
   if (!res) { showToast('Error logging session'); return; }
 
+  // Log per-movement entries with slugs for movement history tracking
+  const strengthEntries = sessionItems.map((item, idx) => {
+    const slug = getMovementSlug(item.label);
+    if (!slug) return null;
+    const kg   = parseFloat(document.getElementById(`kg-${idx}`)?.value || 0);
+    const sets = parseInt(document.getElementById(`sets-${idx}`)?.value || 0) || item.sets || 0;
+    const reps = parseInt(document.getElementById(`reps-${idx}`)?.value || 0) || item.reps || 0;
+    if (!kg || !sets || !reps) return null;
+    return api('/api/strength', 'POST', { movement: slug, weight_kg: kg, sets, reps });
+  }).filter(Boolean);
+  await Promise.all(strengthEntries);
+
   appState = res.state;
   const [wkRes, stRes, wlRes] = await Promise.all([
     api('/api/workout/today'),
