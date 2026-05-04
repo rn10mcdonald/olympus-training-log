@@ -32,20 +32,17 @@ def _load_training(user_id: int) -> dict:
         raw = core.default_state()
         db.save_legacy(user_id, raw)
 
-    # Migrate old track keys that no longer exist
+    # Migrate old non-custom track keys (old system used named TEMPLATES)
     if raw.get("track") and not raw["track"].startswith("custom_") \
-            and raw["track"] not in core.TEMPLATES:
-        raw["track"] = core.TRACK_KEYS[0]
-        raw["microcycle"] = {
-            "id":                 raw.get("microcycle", {}).get("id", 0),
-            "sessions_completed": 0,
-            "start_date":         str(dt.date.today()),
-            "completed":          False,
-        }
+            and not raw["track"].startswith("program_"):
+        raw.pop("track", None)   # remove; calendar-based system needs no track key
 
-    # Ensure new state keys are present
-    raw.setdefault("cycle_week", 1)
-    raw.setdefault("strength_sessions_in_wave", 0)
+    # Ensure program_start_iso is present (new calendar-based system)
+    if not raw.get("program_start_iso"):
+        today  = dt.date.today()
+        monday = today - dt.timedelta(days=today.weekday())
+        raw["program_start_iso"] = str(monday)
+
     mc = raw.setdefault("microcycle", {})
     mc.setdefault("id",                 0)
     mc.setdefault("sessions_completed", 0)
@@ -152,18 +149,13 @@ def get_state(u: dict = CurrentUser):
 def get_today(u: dict = CurrentUser):
     state   = _load_training(u["user_id"])
     workout = core.get_today_workout(state)
-    # Augment suggested_weight from db history if possible
+    # Augment suggested_weight from db history if available
     if workout.get("status") == "active":
-        track = workout.get("track_key", "")
-        if track and track in core.TEMPLATES:
-            main_text = workout.get("main", "")
-            # Try to find a matching movement in history
-            history = db.get_workouts(u["user_id"], limit=50)
-            for row in history:
-                if row.get("movement") and row.get("weight_kg") and \
-                        row.get("type") in ("recommended", "strength"):
-                    workout["suggested_weight"] = float(row["weight_kg"])
-                    break
+        history = db.get_workouts(u["user_id"], limit=50)
+        for row in history:
+            if row.get("weight_kg") and row.get("type") in ("recommended", "strength"):
+                workout["suggested_weight"] = float(row["weight_kg"])
+                break
     return workout
 
 @app.get("/api/movements")
@@ -187,16 +179,21 @@ def get_movement_history(movement: str, u: dict = CurrentUser):
 @app.get("/api/tracks")
 def get_tracks(u: dict = CurrentUser):
     state  = _load_training(u["user_id"])
-    tracks = {k: v["name"] for k, v in core.TEMPLATES.items()}
+    tracks = {f"program_{i+1}": p["name"] for i, p in enumerate(core.PROGRAMS)}
     for ct in state.get("custom_tracks", []):
         n = len(ct.get("sessions", []))
         tracks[f"custom_{ct['id']}"] = f"{ct['name']} ({n} sessions)"
     return tracks
 
 @app.get("/api/tracks/{key}")
-def get_track_detail(key: str):
+def get_track_detail(key: str, u: dict = CurrentUser):
     if key.startswith("custom_"):
-        raise HTTPException(404, "Custom tracks require auth context")
+        state  = _load_training(u["user_id"])
+        track_id = key[7:]
+        ct = core.get_custom_track_detail(state, track_id)
+        if ct is None:
+            raise HTTPException(404, f"Custom track not found: {key}")
+        return ct
     detail = core.get_track_detail(key)
     if detail is None:
         raise HTTPException(404, f"Unknown track: {key}")
@@ -206,14 +203,14 @@ def get_track_detail(key: str):
 async def select_track(req: Request, u: dict = CurrentUser):
     payload = await req.json()
     key     = payload.get("key", "").strip()
-    if not key.startswith("custom_") and key not in core.TEMPLATES:
-        raise HTTPException(400, f"Unknown track: {key}")
-    uid   = u["user_id"]
-    state = _load_training(uid)
+    uid     = u["user_id"]
+    state   = _load_training(uid)
     if key.startswith("custom_"):
         track_id = key[7:]
         if core.get_custom_track_detail(state, track_id) is None:
             raise HTTPException(404, f"Custom track not found: {key}")
+    elif not key.startswith("program_"):
+        raise HTTPException(400, f"Unknown track: {key}")
     msg = core.init_track(state, key)
     _save_training(uid, state)
     return {"status": "ok", "msg": msg, "state": state}
