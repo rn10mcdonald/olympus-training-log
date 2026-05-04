@@ -911,6 +911,7 @@ function switchTab(tab, btn) {
 
 // ── TODAY ─────────────────────────────────────────────────────────────────────
 function renderToday() {
+  activeDayPreview = null;
   const loading = document.getElementById('today-loading');
   const content = document.getElementById('today-content');
   loading.style.display = 'none';
@@ -1080,7 +1081,10 @@ function renderStreakCard() {
     else if (type === 'cardio') cls += ' filled-cardio';
     else if (type) cls += ' filled-strength';
     if (isToday) cls += ' today-ring';
-    return `<div class="${cls}">${lbl}</div>`;
+    const dotDate = new Date(weekStart);
+    dotDate.setDate(weekStart.getDate() + i);
+    const dateStr = dotDate.toISOString().slice(0, 10);
+    return `<div class="${cls}" onclick="previewDayWorkout('${dateStr}')" style="cursor:pointer">${lbl}</div>`;
   }).join('');
 
   const emoji = streak_weeks >= 4 ? '🔥' : streak_weeks >= 2 ? '⚡' : '✦';
@@ -1094,7 +1098,97 @@ function renderStreakCard() {
     <div class="streak-count">${this_week}/${week_target} this week${prog}</div>
     <div class="streak-weeks">${emoji} ${streak_weeks}-week streak</div>
   </div>
+  <div id="day-preview"></div>
 </div>`;
+}
+
+function closeDayPreview() {
+  activeDayPreview = null;
+  const el = document.getElementById('day-preview');
+  if (el) el.innerHTML = '';
+}
+
+async function previewDayWorkout(dateStr) {
+  const previewEl = document.getElementById('day-preview');
+  if (!previewEl) return;
+
+  // Toggle: tapping same dot closes preview
+  if (activeDayPreview === dateStr) {
+    closeDayPreview();
+    return;
+  }
+  activeDayPreview = dateStr;
+
+  previewEl.innerHTML = `<div style="border-top:1px solid var(--border);margin-top:12px;padding-top:10px;color:var(--light-gray);font-size:13px">Loading…</div>`;
+
+  const today   = new Date().toISOString().slice(0, 10);
+  const isPast  = dateStr < today;
+  const isToday = dateStr === today;
+  const isFuture = dateStr > today;
+
+  // Parse day-of-week from date string
+  const dayNames = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+  const d   = new Date(dateStr + 'T00:00:00');
+  const dow = d.getDay() === 0 ? 6 : d.getDay() - 1; // 0=Mon…6=Sun
+  const dayName = dayNames[dow];
+
+  const wk = await api(`/api/workout/today?date=${dateStr}`);
+  if (activeDayPreview !== dateStr) return; // superseded by another tap
+
+  if (!wk) {
+    previewEl.innerHTML = `<div style="border-top:1px solid var(--border);margin-top:12px;padding-top:10px;color:var(--light-gray);font-size:13px">Unable to load preview.</div>`;
+    return;
+  }
+
+  const closeBtn = `<button onclick="closeDayPreview()" style="position:absolute;right:0;top:6px;background:none;border:none;font-size:20px;color:var(--light-gray);cursor:pointer;line-height:1;padding:0">×</button>`;
+  const wrap = `position:relative;border-top:1px solid var(--border);margin-top:12px;padding-top:12px`;
+  const dayLabel = `<div style="font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--warm-gray);margin-bottom:6px;text-transform:uppercase">${dayName}</div>`;
+
+  let inner = '';
+
+  if (wk.status === 'rest') {
+    inner = `<div style="color:var(--warm-gray);font-style:italic;font-size:14px">Sunday · Rest. You earned it.</div>`;
+  } else if (wk.status === 'active') {
+    const textColor = isToday ? 'var(--terracotta)' : isFuture ? 'var(--warm-gray)' : 'var(--ink,#2C2C2C)';
+    const fontStyle = isFuture ? 'italic' : 'normal';
+    const style     = `color:${textColor};font-style:${fontStyle}`;
+
+    // Badge + Optional pill for Saturday
+    const isSaturday = dow === 5;
+    inner += `<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;flex-wrap:wrap">
+      <span class="day-badge ${badgeClass(wk.track_key)}">${badgeLabel(wk)}</span>
+      ${isSaturday ? `<span style="font-size:11px;font-weight:600;background:#e8d5a3;color:#8B6914;padding:2px 8px;border-radius:10px">Optional</span>` : ''}
+    </div>`;
+
+    // Main lift
+    inner += `<div style="font-size:14px;font-weight:600;${style};margin-bottom:5px">${x(wk.main)}</div>`;
+
+    // Focus: first item
+    if (wk.focus_work && wk.focus_work.length) {
+      inner += `<div style="font-size:12px;${style};margin-bottom:3px">Focus: ${x(wk.focus_work[0])}</div>`;
+    }
+
+    // Arms: first item
+    if (wk.arms && wk.arms.length) {
+      inner += `<div style="font-size:12px;${style};margin-bottom:3px">Arms: ${x(wk.arms[0])}</div>`;
+    }
+
+    // Finisher: first line only
+    if (wk.finisher) {
+      const finLine = wk.finisher.split('\n')[0];
+      inner += `<div style="font-size:12px;${style};margin-bottom:3px">Finisher: ${x(finLine)}</div>`;
+    }
+
+    // Past days: show logged indicator + weights
+    if (isPast) {
+      const loggedEntries = allWorkouts.filter(w => w.date === dateStr && (w.type === 'recommended' || w.type === 'strength'));
+      if (loggedEntries.length > 0) {
+        inner += `<div style="font-size:12px;color:#7A9E7E;font-weight:600;margin-top:6px">✓ Session logged</div>`;
+      }
+    }
+  }
+
+  previewEl.innerHTML = `<div style="${wrap}">${closeBtn}${dayLabel}${inner}</div>`;
 }
 
 function renderQuickCardio() {
