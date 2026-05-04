@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Request, HTTPException, Depends
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
 import core, datetime as dt, os, time as _time
@@ -71,6 +71,19 @@ def _load_training(user_id: int) -> dict:
 
 def _save_training(user_id: int, d: dict) -> None:
     db.save_legacy(user_id, d)
+
+
+def _append_estate_log(
+    state: gs.PlayerState, description: str, log_type: str = "system"
+) -> None:
+    """Append one entry to the player's persistent estate log (append-only, no cap)."""
+    if not hasattr(state, "estate_log") or state.estate_log is None:
+        state.estate_log = []
+    state.estate_log.append({
+        "timestamp": dt.datetime.now().isoformat(),
+        "type":      log_type,
+        "description": description,
+    })
 
 
 # ── Static serving ────────────────────────────────────────────────────────────
