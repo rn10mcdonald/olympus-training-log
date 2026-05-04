@@ -1423,6 +1423,67 @@ PROGRAM_3 = {
 
 PROGRAMS = [PROGRAM_1, PROGRAM_2, PROGRAM_3]
 
+# ── Arms rotation ─────────────────────────────────────────────────────────────
+# One pairing per program × day type. get_today_workout() uses this instead of
+# the per-session hardcoded lists, so the curl/tricep combo rotates across days.
+
+ARMS_ROTATION = {
+    "program_1": {
+        "strength_a": [
+            "KB Hammer Curl 3×12 @ 8 kg",
+            "KB Tricep Kickback 3×12/side @ 8 kg",
+        ],
+        "strength_b": [
+            "KB Zottman Curl 3×10 @ 8 kg  (curl up supinated, lower pronated — forearm gold)",
+            "KB Overhead Tricep Extension 3×12 @ 8 kg  (elbows close, full stretch at bottom)",
+        ],
+        "strength_c": [
+            "KB Curl 3×12 @ 8 kg  (supinated — pure bicep)",
+            "KB Floor Tricep Extension 3×10 @ 8 kg  (skull crusher from floor — safe)",
+        ],
+        "strength_d": [
+            "KB Hammer Curl 3×12 @ 8 kg",
+            "KB Overhead Tricep Extension 3×12 @ 8 kg",
+        ],
+    },
+    "program_2": {
+        "strength_a": [
+            "KB Zottman Curl 3×10 @ 10 kg  (↑ load from P1)",
+            "KB Skull Crusher 3×10 @ 10 kg  (elbow hinge only — tricep mass)",
+        ],
+        "strength_b": [
+            "Cross-Body Hammer Curl 3×10/side @ 8 kg  (curl across body — hits brachialis)",
+            "Close-Grip KB Floor Press 3×10 @ 12 kg  (hands touching — tricep dominant)",
+        ],
+        "strength_c": [
+            "KB Concentration Curl 3×10/side @ 8 kg  (elbow on inner thigh — peak contraction)",
+            "KB Tricep Kickback 3×12/side @ 8 kg",
+        ],
+        "strength_d": [
+            "KB Zottman Curl 3×12 @ 8 kg",
+            "KB Skull Crusher 3×12 @ 8 kg",
+        ],
+    },
+    "program_3": {
+        "strength_a": [
+            "KB Curl 3×10 @ 12 kg  (heavier — strength phase)",
+            "KB Skull Crusher 3×10 @ 12 kg",
+        ],
+        "strength_b": [
+            "KB Reverse Curl 3×10 @ 8 kg  (pronated grip — hits brachialis + forearm)",
+            "Tricep Dip off chair 3×12  (bodyweight — full range)",
+        ],
+        "strength_c": [
+            "KB Concentration Curl 3×10/side @ 10 kg  (↑ load)",
+            "KB Overhead Tricep Extension 3×10 @ 12 kg  (↑ load)",
+        ],
+        "strength_d": [
+            "KB Curl 3×12 @ 10 kg",
+            "KB Skull Crusher 3×12 @ 10 kg",
+        ],
+    },
+}
+
 # Day-of-week → session type (Monday=0 ... Sunday=6)
 _DOW_TO_SESSION = [
     "strength_a",   # 0 Monday
@@ -1706,7 +1767,8 @@ def get_today_workout(state: dict) -> dict:
         "std_kg":           std_kg,
         "full_body_block":  week_data.get("full_body", []),
         "focus_work":       week_data.get("focus", []),
-        "arms":             week_data.get("arms", []),
+        "arms":             ARMS_ROTATION.get(f"program_{current_prog}", {}).get(session_type,
+                                week_data.get("arms", [])),
         "finisher":         week_data.get("finisher", ""),
         "bell_guidance":    day_data.get("focus", ""),
         "cycle_week":       current_week,
