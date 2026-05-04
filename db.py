@@ -461,3 +461,24 @@ def get_movement_history_all(user_id: int, movement: str, limit: int = 20) -> li
             {"uid": user_id, "mvt": movement, "limit": limit},
         ).fetchall()
         return [dict(r._mapping) for r in rows]
+
+
+def backfill_recommended_notes() -> int:
+    """One-time migration: recommended rows that were logged before per-exercise
+    tracking existed have NULL movement/sets/reps.  Copy the first 100 chars of
+    the notes field into movement so the rows aren't completely opaque in history.
+    Returns the number of rows updated.
+
+    Run once against production:
+        import db; print(db.backfill_recommended_notes(), "rows updated")
+    """
+    with _db() as sess:
+        result = sess.execute(text("""
+            UPDATE workouts
+            SET movement = SUBSTR(notes, 1, 100)
+            WHERE type     = 'recommended'
+              AND movement IS NULL
+              AND notes    IS NOT NULL
+              AND notes    != ''
+        """))
+        return result.rowcount
