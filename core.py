@@ -1917,16 +1917,37 @@ def log_walk(state: dict, miles: float) -> str:
 
 
 def get_streak_info(state: dict) -> dict:
-    today    = dt.date.today()
-    wk_log   = state.get("week_log", {})
-    curr_key = _week_key(today)
-    this_week = wk_log.get(curr_key, 0)
+    today = dt.date.today()
 
+    # Collect every activity date from all logs (unique calendar days per week)
+    all_dates: list[dt.date] = []
+    for w in state.get("workouts", []):
+        try:
+            all_dates.append(dt.date.fromisoformat(w["date"]))
+        except (KeyError, ValueError, TypeError):
+            pass
+    for log_key in ("ruck_log", "run_log", "walk_log"):
+        for entry in state.get(log_key, []):
+            try:
+                all_dates.append(dt.date.fromisoformat(entry["date"]))
+            except (KeyError, ValueError, TypeError):
+                pass
+
+    # Group into ISO-week buckets → set of unique dates
+    week_days: dict[str, set] = {}
+    for d in all_dates:
+        k = _week_key(d)
+        week_days.setdefault(k, set()).add(d)
+
+    curr_key  = _week_key(today)
+    this_week = len(week_days.get(curr_key, set()))
+
+    # Count consecutive completed weeks going back from last week
     streak_weeks = 0
     check = today - dt.timedelta(weeks=1)
     while True:
         k = _week_key(check)
-        if wk_log.get(k, 0) >= WK_TARGET:
+        if len(week_days.get(k, set())) >= WK_TARGET:
             streak_weeks += 1
             check -= dt.timedelta(weeks=1)
         else:
@@ -1935,7 +1956,7 @@ def get_streak_info(state: dict) -> dict:
         streak_weeks += 1
 
     last_week_date = today - dt.timedelta(weeks=1)
-    last_week_hit  = wk_log.get(_week_key(last_week_date), 0) >= WK_TARGET
+    last_week_hit  = len(week_days.get(_week_key(last_week_date), set())) >= WK_TARGET
     days_remaining       = 7 - today.isoweekday()
     activities_remaining = max(0, WK_TARGET - this_week)
 
