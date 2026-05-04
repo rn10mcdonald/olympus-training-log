@@ -73,19 +73,6 @@ def _save_training(user_id: int, d: dict) -> None:
     db.save_legacy(user_id, d)
 
 
-def _append_estate_log(
-    state: gs.PlayerState, description: str, log_type: str = "system"
-) -> None:
-    """Append one entry to the player's persistent estate log (append-only, no cap)."""
-    if not hasattr(state, "estate_log") or state.estate_log is None:
-        state.estate_log = []
-    state.estate_log.append({
-        "timestamp": dt.datetime.now().isoformat(),
-        "type":      log_type,
-        "description": description,
-    })
-
-
 # ── Static serving ────────────────────────────────────────────────────────────
 
 @app.get("/", response_class=HTMLResponse)
