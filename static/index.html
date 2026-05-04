@@ -1,782 +1,1451 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-<title>Olympus Training Log</title>
-<link rel="manifest" href="static/manifest.json">
-<link rel="stylesheet" href="static/style.css?v=14">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#C4622D">
+<title>First Bell</title>
+<link rel="manifest" href="/static/manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --cream:            #FAF7F2;
+  --warm-white:       #FFFFFF;
+  --terracotta:       #C4622D;
+  --terracotta-light: #E8845A;
+  --terracotta-bg:    #F7EDE6;
+  --sage:             #7A9E7E;
+  --sage-bg:          #EBF2EC;
+  --slate:            #5B7FA6;
+  --slate-bg:         #E8EFF6;
+  --charcoal:         #2C2C2C;
+  --gold:             #8B6914;
+  --gold-bg:          #F5EDD8;
+  --warm-gray:        #6B6560;
+  --light-gray:       #9E9892;
+  --card-bg:          #FFFFFF;
+  --border:           #E8E0D8;
+  --shadow:           rgba(44,44,44,0.08);
+  --shadow-md:        rgba(44,44,44,0.14);
+  --tab-h:            64px;
+  --header-h:         60px;
+}
+
+*,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+
+html,body {
+  height:100%;
+  background:var(--cream);
+  color:var(--charcoal);
+  font-family:'DM Sans',system-ui,sans-serif;
+  font-size:16px;
+  line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+  overscroll-behavior:none;
+}
+
+#app {
+  display:flex;
+  flex-direction:column;
+  height:100dvh;
+  max-width:480px;
+  margin:0 auto;
+  position:relative;
+}
+
+/* ── Header ──────────────────────────────────────────────────────────────── */
+.app-header {
+  height:var(--header-h);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 20px;
+  background:var(--cream);
+  border-bottom:1px solid var(--border);
+  flex-shrink:0;
+  z-index:10;
+}
+.wordmark {
+  font-family:'DM Serif Display',serif;
+  font-size:22px;
+  color:var(--charcoal);
+}
+.greeting {
+  font-size:13px;
+  color:var(--warm-gray);
+  font-weight:500;
+}
+.logout-btn {
+  background:none;
+  border:none;
+  color:var(--light-gray);
+  font-size:13px;
+  cursor:pointer;
+  padding:4px 8px;
+  border-radius:8px;
+  font-family:'DM Sans',sans-serif;
+}
+.logout-btn:hover { color:var(--warm-gray); background:var(--border); }
+
+/* ── Main ────────────────────────────────────────────────────────────────── */
+main {
+  flex:1;
+  overflow-y:auto;
+  overflow-x:hidden;
+  -webkit-overflow-scrolling:touch;
+  background:var(--cream);
+}
+.tab-content { display:none; padding:16px 16px calc(var(--tab-h) + 20px); }
+.tab-content.active { display:block; }
+
+/* ── Bottom nav ──────────────────────────────────────────────────────────── */
+.bottom-nav {
+  height:var(--tab-h);
+  display:flex;
+  align-items:stretch;
+  background:var(--warm-white);
+  border-top:1px solid var(--border);
+  flex-shrink:0;
+  position:fixed;
+  bottom:0;
+  left:50%;
+  transform:translateX(-50%);
+  width:100%;
+  max-width:480px;
+  z-index:100;
+  padding-bottom:env(safe-area-inset-bottom,0);
+}
+.nav-btn {
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:3px;
+  background:none;
+  border:none;
+  cursor:pointer;
+  color:var(--light-gray);
+  font-size:11px;
+  font-family:'DM Sans',sans-serif;
+  font-weight:500;
+  transition:color .15s;
+  padding:8px 0;
+}
+.nav-btn svg { width:22px; height:22px; }
+.nav-btn.active { color:var(--terracotta); }
+
+/* ── Cards ───────────────────────────────────────────────────────────────── */
+.card {
+  background:var(--card-bg);
+  border-radius:16px;
+  border:1px solid var(--border);
+  box-shadow:0 2px 12px var(--shadow);
+  padding:20px;
+  margin-bottom:12px;
+}
+.card-title {
+  font-size:11px;
+  font-weight:600;
+  letter-spacing:.8px;
+  text-transform:uppercase;
+  color:var(--light-gray);
+  margin-bottom:12px;
+}
+
+/* ── Day badges ──────────────────────────────────────────────────────────── */
+.day-badge {
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  font-size:12px;
+  font-weight:600;
+  padding:5px 12px;
+  border-radius:100px;
+  margin-bottom:10px;
+}
+.badge-a   { background:var(--terracotta-bg); color:var(--terracotta); }
+.badge-b   { background:var(--slate-bg);      color:var(--slate);      }
+.badge-c   { background:#EAEAEA;              color:var(--charcoal);   }
+.badge-d   { background:var(--gold-bg);       color:var(--gold);       }
+.badge-mob { background:var(--sage-bg);       color:var(--sage);       }
+
+/* ── Buttons ─────────────────────────────────────────────────────────────── */
+.btn {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  border-radius:12px;
+  padding:14px 24px;
+  font-family:'DM Sans',sans-serif;
+  font-size:15px;
+  font-weight:600;
+  cursor:pointer;
+  border:none;
+  transition:background .15s, transform .1s;
+}
+.btn:active { transform:scale(0.98); }
+.btn-primary { background:var(--terracotta); color:#fff; }
+.btn-primary:hover { background:var(--terracotta-light); }
+.btn-secondary { background:transparent; color:var(--terracotta); border:1.5px solid var(--terracotta); }
+.btn-ghost { background:transparent; color:var(--warm-gray); border:1.5px solid var(--border); }
+.btn-full { width:100%; }
+.btn-text {
+  background:none;
+  border:none;
+  color:var(--warm-gray);
+  font-size:14px;
+  font-weight:500;
+  cursor:pointer;
+  text-decoration:underline;
+  text-underline-offset:3px;
+  width:100%;
+  text-align:center;
+  padding:10px;
+  font-family:'DM Sans',sans-serif;
+}
+.pill-btn {
+  background:var(--cream);
+  border:1.5px solid var(--border);
+  border-radius:100px;
+  padding:8px 18px;
+  font-size:14px;
+  font-weight:500;
+  cursor:pointer;
+  color:var(--charcoal);
+  font-family:'DM Sans',sans-serif;
+  transition:all .15s;
+}
+.pill-btn.active,.pill-btn:hover { background:var(--terracotta); border-color:var(--terracotta); color:#fff; }
+
+/* ── Session card ────────────────────────────────────────────────────────── */
+.week-label { font-size:13px; color:var(--warm-gray); margin-bottom:4px; }
+.cycle-indicator {
+  font-family:'JetBrains Mono',monospace;
+  font-size:11px;
+  color:var(--light-gray);
+  margin-bottom:14px;
+}
+.main-lift {
+  font-family:'DM Serif Display',serif;
+  font-size:22px;
+  line-height:1.3;
+  color:var(--charcoal);
+  margin-bottom:12px;
+}
+.bell-row { display:flex; align-items:center; gap:8px; margin-bottom:14px; }
+.bell-weight {
+  font-family:'JetBrains Mono',monospace;
+  font-size:15px;
+  font-weight:500;
+  color:var(--terracotta);
+}
+.bell-label { font-size:12px; color:var(--light-gray); }
+.bell-guidance-row {
+  font-size:12px;
+  color:var(--warm-gray);
+  background:var(--cream);
+  border-radius:8px;
+  padding:8px 12px;
+  margin-bottom:14px;
+  line-height:1.6;
+}
+.acc-toggle {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  background:var(--cream);
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:10px 14px;
+  cursor:pointer;
+  font-size:14px;
+  font-weight:500;
+  color:var(--warm-gray);
+  width:100%;
+  text-align:left;
+  margin-bottom:8px;
+  font-family:'DM Sans',sans-serif;
+}
+.chevron { transition:transform .2s; font-size:12px; }
+.acc-toggle.expanded .chevron { transform:rotate(180deg); }
+.acc-list { display:none; list-style:none; margin-bottom:12px; }
+.acc-list.visible { display:block; }
+.acc-list li {
+  font-size:14px;
+  color:var(--charcoal);
+  padding:7px 0;
+  border-bottom:1px solid var(--border);
+  display:flex;
+  align-items:flex-start;
+  gap:8px;
+}
+.acc-list li::before { content:"·"; color:var(--terracotta); font-size:18px; line-height:1.2; flex-shrink:0; }
+.acc-list li:last-child { border-bottom:none; }
+.finisher-section {
+  background:var(--cream);
+  border-radius:10px;
+  padding:12px 14px;
+  margin-bottom:16px;
+}
+.finisher-label {
+  font-size:11px;
+  font-weight:600;
+  text-transform:uppercase;
+  letter-spacing:.8px;
+  color:var(--terracotta);
+  margin-bottom:4px;
+}
+.finisher-text { font-size:14px; color:var(--charcoal); line-height:1.5; }
+
+/* ── Streak dots ─────────────────────────────────────────────────────────── */
+.streak-dots { display:flex; gap:8px; margin-bottom:12px; }
+.dot {
+  width:32px; height:32px;
+  border-radius:50%;
+  background:var(--border);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:10px;
+  font-weight:600;
+  color:var(--light-gray);
+}
+.dot.filled-strength { background:var(--terracotta); color:#fff; }
+.dot.filled-mobility { background:var(--sage);       color:#fff; }
+.dot.filled-cardio   { background:var(--slate);      color:#fff; }
+.dot.today-ring      { box-shadow:0 0 0 2.5px var(--terracotta), 0 0 0 4px var(--terracotta-bg); }
+.streak-stat-row {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+.streak-count { font-size:15px; font-weight:600; color:var(--charcoal); }
+.streak-weeks { font-size:14px; color:var(--warm-gray); font-weight:500; }
+
+/* ── Log tab ─────────────────────────────────────────────────────────────── */
+.filter-pills {
+  display:flex; gap:8px; margin-bottom:16px;
+  overflow-x:auto; padding-bottom:4px;
+  scrollbar-width:none;
+}
+.filter-pills::-webkit-scrollbar { display:none; }
+.filter-pill {
+  flex-shrink:0;
+  background:var(--warm-white);
+  border:1.5px solid var(--border);
+  border-radius:100px;
+  padding:6px 14px;
+  font-size:13px;
+  font-weight:500;
+  color:var(--warm-gray);
+  cursor:pointer;
+  font-family:'DM Sans',sans-serif;
+  transition:all .15s;
+}
+.filter-pill.active { background:var(--terracotta); border-color:var(--terracotta); color:#fff; }
+.date-group-label {
+  font-size:12px; font-weight:600; text-transform:uppercase;
+  letter-spacing:.8px; color:var(--light-gray);
+  margin:16px 0 8px;
+}
+.workout-entry {
+  background:var(--card-bg);
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:14px 16px;
+  margin-bottom:8px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+.entry-left { flex:1; min-width:0; }
+.entry-type {
+  font-size:11px; font-weight:600;
+  text-transform:uppercase; letter-spacing:.6px;
+  margin-bottom:3px;
+}
+.type-recommended,.type-strength { color:var(--terracotta); }
+.type-custom { color:var(--warm-gray); }
+.type-rucking,.type-running,.type-walking { color:var(--slate); }
+.type-mobility { color:var(--sage); }
+.entry-detail {
+  font-size:14px; font-weight:500; color:var(--charcoal);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.entry-meta { font-size:12px; color:var(--light-gray); margin-top:2px; }
+.delete-btn {
+  background:none; border:none; color:var(--light-gray);
+  cursor:pointer; padding:6px; border-radius:8px;
+  flex-shrink:0; font-size:16px; transition:color .15s;
+}
+.delete-btn:hover { color:#e05252; background:#FFF0F0; }
+.empty-state { text-align:center; padding:40px 20px; color:var(--light-gray); }
+.empty-state h3 {
+  font-family:'DM Serif Display',serif; font-size:20px;
+  color:var(--warm-gray); margin-bottom:8px;
+}
+.empty-state p { font-size:14px; }
+
+/* ── Progress tab ────────────────────────────────────────────────────────── */
+.movement-select {
+  width:100%; padding:12px 14px;
+  border:1.5px solid var(--border); border-radius:10px;
+  font-size:15px; font-family:'DM Sans',sans-serif;
+  color:var(--charcoal); background:var(--warm-white);
+  appearance:none; -webkit-appearance:none;
+  margin-bottom:16px; cursor:pointer;
+}
+.movement-select:focus { outline:none; border-color:var(--terracotta); }
+.chart-container {
+  background:var(--warm-white);
+  border-radius:12px; padding:16px;
+  margin-bottom:12px; overflow-x:auto;
+}
+.chart-container svg { display:block; min-width:100%; }
+.pr-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:12px; }
+.pr-stat { background:var(--cream); border-radius:10px; padding:12px; text-align:center; }
+.pr-value {
+  font-family:'JetBrains Mono',monospace;
+  font-size:20px; font-weight:500;
+  color:var(--terracotta); margin-bottom:2px;
+}
+.pr-label { font-size:11px; color:var(--light-gray); }
+.stats-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.stat-card {
+  background:var(--warm-white);
+  border:1px solid var(--border);
+  border-radius:12px; padding:14px;
+}
+.stat-value {
+  font-family:'JetBrains Mono',monospace;
+  font-size:22px; font-weight:500;
+  color:var(--charcoal); margin-bottom:2px;
+}
+.stat-label { font-size:12px; color:var(--light-gray); }
+
+/* ── Library tab ─────────────────────────────────────────────────────────── */
+.search-wrap { position:relative; margin-bottom:16px; }
+.search-wrap svg {
+  position:absolute; left:12px; top:50%;
+  transform:translateY(-50%); color:var(--light-gray);
+  pointer-events:none;
+}
+.search-wrap input {
+  width:100%; padding:12px 14px 12px 38px;
+  border:1.5px solid var(--border); border-radius:10px;
+  font-size:15px; font-family:'DM Sans',sans-serif;
+  color:var(--charcoal); background:var(--warm-white);
+  appearance:none; -webkit-appearance:none;
+}
+.search-wrap input:focus { outline:none; border-color:var(--terracotta); }
+.category-section { margin-bottom:20px; }
+.category-label {
+  font-size:11px; font-weight:600; text-transform:uppercase;
+  letter-spacing:.8px; color:var(--light-gray);
+  margin-bottom:8px; padding:0 2px;
+}
+.movement-card {
+  background:var(--card-bg); border:1px solid var(--border);
+  border-radius:10px; padding:12px 14px; margin-bottom:6px;
+}
+.mv-header { display:flex; align-items:center; justify-content:space-between; }
+.mv-name { font-size:15px; font-weight:500; color:var(--charcoal); }
+.mv-hint { font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--warm-gray); }
+.mv-kg { font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--terracotta); margin-top:2px; }
+
+/* ── Track selector ──────────────────────────────────────────────────────── */
+.track-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px; }
+.track-btn {
+  background:var(--warm-white); border:1.5px solid var(--border);
+  border-radius:12px; padding:14px 12px; cursor:pointer; text-align:left;
+  transition:all .15s; font-family:'DM Sans',sans-serif;
+}
+.track-btn:hover { border-color:var(--terracotta); background:var(--terracotta-bg); }
+.track-type { font-size:13px; font-weight:600; color:var(--charcoal); margin-top:6px; }
+
+/* ── Forms ───────────────────────────────────────────────────────────────── */
+.form-group { margin-bottom:12px; }
+.form-label { font-size:13px; font-weight:500; color:var(--warm-gray); margin-bottom:5px; display:block; }
+.form-input {
+  width:100%; padding:12px 14px;
+  border:1.5px solid var(--border); border-radius:10px;
+  font-size:15px; font-family:'DM Sans',sans-serif;
+  color:var(--charcoal); background:var(--warm-white);
+  transition:border-color .15s;
+  appearance:none; -webkit-appearance:none;
+}
+.form-input:focus { outline:none; border-color:var(--terracotta); }
+
+/* ── Sheets ──────────────────────────────────────────────────────────────── */
+.sheet-overlay {
+  display:none; position:fixed; inset:0;
+  background:rgba(44,44,44,0.5); z-index:200;
+  backdrop-filter:blur(2px);
+}
+.sheet-overlay.visible { display:block; }
+.bottom-sheet {
+  position:fixed; bottom:0; left:50%;
+  transform:translateX(-50%) translateY(100%);
+  width:100%; max-width:480px;
+  background:var(--warm-white);
+  border-radius:20px 20px 0 0; z-index:201;
+  max-height:90dvh; overflow-y:auto;
+  transition:transform .3s cubic-bezier(0.32,0.72,0,1);
+  padding-bottom:env(safe-area-inset-bottom,16px);
+}
+.bottom-sheet.open { transform:translateX(-50%) translateY(0); }
+.sheet-handle {
+  width:40px; height:4px; background:var(--border);
+  border-radius:2px; margin:12px auto 8px;
+}
+.sheet-header {
+  padding:8px 20px 16px;
+  border-bottom:1px solid var(--border);
+}
+.sheet-header h2 {
+  font-family:'DM Serif Display',serif;
+  font-size:20px; margin-bottom:4px;
+}
+.sheet-header p { font-size:13px; color:var(--warm-gray); }
+.sheet-body { padding:16px 20px; }
+.sheet-footer { padding:12px 20px; border-top:1px solid var(--border); }
+
+.exercise-row {
+  border:1px solid var(--border); border-radius:10px;
+  padding:14px; margin-bottom:10px;
+}
+.ex-label { font-size:14px; font-weight:500; color:var(--charcoal); margin-bottom:10px; }
+.ex-inputs { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
+.ex-field label { font-size:11px; color:var(--light-gray); margin-bottom:3px; display:block; }
+.ex-field input {
+  width:100%; padding:8px 10px;
+  border:1.5px solid var(--border); border-radius:8px;
+  font-size:15px; font-family:'JetBrains Mono',monospace;
+  color:var(--charcoal); background:var(--warm-white);
+  text-align:center; appearance:none; -webkit-appearance:none;
+}
+.ex-field input:focus { outline:none; border-color:var(--terracotta); }
+
+/* ── Auth ────────────────────────────────────────────────────────────────── */
+#auth-screen {
+  display:none; position:fixed; inset:0;
+  background:var(--cream); z-index:300;
+  flex-direction:column; align-items:center; justify-content:center;
+  padding:32px 24px;
+}
+#auth-screen.visible { display:flex; }
+.auth-logo {
+  font-family:'DM Serif Display',serif;
+  font-size:38px; color:var(--charcoal); margin-bottom:6px;
+}
+.auth-tagline { font-size:14px; color:var(--warm-gray); margin-bottom:36px; }
+.auth-card {
+  width:100%; max-width:360px;
+  background:var(--card-bg); border-radius:20px;
+  border:1px solid var(--border);
+  box-shadow:0 4px 24px var(--shadow-md);
+  padding:28px 24px;
+}
+.auth-tabs {
+  display:flex; margin-bottom:24px;
+  border:1px solid var(--border); border-radius:10px; overflow:hidden;
+}
+.auth-tab {
+  flex:1; padding:10px; background:none; border:none;
+  font-family:'DM Sans',sans-serif; font-size:14px; font-weight:500;
+  cursor:pointer; color:var(--warm-gray); transition:all .15s;
+}
+.auth-tab.active { background:var(--terracotta); color:#fff; }
+.auth-error {
+  color:#e05252; font-size:13px;
+  margin-top:-8px; margin-bottom:12px; display:none;
+}
+.auth-error.visible { display:block; }
+
+/* ── Toast ───────────────────────────────────────────────────────────────── */
+.toast {
+  position:fixed; bottom:calc(var(--tab-h) + 12px);
+  left:50%; transform:translateX(-50%) translateY(20px);
+  background:var(--charcoal); color:#fff;
+  padding:12px 20px; border-radius:100px;
+  font-size:14px; font-weight:500; white-space:nowrap;
+  opacity:0; transition:opacity .2s, transform .2s;
+  z-index:400; pointer-events:none;
+}
+.toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+/* ── Offline banner ──────────────────────────────────────────────────────── */
+.offline-banner {
+  display:none; background:#e05252; color:#fff;
+  text-align:center; padding:8px;
+  font-size:13px; font-weight:500;
+}
+.offline-banner.visible { display:block; }
+
+/* ── Utility ─────────────────────────────────────────────────────────────── */
+.text-muted { color:var(--light-gray); }
+.hidden { display:none !important; }
+.spinner {
+  width:20px; height:20px;
+  border:2px solid var(--border); border-top-color:var(--terracotta);
+  border-radius:50%; animation:spin .7s linear infinite; margin:0 auto;
+}
+@keyframes spin { to { transform:rotate(360deg); } }
+.loading-state { text-align:center; padding:40px 20px; }
+</style>
 </head>
 <body>
 
-<!-- ═══ HEADER ═══════════════════════════════════════════════════════════════ -->
-<header class="site-header">
-  <div class="header-brand">
-    <img src="static/coin.png" alt="coin" class="coin-spin">
-    <span class="brand-title">Olympus</span>
-  </div>
-  <div class="header-stats">
-    <div class="stat-pill" title="Drachma treasury">
-      <span class="stat-icon">🪙</span>
-      <span id="drachma" class="stat-value">0.00</span>
-    </div>
-    <div class="stat-pill" title="Laurels earned">
-      <span class="stat-icon">🌿</span>
-      <span id="laurel-count" class="stat-value">0</span>
-    </div>
-    <div class="stat-pill" title="Activities this week / goal">
-      <span class="stat-icon">🗓</span>
-      <span id="week-count" class="stat-value">0/3</span>
-    </div>
-    <button id="logout-btn" class="btn-ghost-sm" title="Log out" style="margin-left:4px">⏻</button>
-  </div>
-</header>
-
-<!-- ═══ PAGE CONTENT ═════════════════════════════════════════════════════════ -->
-<main class="page-content">
-
-  <!-- ── TRAIN ─────────────────────────────────────────────────────────────── -->
-  <section class="page-section active" id="section-train">
-    <div class="section-scroll">
-
-      <!-- 1. PROGRAM TRACK -->
-      <div class="card">
-        <div class="card-header">
-          <h2>⚔️ Program</h2>
-          <span id="program-fraction" class="stat-chip" hidden>0 / 6</span>
-        </div>
-
-        <!-- No program selected -->
-        <div id="no-program-state">
-          <p class="dim-msg" style="margin-bottom:12px">Choose a training program to begin your journey.</p>
-          <button class="btn-primary" id="choose-program-btn" style="width:100%">Choose Program</button>
-        </div>
-
-        <!-- Program active -->
-        <div id="active-program-state" hidden>
-          <p class="program-name" id="program-name-display"></p>
-          <div class="progress-bar-wrap" style="margin:10px 0 4px">
-            <div id="program-bar" class="progress-bar-fill" style="width:0%"></div>
-          </div>
-          <p class="sub-text" id="program-countdown" style="margin-bottom:14px;text-align:center"></p>
-          <div class="btn-row">
-            <button class="btn-outline-sm" id="change-program-btn">Change Program</button>
-            <button class="btn-ghost-sm" id="view-program-btn">View Sessions</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- 2. TODAY'S SESSION -->
-      <div class="card" id="todays-session-card">
-        <div class="card-header">
-          <h2>Today's Session</h2>
-          <button class="btn-icon" id="refresh-btn" title="Refresh">↺</button>
-        </div>
-        <div id="workout-display"><p class="dim-msg">Loading…</p></div>
-        <div id="workout-actions" style="margin-top:12px">
-          <button class="btn-primary btn-large" id="log-session-btn" style="width:100%">⚔️ Log Session</button>
-        </div>
-      </div>
-
-      <!-- 3. CUSTOM WORK -->
-      <div class="card">
-        <h2 class="card-h2">💪 Custom Work</h2>
-        <div class="movement-cats" id="custom-cats">
-          <button class="cat-btn active" data-cat="kettlebell">Kettlebell</button>
-          <button class="cat-btn" data-cat="dumbbell">Dumbbell</button>
-          <button class="cat-btn" data-cat="barbell">Barbell</button>
-          <button class="cat-btn" data-cat="bodyweight">Bodyweight</button>
-          <button class="cat-btn" data-cat="yoga">Yoga</button>
-          <button class="cat-btn" data-cat="pilates">Pilates</button>
-        </div>
-        <div class="field-group" style="margin-top:10px">
-          <label for="custom-movement-select">Movement</label>
-          <select id="custom-movement-select" class="track-select"></select>
-          <p class="sub-text" id="custom-last-weight" style="margin-top:4px;min-height:1.4em"></p>
-        </div>
-        <div class="input-row" style="margin-top:10px" id="custom-inputs">
-          <div class="field-group" id="custom-weight-group">
-            <label for="custom-weight">Weight (kg)</label>
-            <input id="custom-weight" type="number" placeholder="16" step="0.5" min="0" inputmode="decimal">
-          </div>
-          <div class="field-group">
-            <label for="custom-sets">Sets</label>
-            <input id="custom-sets" type="number" placeholder="3" step="1" min="1" inputmode="numeric">
-          </div>
-          <div class="field-group">
-            <label for="custom-reps">Reps</label>
-            <input id="custom-reps" type="number" placeholder="10" step="1" min="1" inputmode="numeric">
-          </div>
-        </div>
-        <!-- Multi-exercise session actions -->
-        <div class="custom-action-row">
-          <button class="btn-outline" id="add-to-session-btn" style="flex:1">+ Add to Session</button>
-          <button class="btn-primary" id="log-exercise-btn" style="flex:1">💪 Log Now</button>
-        </div>
-        <!-- Session queue (shows when exercises have been added) -->
-        <div id="session-queue-wrap" hidden>
-          <div class="session-queue-section">
-            <div class="session-queue-header">Session Queue</div>
-            <ul id="session-queue-list" class="session-queue-list"></ul>
-            <button class="btn-primary" id="submit-session-btn" style="width:100%">⚔️ Submit Session</button>
-          </div>
-        </div>
-      </div>
-
-    </div>
-  </section>
-
-  <!-- ── CARDIO ────────────────────────────────────────────────────────────── -->
-  <section class="page-section" id="section-cardio">
-    <div class="section-scroll">
-
-      <!-- Log Cardio -->
-      <div class="card">
-        <h2 class="card-h2">🏃 Log Cardio</h2>
-        <div class="cardio-type-row" id="cardio-type-row">
-          <button class="cardio-type-btn active" data-type="running">🏃 Run</button>
-          <button class="cardio-type-btn" data-type="walking">🚶 Walk</button>
-          <button class="cardio-type-btn" data-type="rucking">🎒 Ruck</button>
-          <button class="cardio-type-btn" data-type="hiking">🥾 Hike</button>
-        </div>
-        <div class="input-row" style="margin-top:10px">
-          <div class="field-group">
-            <label for="cardio-miles">Miles</label>
-            <input id="cardio-miles" type="number" placeholder="0.0" step="0.01" min="0" inputmode="decimal">
-          </div>
-          <div class="field-group">
-            <label for="cardio-duration">Duration (min)</label>
-            <input id="cardio-duration" type="number" placeholder="optional" step="1" min="0" inputmode="numeric">
-          </div>
-          <div class="field-group" id="cardio-weight-group" style="display:none">
-            <label for="cardio-weight-lbs">Weight (lbs)</label>
-            <input id="cardio-weight-lbs" type="number" placeholder="20" step="1" min="0" inputmode="numeric">
-          </div>
-          <button class="btn-primary" id="log-cardio-btn" style="align-self:flex-end;min-height:44px">Log</button>
-        </div>
-        <div class="stat-row">
-          <span class="dim-text">Rucked</span>
-          <strong id="total-ruck-miles" class="gold-text">0.0 mi</strong>
-          <span class="divider">·</span>
-          <span class="dim-text">Run</span>
-          <strong id="total-run-miles" class="gold-text">0.0 mi</strong>
-          <span class="divider">·</span>
-          <span class="dim-text">Walked</span>
-          <strong id="total-walk-miles" class="gold-text">0.0 mi</strong>
-        </div>
-      </div>
-
-      <!-- Pheidippides Journey -->
-      <div class="card">
-        <div class="card-header">
-          <h2>📜 Pheidippides Journey</h2>
-          <span id="journey-fraction" class="stat-chip">0 / 306 mi</span>
-        </div>
-        <p class="sub-text" style="margin-bottom:8px">Ruck, run, walk, and hike miles all count toward this route.</p>
-        <div class="progress-bar-wrap">
-          <div id="journey-bar" class="progress-bar-fill" style="width:0%"></div>
-        </div>
-        <div id="ruck-postcards" class="postcard-list" style="margin-top:14px">
-          <p class="dim-msg">Log your first miles to unlock waypoints.</p>
-        </div>
-      </div>
-
-      <!-- Recent Cardio -->
-      <div class="card">
-        <h2 class="card-h2">Recent Cardio</h2>
-        <div id="recent-cardio"><p class="dim-msg">No cardio logged yet.</p></div>
-      </div>
-
-    </div>
-  </section>
-
-  <!-- ── VAULT ─────────────────────────────────────────────────────────────── -->
-  <section class="page-section" id="section-vault">
-    <div class="section-scroll">
-
-      <div class="card">
-        <h2 class="card-h2">⚔️ Monster Trophies</h2>
-        <p class="sub-text" style="margin-bottom:10px">Complete a 6-session microcycle to slay a monster and earn a permanent passive bonus.</p>
-        <div id="trophy-buffs-summary"></div>
-        <div class="badge-grid" id="trophies-list">
-          <div class="empty-msg">Complete a cycle to earn your first trophy.</div>
-        </div>
-      </div>
-
-      <div class="card">
-        <h2 class="card-h2">🌿 Olympian Laurels</h2>
-        <p class="sub-text" style="margin-bottom:10px">Log 3 activities (any type) in a calendar week.</p>
-        <div class="badge-grid" id="laurels-list">
-          <div class="empty-msg">Train 3× this week to earn a Laurel.</div>
-        </div>
-      </div>
-
-      <div class="card">
-        <h2 class="card-h2">📜 Journey Waypoints</h2>
-        <p class="sub-text" style="margin-bottom:10px">Ruck and run your way from Athens to Sparta and back.</p>
-        <div id="vault-postcards" class="postcard-list">
-          <div class="empty-msg">Unlock waypoints by covering journey miles.</div>
-        </div>
-      </div>
-
-    </div>
-  </section>
-
-  <!-- ── ESTATE ────────────────────────────────────────────────────────────── -->
-  <section class="page-section" id="section-estate">
-    <div class="section-scroll">
-
-      <!-- Resource Bar -->
-      <div class="card">
-        <div class="card-header">
-          <h2>🏛️ Estate Resources</h2>
-          <span id="estate-drachma-pill" class="stat-chip">🪙 0.00</span>
-        </div>
-        <div class="estate-resource-bar" id="estate-resources">
-          <!-- Rendered by renderEstateResources() -->
-        </div>
-      </div>
-
-      <!-- Estate Grid -->
-      <div class="card">
-        <div class="card-header">
-          <h2>🌾 Estate</h2>
-          <span class="sub-text" style="font-size:0.78rem">7 × 5 grid</span>
-        </div>
-        <div class="estate-grid-wrap" id="estate-grid">
-          <!-- Rendered by renderEstateGrid() -->
-        </div>
-      </div>
-
-      <!-- Villa -->
-      <div class="card">
-        <div class="card-header">
-          <h2>🏛️ Villa</h2>
-          <span id="villa-level-chip" class="stat-chip">Level 1</span>
-        </div>
-        <p class="sub-text" style="margin-bottom:10px">Upgrade your villa to expand your army capacity and unlock the barracks.</p>
-        <div id="villa-body"><!-- rendered by renderVilla() --></div>
-      </div>
-
-      <!-- Processing Buildings -->
-      <div class="card">
-        <div class="card-header">
-          <h2>⚗️ Workshop</h2>
-        </div>
-        <p class="sub-text" style="margin-bottom:10px">Build processing buildings to convert raw goods into refined products.</p>
-        <div id="processing-list"><!-- rendered by renderProcessing() --></div>
-      </div>
-
-      <!-- Blessings -->
-      <div class="card">
-        <div class="card-header">
-          <h2>🌟 Blessings</h2>
-          <span id="blessings-laurels-chip" class="stat-chip">🌿 0 laurels</span>
-        </div>
-        <p class="sub-text" style="margin-bottom:10px">Spend laurels to invoke divine favour before a workout or campaign.</p>
-        <div id="blessings-list"><!-- rendered by renderBlessings() --></div>
-      </div>
-
-      <!-- Sanctuary -->
-      <div class="card">
-        <div class="card-header">
-          <h2>🏛️ Sanctuary</h2>
-          <span id="sanctuary-count" class="stat-chip">0 / 3</span>
-        </div>
-        <p class="sub-text" style="margin-bottom:10px">Recruited creatures provide passive buffs to your estate.</p>
-        <div id="sanctuary-list" class="creature-list">
-          <p class="dim-msg">No creatures recruited yet. Complete outdoor workouts to encounter them.</p>
-        </div>
-      </div>
-
-      <!-- Relic Inventory -->
-      <div class="card">
-        <div class="card-header">
-          <h2>⚗️ Relics</h2>
-          <span id="relics-count" class="stat-chip">0 / 10</span>
-        </div>
-        <p class="sub-text" style="margin-bottom:10px">Relics provide passive bonuses to workouts and farm production.</p>
-        <div id="relics-list" class="relic-list">
-          <p class="dim-msg">No relics acquired yet. They are found through events and campaigns.</p>
-        </div>
-      </div>
-
-      <!-- Barracks -->
-      <div class="card">
-        <div class="card-header">
-          <h2>🏰 Barracks</h2>
-          <span id="army-strength-pill" class="stat-chip">⚔️ 0 str</span>
-        </div>
-
-        <!-- State A: not yet built -->
-        <div id="barracks-locked">
-          <p class="sub-text" style="margin-bottom:10px">
-            Train soldiers to defend your estate and launch campaigns.
-          </p>
-          <!-- Requirements progress — rendered by renderBarracksRequirements() -->
-          <div id="barracks-requirements" style="margin-bottom:12px"></div>
-          <div class="barracks-cost-row">
-            <span class="barracks-cost-label">Build cost:</span>
-            <span class="barracks-cost-resources">🪙 600 · 🌾 40 grain · 🍷 10 wine</span>
-          </div>
-          <button class="btn-primary" id="build-barracks-btn" style="margin-top:12px;width:100%">
-            🏰 Build Barracks
-          </button>
-        </div>
-
-        <!-- State B: barracks open -->
-        <div id="barracks-open" hidden>
-          <div class="army-stats-row">
-            <div class="army-stat-chip">
-              <span class="army-stat-label">Units</span>
-              <span id="army-count" class="army-stat-val">0 / 10</span>
-            </div>
-            <div class="army-stat-chip">
-              <span class="army-stat-label">Strength</span>
-              <span id="army-total-strength" class="army-stat-val">0</span>
-            </div>
-          </div>
-
-          <!-- Current army list -->
-          <div id="army-unit-list" class="unit-list" style="margin-top:12px">
-            <p class="dim-msg">No soldiers recruited yet.</p>
-          </div>
-
-          <!-- Recruit section -->
-          <div class="recruit-section">
-            <div class="recruit-section-header">⚔️ Recruit Soldiers</div>
-            <div id="recruit-unit-list" class="recruit-list">
-              <!-- Populated by renderArmy() -->
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Campaign Map CTA -->
-      <div class="card prophecy-cta-card">
-        <div class="prophecy-cta-row">
-          <div>
-            <div class="prophecy-cta-label">Military Campaigns</div>
-            <div id="campaigns-won-preview" class="prophecy-cta-title">0 victories</div>
-          </div>
-          <button class="btn-outline" id="open-campaign-map-btn">⚔️ Campaign Map</button>
-        </div>
-      </div>
-
-      <!-- Prophecy Scroll button -->
-      <div class="card prophecy-cta-card">
-        <div class="prophecy-cta-row">
-          <div>
-            <div class="prophecy-cta-label">Your Heroic Title</div>
-            <div id="prophecy-combined-preview" class="prophecy-cta-title">Unnamed Mortal</div>
-          </div>
-          <button class="btn-outline" id="open-prophecy-btn">📜 Prophecy Scroll</button>
-        </div>
-      </div>
-
-      <!-- Agora (Marketplace) -->
-      <div class="card">
-        <div class="card-header">
-          <h2>🏛️ Agora</h2>
-          <span class="sub-text" style="font-size:0.78rem">Sell goods for drachmae</span>
-        </div>
-        <div class="agora-grid" id="agora-grid">
-          <p class="dim-msg">Loading market prices…</p>
-        </div>
-      </div>
-
-      <!-- Event Log -->
-      <div class="card">
-        <h2 class="card-h2">📜 Estate Log</h2>
-        <div class="estate-event-log" id="estate-event-log">
-          <p class="dim-msg">Log a workout to see events.</p>
-        </div>
-      </div>
-
-    </div>
-  </section>
-
-  <!-- ── HISTORY ────────────────────────────────────────────────────────────── -->
-  <section class="page-section" id="section-history">
-    <div class="section-scroll">
-
-      <!-- Activity Calendar -->
-      <div class="card">
-        <div class="card-header">
-          <h2>📅 This Week</h2>
-          <span id="calendar-week-label" class="stat-chip"></span>
-        </div>
-        <div class="activity-calendar" id="activity-calendar">
-          <!-- Rendered by renderActivityCalendar() -->
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="filter-row">
-          <button class="filter-btn active" data-filter="all">All</button>
-          <button class="filter-btn" data-filter="strength">Strength</button>
-          <button class="filter-btn" data-filter="running">Run</button>
-          <button class="filter-btn" data-filter="rucking">Ruck</button>
-          <button class="filter-btn" data-filter="walking">Walk</button>
-        </div>
-        <div id="history-list"><p class="dim-msg">No activity logged yet — get moving!</p></div>
-      </div>
-
-    </div>
-  </section>
-
-</main>
-
-<!-- ═══ BOTTOM NAV ═══════════════════════════════════════════════════════════ -->
-<nav class="bottom-nav">
-  <button class="nav-btn active" data-section="train">
-    <span class="nav-icon">⚔️</span>
-    <span class="nav-label">Train</span>
-  </button>
-  <button class="nav-btn" data-section="cardio">
-    <span class="nav-icon">🏃</span>
-    <span class="nav-label">Cardio</span>
-  </button>
-  <button class="nav-btn" data-section="vault">
-    <span class="nav-icon">🏆</span>
-    <span class="nav-label">Vault</span>
-  </button>
-  <button class="nav-btn" data-section="estate">
-    <span class="nav-icon">🏛️</span>
-    <span class="nav-label">Estate</span>
-  </button>
-  <button class="nav-btn" data-section="history">
-    <span class="nav-icon">📜</span>
-    <span class="nav-label">History</span>
-  </button>
-</nav>
-
-<!-- ═══ TOAST ════════════════════════════════════════════════════════════════ -->
-<div id="toast" class="toast" role="alert" aria-live="polite"></div>
-
-<!-- ═══ CUSTOM WORKOUT DIALOG ════════════════════════════════════════════════ -->
-<div id="custom-dialog" class="dialog-overlay" hidden>
-  <div class="dialog" role="dialog" aria-modal="true">
-    <h3>Log Custom Workout</h3>
-    <textarea id="custom-text" rows="4"
-              placeholder="Describe your workout… (Ctrl+Enter to submit)"></textarea>
-    <div class="dialog-actions">
-      <button class="btn-ghost" id="cancel-custom">Cancel</button>
-      <button class="btn-primary" id="submit-custom">Log It</button>
-    </div>
-  </div>
-</div>
-
-<!-- ═══ CYCLE BUILDER DIALOG ════════════════════════════════════════════════ -->
-<div id="builder-dialog" class="dialog-overlay" hidden>
-  <div class="dialog dialog-wide builder-dialog-box" role="dialog" aria-modal="true">
-
-    <!-- Header -->
-    <div class="dialog-top-row">
-      <h3>⚒ Build Custom Cycle</h3>
-      <button class="btn-icon" id="close-builder-btn">✕</button>
-    </div>
-
-    <!-- Session tabs -->
-    <div class="builder-tabs" id="builder-tabs">
-      <!-- Injected by renderBuilderTabs() -->
-    </div>
-
-    <!-- Scrollable body: session editor + movement library -->
-    <div class="builder-body">
-
-      <!-- Session editor -->
-      <div class="builder-session-editor" id="builder-session-editor">
-        <!-- Injected by renderBuilderEditor() -->
-      </div>
-
-      <!-- Movement library (always visible, scrolls with body) -->
-      <div class="builder-library">
-        <div class="builder-lib-hdr">
-          <span class="builder-lib-title">📖 Movement Library</span>
-          <span class="builder-lib-hint">tap to insert into focused slot</span>
-        </div>
-        <input id="lib-search" type="text" placeholder="Search movements…"
-               class="lib-search-input" autocomplete="off">
-        <div class="builder-lib-cats" id="lib-cats">
-          <!-- Category pills injected by renderLibraryCats() -->
-        </div>
-        <div class="builder-lib-grid" id="lib-grid">
-          <!-- Movement pills injected by renderLibraryGrid() -->
-        </div>
-      </div>
-
-    </div><!-- /.builder-body -->
-
-    <!-- Footer -->
-    <div class="builder-footer">
-      <input id="builder-name" type="text" placeholder="Name your cycle…"
-             class="builder-name-input">
-      <div class="builder-footer-btns">
-        <button class="btn-ghost" id="cancel-builder-btn">Cancel</button>
-        <button class="btn-primary" id="save-builder-btn">💾 Save &amp; Start</button>
-      </div>
-    </div>
-
-  </div>
-</div>
-
-<!-- ═══ TRACK PREVIEW DIALOG ════════════════════════════════════════════════ -->
-<div id="preview-dialog" class="dialog-overlay" hidden>
-  <div class="dialog dialog-wide" role="dialog" aria-modal="true">
-    <div class="dialog-top-row">
-      <h3 id="preview-track-name">Track Preview</h3>
-      <button class="btn-icon" id="close-preview-btn">✕</button>
-    </div>
-    <p class="sub-text" style="margin-bottom:12px">Tap a session to expand details.</p>
-    <div id="preview-sessions" class="preview-sessions"></div>
-    <div class="dialog-actions">
-      <button class="btn-ghost" id="cancel-preview-btn">Close</button>
-      <button class="btn-primary" id="start-previewed-btn">Start This Track</button>
-    </div>
-  </div>
-</div>
-
-<!-- ═══ CREATURE ENCOUNTER DIALOG ════════════════════════════════════════════ -->
-<div id="encounter-overlay" class="dialog-overlay" hidden>
-  <div class="dialog encounter-dialog" role="dialog" aria-modal="true"
-       aria-labelledby="encounter-creature-name">
-
-    <div class="encounter-header">
-      <div id="encounter-rarity-badge" class="encounter-rarity-badge">common</div>
-      <div id="encounter-icon" class="encounter-icon">🌿</div>
-    </div>
-
-    <h3 id="encounter-creature-name" class="encounter-title">A Creature Appears</h3>
-    <p id="encounter-description" class="encounter-description"></p>
-
-    <div class="encounter-buff-row">
-      <span class="encounter-buff-icon">✨</span>
-      <span id="encounter-buff-label" class="encounter-buff-label">Passive buff</span>
-    </div>
-
-    <p id="encounter-flavor" class="encounter-flavor"></p>
-
-    <div class="encounter-actions">
-      <button class="btn-outline encounter-release-btn" id="encounter-release-btn">
-        ⚡ Release <span id="encounter-release-reward">(+5 🪙)</span>
-      </button>
-      <button class="btn-primary encounter-recruit-btn" id="encounter-recruit-btn">
-        🏛️ Recruit
-      </button>
-    </div>
-
-    <button class="btn-ghost encounter-skip-btn" id="encounter-skip-btn">
-      Leave it be
-    </button>
-  </div>
-</div>
-
-<!-- ═══ PROPHECY SCROLL DIALOG ═══════════════════════════════════════════════ -->
-<div id="prophecy-overlay" class="dialog-overlay prophecy-overlay" hidden>
-  <div class="dialog dialog-wide prophecy-dialog" role="dialog" aria-modal="true"
-       aria-labelledby="prophecy-dialog-title">
-
-    <!-- Header -->
-    <div class="dialog-top-row prophecy-header">
-      <div>
-        <div class="prophecy-scroll-eyebrow">Prophecy Scroll</div>
-        <h3 id="prophecy-dialog-title" class="prophecy-scroll-title">Unnamed Mortal</h3>
-      </div>
-      <button class="btn-icon" id="close-prophecy-btn">✕</button>
-    </div>
-
-    <!-- Oracle phase bar -->
-    <div class="prophecy-oracle-bar">
-      <span class="prophecy-oracle-icon">🔮</span>
-      <div class="prophecy-oracle-info">
-        <span class="prophecy-oracle-phase-label">Oracle Relationship</span>
-        <span id="prophecy-oracle-phase-name" class="prophecy-oracle-phase-name">Stranger</span>
-      </div>
-      <div class="prophecy-oracle-meta">
-        <span id="prophecy-oracle-visits" class="prophecy-oracle-visits">0 visits</span>
-      </div>
-    </div>
-
-    <!-- Laurels -->
-    <div class="prophecy-laurels-row">
-      <span class="prophecy-laurels-icon">🌿</span>
-      <span class="prophecy-laurels-label">Laurels Earned</span>
-      <span id="prophecy-laurels" class="prophecy-laurels-count">0</span>
-    </div>
-
-    <!-- Title categories -->
-    <div id="prophecy-categories" class="prophecy-categories">
-      <!-- Injected by renderProphecyCategories() -->
-    </div>
-
-    <div class="dialog-actions">
-      <button class="btn-ghost" id="cancel-prophecy-btn">Close</button>
-    </div>
-  </div>
-</div>
-
-<!-- ═══ ESTATE EVENT POPUP ════════════════════════════════════════════════════ -->
-<div id="event-overlay" class="event-overlay" hidden>
-  <div class="event-popup" role="dialog" aria-modal="true" aria-labelledby="event-title">
-
-    <div class="event-popup-header">
-      <span id="event-icon"  class="event-icon">🔮</span>
-      <span id="event-type-badge" class="event-type-badge">oracle</span>
-    </div>
-
-    <h3 id="event-title" class="event-title">The Oracle Appears</h3>
-
-    <div id="event-lines" class="event-lines">
-      <!-- Lines injected by showEventPopup() -->
-    </div>
-
-    <!-- Creature card (hidden unless creature event) -->
-    <div id="event-creature-card" class="event-creature-card" hidden>
-      <span id="event-creature-rarity" class="event-creature-rarity"></span>
-      <span id="event-creature-name"   class="event-creature-name"></span>
-    </div>
-
-    <button class="btn-primary event-dismiss-btn" id="event-dismiss-btn">
-      Continue →
-    </button>
-
-  </div>
-</div>
-
-<!-- ═══ CAMPAIGN MAP DIALOG ════════════════════════════════════════════════ -->
-<div id="campaign-overlay" class="dialog-overlay" hidden>
-  <div class="dialog dialog-wide campaign-dialog" role="dialog" aria-modal="true"
-       aria-labelledby="campaign-dialog-title">
-
-    <div class="dialog-top-row">
-      <div>
-        <div class="prophecy-scroll-eyebrow">Military Campaign</div>
-        <h3 id="campaign-dialog-title" class="prophecy-scroll-title">Choose Your Battle</h3>
-      </div>
-      <button class="btn-icon" id="close-campaign-btn">✕</button>
-    </div>
-
-    <!-- Army strength bar -->
-    <div class="campaign-army-bar">
-      <span class="campaign-army-icon">⚔️</span>
-      <div class="campaign-army-info">
-        <span class="campaign-army-label">Army Strength</span>
-        <strong id="campaign-army-strength-display" class="campaign-army-val">0</strong>
-      </div>
-    </div>
-
-    <p class="sub-text campaign-cost-note">
-      Launch cost: 🪙 50 drachmae · 🌾 5 grain
-    </p>
-
-    <!-- Region list -->
-    <div id="campaign-region-list" class="campaign-region-list">
-      <p class="dim-msg">Loading regions…</p>
-    </div>
-
-    <div class="dialog-actions">
-      <button class="btn-ghost" id="cancel-campaign-btn">Close</button>
-    </div>
-  </div>
-</div>
-
-<!-- ═══ FARM BUILD DIALOG ═══════════════════════════════════════════════════ -->
-<div id="farm-build-overlay" class="dialog-overlay" hidden>
-  <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="farm-build-title">
-    <div class="dialog-top-row">
-      <h3 id="farm-build-title">🌾 Build a Farm</h3>
-      <button class="btn-icon" id="close-farm-build-btn">✕</button>
-    </div>
-    <p class="sub-text" style="margin-bottom:12px" id="farm-build-subtitle">Choose a farm type to build on this plot.</p>
-    <div id="farm-type-list" class="farm-type-list">
-      <!-- Rendered by renderFarmBuildDialog() -->
-    </div>
-    <div class="dialog-actions">
-      <button class="btn-ghost" id="cancel-farm-build-btn">Cancel</button>
-    </div>
-  </div>
-</div>
-
-<!-- ═══ FARM UPGRADE DIALOG ══════════════════════════════════════════════════ -->
-<div id="farm-upgrade-overlay" class="dialog-overlay" hidden>
-  <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="farm-upgrade-title">
-    <div class="dialog-top-row">
-      <h3 id="farm-upgrade-title">⬆️ Upgrade Farm</h3>
-      <button class="btn-icon" id="close-farm-upgrade-btn">✕</button>
-    </div>
-    <div id="farm-upgrade-body">
-      <!-- Rendered by showFarmUpgradeDialog() -->
-    </div>
-    <div class="dialog-actions">
-      <button class="btn-ghost" id="cancel-farm-upgrade-btn">Cancel</button>
-      <button class="btn-primary" id="confirm-farm-upgrade-btn">Upgrade</button>
-    </div>
-  </div>
-</div>
-
-<!-- ═══ PROGRAM PICKER DIALOG ════════════════════════════════════════════════ -->
-<div id="program-picker-dialog" class="dialog-overlay" hidden>
-  <div class="dialog dialog-md">
-    <div class="dialog-header">
-      <h2>Choose Program</h2>
-      <button class="btn-icon" id="close-program-picker-btn">✕</button>
-    </div>
-    <div class="dialog-body">
-      <div class="field-group">
-        <label for="track-select">Program</label>
-        <div class="track-picker-row">
-          <select id="track-select" class="track-select"></select>
-          <button class="btn-icon-sm" id="preview-track-btn" title="Preview sessions">👁</button>
-          <button class="btn-icon-sm" id="delete-track-btn" title="Delete custom program" style="display:none">🗑</button>
-        </div>
-      </div>
-      <button class="btn-primary" id="start-track-btn" style="width:100%;margin-top:12px">Start Program</button>
-      <div class="dialog-divider">or</div>
-      <button class="btn-ghost-sm" id="open-builder-btn" style="width:100%">⚒ Build Custom Program</button>
-    </div>
-  </div>
-</div>
-
-<!-- ═══ LAUREL POPUP ══════════════════════════════════════════════════════════ -->
-<div id="laurel-popup" class="laurel-popup" hidden>
-  <div class="laurel-popup-box">
-    <div class="laurel-crown">🌿</div>
-    <h2 style="margin:8px 0 4px">Laurel Earned!</h2>
-    <p class="sub-text">Awarded for weekly training consistency.</p>
-    <p id="laurel-popup-msg" style="margin-top:8px;color:var(--gold)"></p>
-    <button class="btn-primary" id="laurel-popup-close" style="margin-top:16px;width:100%">✓ Claim</button>
-  </div>
-</div>
-
-<!-- ═══ AUTH OVERLAY ══════════════════════════════════════════════════════════ -->
-<div id="auth-overlay" class="auth-overlay" hidden>
-  <div class="auth-box">
-    <div class="auth-brand">
-      <span class="auth-coin-icon">⚡</span>
-      <h1 class="auth-title">Olympus</h1>
-    </div>
-    <p class="auth-subtitle">Training Log of the Gods</p>
+<!-- Auth -->
+<div id="auth-screen">
+  <div class="auth-logo">First Bell</div>
+  <div class="auth-tagline">Your kettlebell training journal.</div>
+  <div class="auth-card">
     <div class="auth-tabs">
-      <button class="auth-tab active" data-mode="login">Sign In</button>
-      <button class="auth-tab" data-mode="register">Create Account</button>
+      <button class="auth-tab active" id="tab-login-btn" onclick="switchAuthTab('login')">Sign In</button>
+      <button class="auth-tab" id="tab-reg-btn" onclick="switchAuthTab('register')">Register</button>
     </div>
-    <form id="auth-form" autocomplete="on">
-      <input type="text" id="auth-username" class="auth-input" placeholder="Username"
-             autocomplete="username" required>
-      <input type="password" id="auth-password" class="auth-input" placeholder="Password"
-             autocomplete="current-password" required>
-      <div id="auth-error" class="auth-error" hidden></div>
-      <button type="submit" id="auth-submit" class="auth-submit-btn">Sign In</button>
-    </form>
+    <div class="form-group">
+      <label class="form-label">Username</label>
+      <input class="form-input" id="auth-username" type="text" autocomplete="username" placeholder="your_username">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Password</label>
+      <input class="form-input" id="auth-password" type="password" autocomplete="current-password" placeholder="••••••••">
+    </div>
+    <div class="auth-error" id="auth-error"></div>
+    <button class="btn btn-primary btn-full" id="auth-submit-btn" onclick="submitAuth()">Sign In</button>
   </div>
 </div>
 
-<script src="static/main.js?v=14"></script>
+<!-- App -->
+<div id="app">
+  <div class="offline-banner" id="offline-banner">You're offline — viewing cached data</div>
+  <header class="app-header">
+    <div class="wordmark">First Bell</div>
+    <div style="display:flex;align-items:center;gap:12px">
+      <div class="greeting" id="greeting"></div>
+      <button class="logout-btn" onclick="logout()">Out</button>
+    </div>
+  </header>
+
+  <main id="main-content">
+    <section id="tab-today" class="tab-content active">
+      <div id="today-loading" class="loading-state"><div class="spinner"></div></div>
+      <div id="today-content" class="hidden"></div>
+    </section>
+    <section id="tab-log" class="tab-content">
+      <div class="filter-pills">
+        <button class="filter-pill active" onclick="setLogFilter('all',this)">All</button>
+        <button class="filter-pill" onclick="setLogFilter('strength',this)">Strength</button>
+        <button class="filter-pill" onclick="setLogFilter('mobility',this)">Mobility</button>
+        <button class="filter-pill" onclick="setLogFilter('cardio',this)">Cardio</button>
+      </div>
+      <div id="log-loading" class="loading-state hidden"><div class="spinner"></div></div>
+      <div id="log-content"></div>
+    </section>
+    <section id="tab-progress" class="tab-content">
+      <div id="progress-loading" class="loading-state"><div class="spinner"></div></div>
+      <div id="progress-content" class="hidden"></div>
+    </section>
+    <section id="tab-library" class="tab-content">
+      <div class="search-wrap">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" id="lib-search" placeholder="Search movements…" oninput="filterLibrary(this.value)">
+      </div>
+      <div id="library-content"></div>
+    </section>
+  </main>
+
+  <nav class="bottom-nav">
+    <button class="nav-btn active" onclick="switchTab('today',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="5"/><path d="M3 21v-1a9 9 0 0118 0v1"/></svg>
+      Today
+    </button>
+    <button class="nav-btn" onclick="switchTab('log',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3.5" cy="6" r=".5" fill="currentColor"/><circle cx="3.5" cy="12" r=".5" fill="currentColor"/><circle cx="3.5" cy="18" r=".5" fill="currentColor"/></svg>
+      Log
+    </button>
+    <button class="nav-btn" onclick="switchTab('progress',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      Progress
+    </button>
+    <button class="nav-btn" onclick="switchTab('library',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+      Library
+    </button>
+  </nav>
+</div>
+
+<!-- Session sheet -->
+<div class="sheet-overlay" id="session-overlay" onclick="closeSessionSheet()"></div>
+<div class="bottom-sheet" id="session-sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header"><h2 id="sheet-title">Log Session</h2><p id="sheet-subtitle"></p></div>
+  <div class="sheet-body" id="sheet-body"></div>
+  <div class="sheet-footer">
+    <button class="btn btn-primary btn-full" id="complete-btn" onclick="submitSession()">Complete Session</button>
+  </div>
+</div>
+
+<!-- Custom workout sheet -->
+<div class="sheet-overlay" id="custom-overlay" onclick="closeCustomSheet()"></div>
+<div class="bottom-sheet" id="custom-sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header"><h2>Log Custom Workout</h2><p>Describe what you did</p></div>
+  <div class="sheet-body">
+    <div class="form-group">
+      <label class="form-label">What did you do?</label>
+      <textarea class="form-input" id="custom-text" rows="3"
+        placeholder="e.g. KB Swing 5×20, TGU 3×3/side, Goblet Squat 4×10…"
+        style="resize:none;min-height:80px"></textarea>
+    </div>
+  </div>
+  <div class="sheet-footer">
+    <button class="btn btn-primary btn-full" onclick="submitCustomWorkout()">Log Workout</button>
+  </div>
+</div>
+
+<!-- Cardio sheet -->
+<div class="sheet-overlay" id="cardio-overlay" onclick="closeCardioSheet()"></div>
+<div class="bottom-sheet" id="cardio-sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header"><h2 id="cardio-title">Log Run</h2></div>
+  <div class="sheet-body" id="cardio-body"></div>
+  <div class="sheet-footer">
+    <button class="btn btn-primary btn-full" onclick="submitCardio()">Log</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
 <script>
-  if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("service-worker.js");
+// ── App state ─────────────────────────────────────────────────────────────────
+let TOKEN    = localStorage.getItem('fb_token');
+let appState   = null;
+let todayWk    = null;
+let streakInfo = null;
+let allWorkouts = [];
+let movements  = [];
+let logFilter  = 'all';
+let cardioType = null;
+let authMode   = 'login';
+let sessionItems = [];
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+  if ('serviceWorker' in navigator)
+    navigator.serviceWorker.register('/service-worker.js').catch(() => {});
+
+  window.addEventListener('online',  () => document.getElementById('offline-banner').classList.remove('visible'));
+  window.addEventListener('offline', () => document.getElementById('offline-banner').classList.add('visible'));
+  if (!navigator.onLine) document.getElementById('offline-banner').classList.add('visible');
+
+  setGreeting();
+  if (!TOKEN) { showAuth(); return; }
+  await loadAll();
+  renderToday();
+  renderLibrary();
+
+  // Auto-reload on deploy
+  setInterval(async () => {
+    try {
+      const r = await fetch('/api/version');
+      const d = await r.json();
+      if (!window._ver) { window._ver = d.version; return; }
+      if (d.version !== window._ver) window.location.reload();
+    } catch {}
+  }, 60000);
+});
+
+function setGreeting() {
+  const h = new Date().getHours();
+  const el = document.getElementById('greeting');
+  if (el) {
+    if (h < 8)       el.textContent = "Let's get it";
+    else if (h < 12) el.textContent = 'Good morning';
+    else if (h < 17) el.textContent = 'Good afternoon';
+    else             el.textContent = 'Good evening';
   }
+}
+
+// ── API ───────────────────────────────────────────────────────────────────────
+async function api(path, method = 'GET', body = null) {
+  const opts = {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(TOKEN ? { Authorization: `Bearer ${TOKEN}` } : {}),
+    },
+  };
+  if (body) opts.body = JSON.stringify(body);
+  try {
+    const res = await fetch(path, opts);
+    if (res.status === 401) { logout(); return null; }
+    return res.json();
+  } catch {
+    return null;
+  }
+}
+
+async function loadAll() {
+  const [s, w, st, mv] = await Promise.all([
+    api('/api/state'),
+    api('/api/workout/today'),
+    api('/api/streak'),
+    api('/api/movements'),
+  ]);
+  if (s)  appState    = s;
+  if (w)  todayWk     = w;
+  if (st) streakInfo  = st;
+  if (mv) movements   = mv;
+}
+
+async function loadWorkouts() {
+  const data = await api('/api/workouts');
+  if (data) allWorkouts = data.workouts || [];
+}
+
+// ── Auth ──────────────────────────────────────────────────────────────────────
+function showAuth() { document.getElementById('auth-screen').classList.add('visible'); }
+function hideAuth() { document.getElementById('auth-screen').classList.remove('visible'); }
+
+function switchAuthTab(mode) {
+  authMode = mode;
+  document.getElementById('tab-login-btn').classList.toggle('active', mode === 'login');
+  document.getElementById('tab-reg-btn').classList.toggle('active', mode === 'register');
+  document.getElementById('auth-submit-btn').textContent = mode === 'login' ? 'Sign In' : 'Create Account';
+  document.getElementById('auth-error').classList.remove('visible');
+}
+
+async function submitAuth() {
+  const username = document.getElementById('auth-username').value.trim();
+  const password = document.getElementById('auth-password').value;
+  const errEl    = document.getElementById('auth-error');
+  errEl.classList.remove('visible');
+  if (!username || !password) {
+    errEl.textContent = 'Enter username and password';
+    errEl.classList.add('visible');
+    return;
+  }
+  const btn = document.getElementById('auth-submit-btn');
+  btn.disabled = true;
+  const endpoint = authMode === 'login' ? '/login' : '/register';
+  try {
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      errEl.textContent = data.detail || 'Authentication failed';
+      errEl.classList.add('visible');
+      btn.disabled = false;
+      return;
+    }
+    TOKEN = data.token;
+    localStorage.setItem('fb_token', data.token);
+    localStorage.setItem('fb_user', data.username);
+    hideAuth();
+    document.getElementById('today-loading').style.display = '';
+    document.getElementById('today-content').classList.add('hidden');
+    await loadAll();
+    renderToday();
+    renderLibrary();
+  } catch {
+    errEl.textContent = 'Network error. Try again.';
+    errEl.classList.add('visible');
+  }
+  btn.disabled = false;
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && document.getElementById('auth-screen').classList.contains('visible'))
+    submitAuth();
+});
+
+function logout() {
+  TOKEN = null;
+  localStorage.removeItem('fb_token');
+  localStorage.removeItem('fb_user');
+  appState = todayWk = streakInfo = null;
+  allWorkouts = [];
+  document.getElementById('today-content').innerHTML = '';
+  document.getElementById('today-content').classList.add('hidden');
+  document.getElementById('today-loading').style.display = '';
+  showAuth();
+}
+
+// ── Tab switching ─────────────────────────────────────────────────────────────
+function switchTab(tab, btn) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById(`tab-${tab}`).classList.add('active');
+  btn.classList.add('active');
+  if (tab === 'log')      renderLog();
+  if (tab === 'progress') renderProgress();
+  if (tab === 'library' && !document.getElementById('library-content').innerHTML) renderLibrary();
+}
+
+// ── TODAY ─────────────────────────────────────────────────────────────────────
+function renderToday() {
+  const loading = document.getElementById('today-loading');
+  const content = document.getElementById('today-content');
+  loading.style.display = 'none';
+  content.classList.remove('hidden');
+
+  if (!todayWk) {
+    content.innerHTML = `<div class="card"><p class="text-muted" style="text-align:center;padding:20px">Unable to load. Check your connection.</p></div>`;
+    return;
+  }
+
+  let html = '';
+  if (todayWk.status === 'cycle_complete') {
+    html += renderCycleComplete();
+  } else if (todayWk.status === 'active') {
+    html += renderSessionCard(todayWk);
+  } else {
+    html += renderTrackSelector('Choose Your Training Day');
+  }
+  html += renderStreakCard();
+  html += renderQuickCardio();
+  content.innerHTML = html;
+}
+
+function badgeClass(trackKey) {
+  if (!trackKey) return 'badge-a';
+  if (trackKey.includes('day_a'))    return 'badge-a';
+  if (trackKey.includes('day_b'))    return 'badge-b';
+  if (trackKey.includes('day_c'))    return 'badge-c';
+  if (trackKey.includes('day_d'))    return 'badge-d';
+  if (trackKey.includes('mobility')) return 'badge-mob';
+  return 'badge-a';
+}
+
+function badgeLabel(wk) {
+  const t = wk.track_key || '';
+  if (t.includes('day_a'))    return '🍑 Day A · Glute & Legs';
+  if (t.includes('day_b'))    return '💪 Day B · Pull + Core';
+  if (t.includes('day_c'))    return '🔥 Day C · Hardstyle';
+  if (t.includes('day_d'))    return '🏋️ Day D · Double KB';
+  if (t.includes('mobility')) return '🌿 Mobility';
+  return wk.track_name || 'Session';
+}
+
+function renderSessionCard(wk) {
+  const acc = wk.accessory || [];
+  const sw  = wk.suggested_weight || wk.std_kg || 16;
+  return `
+<div class="card">
+  <div class="day-badge ${badgeClass(wk.track_key)}">${badgeLabel(wk)}</div>
+  <div class="week-label">${x(wk.week_label)}</div>
+  <div class="cycle-indicator">Wave week ${wk.cycle_week || 1} of 4 &nbsp;·&nbsp; Session ${(wk.session_idx || 0) + 1} of ${wk.total_sessions || 6}</div>
+  <div class="main-lift">${x(wk.main)}</div>
+  <div class="bell-row">
+    <span class="bell-weight">${sw} kg</span>
+    <span class="bell-label">suggested bell</span>
+  </div>
+  ${wk.bell_guidance ? `<div class="bell-guidance-row">${x(wk.bell_guidance)}</div>` : ''}
+  <button class="acc-toggle" id="acc-toggle" onclick="toggleAcc()">
+    Accessories <span style="font-size:12px;color:var(--light-gray)">(${acc.length})</span>
+    <span class="chevron">▼</span>
+  </button>
+  <ul class="acc-list" id="acc-list">${acc.map(a => `<li>${x(a)}</li>`).join('')}</ul>
+  <div class="finisher-section">
+    <div class="finisher-label">Finisher</div>
+    <div class="finisher-text">${x(wk.finisher)}</div>
+  </div>
+  <button class="btn btn-primary btn-full" style="margin-bottom:10px" onclick="openSessionSheet()">Log This Session</button>
+  <button class="btn-text" onclick="openCustomSheet()">Log Custom Workout</button>
+</div>`;
+}
+
+function toggleAcc() {
+  document.getElementById('acc-toggle').classList.toggle('expanded');
+  document.getElementById('acc-list').classList.toggle('visible');
+}
+
+function renderCycleComplete() {
+  return `
+<div class="card" style="text-align:center;padding:28px 20px">
+  <div style="font-size:36px;margin-bottom:8px">🎯</div>
+  <div style="font-family:'DM Serif Display',serif;font-size:22px;margin-bottom:8px">Cycle Complete!</div>
+  <p style="color:var(--warm-gray);font-size:14px;margin-bottom:20px">You finished all sessions in this track. Choose your next training day:</p>
+  <div class="track-grid">${renderTrackBtns()}</div>
+</div>`;
+}
+
+function renderTrackSelector(title) {
+  return `
+<div class="card">
+  <div class="card-title">${x(title)}</div>
+  <div class="track-grid">${renderTrackBtns()}</div>
+</div>`;
+}
+
+function renderTrackBtns() {
+  return [
+    { key:'day_a_glute_legs', name:'Day A', sub:'Glute & Legs',   cls:'badge-a'   },
+    { key:'day_b_pull_core',  name:'Day B', sub:'Pull + Core',    cls:'badge-b'   },
+    { key:'day_c_hardstyle',  name:'Day C', sub:'Hardstyle',      cls:'badge-c'   },
+    { key:'day_d_double_kb',  name:'Day D', sub:'Double KB',      cls:'badge-d'   },
+    { key:'mobility_flow',    name:'Mobility', sub:'Flow & Restore', cls:'badge-mob'},
+  ].map(t => `
+    <button class="track-btn" onclick="selectTrack('${t.key}')">
+      <span class="day-badge ${t.cls}" style="font-size:11px;margin-bottom:4px">${t.name}</span>
+      <div class="track-type">${t.sub}</div>
+    </button>`).join('');
+}
+
+async function selectTrack(key) {
+  const res = await api('/api/track/select', 'POST', { key });
+  if (!res) return;
+  appState = res.state;
+  todayWk  = await api('/api/workout/today');
+  renderToday();
+}
+
+function renderStreakCard() {
+  if (!streakInfo) return '';
+  const { week_target, this_week, streak_weeks, activities_remaining } = streakInfo;
+
+  const today  = new Date();
+  const isoDay = today.getDay() === 0 ? 6 : today.getDay() - 1;
+  const labels = ['M','T','W','T','F','S','S'];
+
+  const weekStart = new Date(today);
+  weekStart.setDate(today.getDate() - isoDay);
+  weekStart.setHours(0,0,0,0);
+
+  const logged = new Map();
+  if (appState) {
+    const entries = [
+      ...(appState.workouts || []).map(w => ({ date: w.date, type: w.day_type || w.type || 'strength' })),
+      ...(appState.ruck_log || []).map(r => ({ date: r.date, type: 'cardio' })),
+      ...(appState.run_log  || []).map(r => ({ date: r.date, type: 'cardio' })),
+      ...(appState.walk_log || []).map(r => ({ date: r.date, type: 'cardio' })),
+    ];
+    for (const entry of entries) {
+      if (!entry.date) continue;
+      const d = new Date(entry.date + 'T00:00:00');
+      const offset = Math.round((d - weekStart) / 86400000);
+      if (offset >= 0 && offset <= 6 && !logged.has(offset)) {
+        logged.set(offset, entry.type);
+      }
+    }
+  }
+
+  const dots = labels.map((lbl, i) => {
+    const isToday = i === isoDay;
+    const type    = logged.get(i);
+    let cls = 'dot';
+    if (type === 'mobility') cls += ' filled-mobility';
+    else if (type === 'cardio') cls += ' filled-cardio';
+    else if (type) cls += ' filled-strength';
+    if (isToday) cls += ' today-ring';
+    return `<div class="${cls}">${lbl}</div>`;
+  }).join('');
+
+  const emoji = streak_weeks >= 4 ? '🔥' : streak_weeks >= 2 ? '⚡' : '✦';
+  const prog  = activities_remaining > 0 ? ` · ${activities_remaining} to go` : ' ✓';
+
+  return `
+<div class="card">
+  <div class="card-title">This Week</div>
+  <div class="streak-dots">${dots}</div>
+  <div class="streak-stat-row">
+    <div class="streak-count">${this_week}/${week_target} this week${prog}</div>
+    <div class="streak-weeks">${emoji} ${streak_weeks}-week streak</div>
+  </div>
+</div>`;
+}
+
+function renderQuickCardio() {
+  return `
+<div class="card">
+  <div class="card-title">Quick Log Cardio</div>
+  <div style="display:flex;gap:8px">
+    <button class="pill-btn" onclick="openCardioSheet('run')">Run</button>
+    <button class="pill-btn" onclick="openCardioSheet('ruck')">Ruck</button>
+    <button class="pill-btn" onclick="openCardioSheet('walk')">Walk</button>
+  </div>
+</div>`;
+}
+
+// ── Session sheet ─────────────────────────────────────────────────────────────
+function openSessionSheet() {
+  if (!todayWk || todayWk.status !== 'active') return;
+  const wk  = todayWk;
+  const sw  = wk.suggested_weight || wk.std_kg || 16;
+  sessionItems = [
+    { label: wk.main, key: 'main', kg: sw },
+    ...(wk.accessory || []).map((a, i) => ({ label: a, key: `acc_${i}`, kg: 0 })),
+    ...(wk.finisher ? [{ label: 'Finisher: ' + wk.finisher, key: 'finisher', kg: 0 }] : []),
+  ];
+
+  document.getElementById('sheet-title').textContent    = 'Log Session';
+  document.getElementById('sheet-subtitle').textContent = wk.main || '';
+  document.getElementById('sheet-body').innerHTML = sessionItems.map((item, idx) => `
+    <div class="exercise-row">
+      <div class="ex-label">${x(item.label)}</div>
+      <div class="ex-inputs">
+        <div class="ex-field"><label>kg</label><input type="number" id="kg-${idx}" min="0" step="0.5" value="${item.kg || ''}" placeholder="${item.kg || '—'}"></div>
+        <div class="ex-field"><label>sets</label><input type="number" id="sets-${idx}" min="0" step="1" placeholder="—"></div>
+        <div class="ex-field"><label>reps</label><input type="number" id="reps-${idx}" min="0" step="1" placeholder="—"></div>
+      </div>
+    </div>`).join('');
+
+  document.getElementById('session-overlay').classList.add('visible');
+  document.getElementById('session-sheet').classList.add('open');
+}
+
+function closeSessionSheet() {
+  document.getElementById('session-overlay').classList.remove('visible');
+  document.getElementById('session-sheet').classList.remove('open');
+}
+
+async function submitSession() {
+  const btn = document.getElementById('complete-btn');
+  btn.disabled = true; btn.textContent = 'Logging…';
+
+  const weights_lbs = {};
+  sessionItems.forEach((item, idx) => {
+    const kg = parseFloat(document.getElementById(`kg-${idx}`)?.value || 0);
+    if (kg > 0) weights_lbs[item.key] = Math.round(kg * 2.20462 * 10) / 10;
+  });
+
+  const res = await api('/api/workout/recommended', 'POST', { weights_lbs });
+  btn.disabled = false; btn.textContent = 'Complete Session';
+  if (!res) { showToast('Error logging session'); return; }
+
+  appState   = res.state;
+  todayWk    = await api('/api/workout/today');
+  streakInfo = await api('/api/streak');
+  closeSessionSheet();
+  renderToday();
+  showToast('Session logged ✓');
+}
+
+// ── Custom workout ────────────────────────────────────────────────────────────
+function openCustomSheet() {
+  document.getElementById('custom-overlay').classList.add('visible');
+  document.getElementById('custom-sheet').classList.add('open');
+  setTimeout(() => document.getElementById('custom-text').focus(), 300);
+}
+function closeCustomSheet() {
+  document.getElementById('custom-overlay').classList.remove('visible');
+  document.getElementById('custom-sheet').classList.remove('open');
+}
+async function submitCustomWorkout() {
+  const text = document.getElementById('custom-text').value.trim();
+  if (!text) return;
+  const res = await api('/api/workout/custom', 'POST', { text });
+  if (!res) { showToast('Error logging'); return; }
+  appState = res.state;
+  streakInfo = await api('/api/streak');
+  document.getElementById('custom-text').value = '';
+  closeCustomSheet();
+  renderToday();
+  showToast('Workout logged ✓');
+}
+
+// ── Cardio sheet ──────────────────────────────────────────────────────────────
+function openCardioSheet(type) {
+  cardioType = type;
+  const titles = { run: 'Log Run', ruck: 'Log Ruck', walk: 'Log Walk' };
+  document.getElementById('cardio-title').textContent = titles[type];
+
+  let body = `<div class="form-group"><label class="form-label">Distance (miles)</label>
+    <input class="form-input" id="cardio-miles" type="number" min="0.1" step="0.1" placeholder="0.0" inputmode="decimal"></div>`;
+  if (type === 'ruck')
+    body += `<div class="form-group"><label class="form-label">Pack weight (lbs)</label>
+    <input class="form-input" id="cardio-lbs" type="number" min="0" step="1" placeholder="0" inputmode="decimal"></div>`;
+  if (type === 'run')
+    body += `<div class="form-group"><label class="form-label">Pace min/mile (optional)</label>
+    <input class="form-input" id="cardio-pace" type="number" min="0" step="0.5" placeholder="e.g. 9.5" inputmode="decimal"></div>`;
+
+  document.getElementById('cardio-body').innerHTML = body;
+  document.getElementById('cardio-overlay').classList.add('visible');
+  document.getElementById('cardio-sheet').classList.add('open');
+  setTimeout(() => document.getElementById('cardio-miles').focus(), 300);
+}
+function closeCardioSheet() {
+  document.getElementById('cardio-overlay').classList.remove('visible');
+  document.getElementById('cardio-sheet').classList.remove('open');
+}
+async function submitCardio() {
+  const miles = parseFloat(document.getElementById('cardio-miles').value || 0);
+  if (!miles || miles <= 0) { showToast('Enter a valid distance'); return; }
+
+  let endpoint, body;
+  if (cardioType === 'run') {
+    const pace = parseFloat(document.getElementById('cardio-pace')?.value || 0) || null;
+    endpoint = '/api/run';
+    body = { miles, ...(pace ? { pace_min_per_mile: pace } : {}) };
+  } else if (cardioType === 'ruck') {
+    const lbs = parseFloat(document.getElementById('cardio-lbs')?.value || 0) || 0;
+    endpoint = '/api/ruck';
+    body = { miles, pounds: lbs };
+  } else {
+    endpoint = '/api/walk';
+    body = { miles };
+  }
+
+  const res = await api(endpoint, 'POST', body);
+  if (!res) { showToast('Error logging'); return; }
+  appState   = res.state;
+  streakInfo = await api('/api/streak');
+  closeCardioSheet();
+  renderToday();
+  showToast(`${cardioType.charAt(0).toUpperCase() + cardioType.slice(1)} logged ✓`);
+}
+
+// ── LOG TAB ───────────────────────────────────────────────────────────────────
+async function renderLog() {
+  document.getElementById('log-loading').classList.remove('hidden');
+  document.getElementById('log-content').innerHTML = '';
+  await loadWorkouts();
+  document.getElementById('log-loading').classList.add('hidden');
+  renderLogContent();
+}
+
+function setLogFilter(filter, btn) {
+  logFilter = filter;
+  document.querySelectorAll('.filter-pill').forEach(el => el.classList.remove('active'));
+  btn.classList.add('active');
+  renderLogContent();
+}
+
+function filterWorkout(w) {
+  if (logFilter === 'all') return true;
+  const t = (w.type || '').toLowerCase();
+  if (logFilter === 'strength')  return ['recommended','strength','custom'].includes(t);
+  if (logFilter === 'mobility')  return t === 'mobility';
+  if (logFilter === 'cardio')    return ['rucking','running','walking'].includes(t);
+  return true;
+}
+
+function typeLabel(w) {
+  const map = { recommended:'Strength', strength:'Strength', custom:'Custom',
+    rucking:'Ruck', running:'Run', walking:'Walk', mobility:'Mobility' };
+  return map[(w.type||'').toLowerCase()] || (w.type||'Activity');
+}
+
+function entryDetail(w) {
+  if (w.movement) {
+    const mv  = movements.find(m => m.slug === w.movement);
+    const name = mv ? mv.name : (w.movement||'').replace(/_/g,' ');
+    const sxr  = (w.sets && w.reps) ? ` ${w.sets}×${w.reps}` : '';
+    const kg   = w.weight_kg ? ` @ ${w.weight_kg}kg` : '';
+    return name + sxr + kg;
+  }
+  if (w.distance_miles) return `${w.distance_miles} mi`;
+  return w.notes || typeLabel(w);
+}
+
+function renderLogContent() {
+  const content  = document.getElementById('log-content');
+  const filtered = allWorkouts.filter(filterWorkout);
+  if (!filtered.length) {
+    content.innerHTML = `<div class="empty-state"><h3>Nothing here yet</h3><p>Log your first workout on the Today tab.</p></div>`;
+    return;
+  }
+
+  const today = new Date().toISOString().slice(0,10);
+  const yest  = new Date(Date.now() - 86400000).toISOString().slice(0,10);
+  const groups = {};
+  for (const w of filtered) {
+    const grp = w.date === today ? 'Today' : w.date === yest ? 'Yesterday' : (w.date || 'Earlier');
+    (groups[grp] = groups[grp] || []).push(w);
+  }
+
+  let html = '';
+  for (const [grp, items] of Object.entries(groups)) {
+    html += `<div class="date-group-label">${x(grp)}</div>`;
+    for (const w of items) {
+      const tc = `type-${(w.type||'').toLowerCase()}`;
+      html += `
+        <div class="workout-entry">
+          <div class="entry-left">
+            <div class="entry-type ${tc}">${typeLabel(w)}</div>
+            <div class="entry-detail">${x(entryDetail(w))}</div>
+            ${w.duration_min ? `<div class="entry-meta">${w.duration_min} min</div>` : ''}
+          </div>
+          <button class="delete-btn" onclick="deleteWorkout(event,${w.id})">✕</button>
+        </div>`;
+    }
+  }
+  content.innerHTML = html;
+}
+
+async function deleteWorkout(evt, id) {
+  evt.stopPropagation();
+  if (!confirm('Delete this entry?')) return;
+  const res = await api(`/api/workout/${id}`, 'DELETE');
+  if (!res) { showToast('Error deleting'); return; }
+  allWorkouts = res.workouts || [];
+  renderLogContent();
+  showToast('Deleted');
+}
+
+// ── PROGRESS TAB ──────────────────────────────────────────────────────────────
+async function renderProgress() {
+  const loading = document.getElementById('progress-loading');
+  const content = document.getElementById('progress-content');
+  loading.style.display = '';
+  content.classList.add('hidden');
+
+  if (!movements.length) movements = await api('/api/movements') || [];
+  if (!streakInfo) streakInfo = await api('/api/streak');
+
+  const strengthMoves = movements.filter(m => m.std_kg > 0);
+  const opts = strengthMoves.map(m => `<option value="${m.slug}">${x(m.name)}</option>`).join('');
+
+  const streak  = streakInfo || {};
+  const ruckMi  = (appState?.total_ruck_miles || 0).toFixed(1);
+  const runMi   = (appState?.total_run_miles  || 0).toFixed(1);
+  const walkMi  = (appState?.total_walk_miles || 0).toFixed(1);
+  const totalMi = (appState?.journey_miles    || 0).toFixed(1);
+  const sessions = allWorkouts.length || (appState?.workouts?.length || 0);
+
+  content.innerHTML = `
+    <div class="card">
+      <div class="card-title">Movement Progress</div>
+      <select class="movement-select" id="mv-select" onchange="loadChart(this.value)">
+        <option value="">— Select a movement —</option>${opts}
+      </select>
+      <div id="chart-area"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Overall Stats</div>
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-value">${streak.streak_weeks || 0}</div><div class="stat-label">Week streak</div></div>
+        <div class="stat-card"><div class="stat-value">${sessions}</div><div class="stat-label">Total sessions</div></div>
+        <div class="stat-card"><div class="stat-value">${ruckMi}</div><div class="stat-label">Ruck miles</div></div>
+        <div class="stat-card"><div class="stat-value">${runMi}</div><div class="stat-label">Run miles</div></div>
+        <div class="stat-card"><div class="stat-value">${walkMi}</div><div class="stat-label">Walk miles</div></div>
+        <div class="stat-card"><div class="stat-value">${totalMi}</div><div class="stat-label">Total miles</div></div>
+      </div>
+    </div>`;
+
+  loading.style.display = 'none';
+  content.classList.remove('hidden');
+}
+
+async function loadChart(slug) {
+  const area = document.getElementById('chart-area');
+  if (!slug) { area.innerHTML = ''; return; }
+  area.innerHTML = '<div class="spinner" style="margin:20px auto"></div>';
+
+  const data = await api(`/api/progress/${encodeURIComponent(slug)}`);
+  if (!data?.history?.length) {
+    area.innerHTML = `<p class="text-muted" style="text-align:center;padding:20px 0;font-size:14px">No history for this movement yet.</p>`;
+    return;
+  }
+
+  const h   = data.history;
+  const wts = h.map(r => parseFloat(r.weight_kg) || 0);
+  const max = Math.max(...wts), min = Math.min(...wts), range = max - min || 1;
+  const W = 300, H = 130, PX = 24, PY = 18;
+  const pts = wts.map((w,i) => {
+    const cx = PX + (i/Math.max(wts.length-1,1))*(W-PX*2);
+    const cy = PY + (1-(w-min)/range)*(H-PY*2);
+    return `${cx},${cy}`;
+  }).join(' ');
+  const circles = wts.map((w,i) => {
+    const cx = PX + (i/Math.max(wts.length-1,1))*(W-PX*2);
+    const cy = PY + (1-(w-min)/range)*(H-PY*2);
+    return `<circle cx="${cx}" cy="${cy}" r="4" fill="#C4622D"/>`;
+  }).join('');
+
+  const dateLabels = h.map((r,i) => {
+    if (h.length > 6 && i % Math.ceil(h.length/5) !== 0 && i !== h.length-1) return '';
+    const cx = PX + (i/Math.max(h.length-1,1))*(W-PX*2);
+    return `<text x="${cx}" y="${H-3}" font-size="8" fill="#9E9892" text-anchor="middle">${(r.date||'').slice(5)}</text>`;
+  }).join('');
+
+  const pr   = max;
+  const last = h[h.length-1];
+
+  area.innerHTML = `
+    <div class="chart-container">
+      <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto">
+        <rect width="${W}" height="${H}" fill="#FAF7F2" rx="8"/>
+        <text x="${PX}" y="${PY-3}" font-size="9" fill="#9E9892">${max}kg</text>
+        <text x="${PX}" y="${H-PY+12}" font-size="9" fill="#9E9892">${min}kg</text>
+        <polyline points="${pts}" fill="none" stroke="#C4622D" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+        ${circles}${dateLabels}
+      </svg>
+    </div>
+    <div class="pr-grid">
+      <div class="pr-stat"><div class="pr-value">${pr}</div><div class="pr-label">PR (kg)</div></div>
+      <div class="pr-stat"><div class="pr-value">${last?.reps || '—'}</div><div class="pr-label">Last reps</div></div>
+      <div class="pr-stat"><div class="pr-value">${h.length}</div><div class="pr-label">Sessions</div></div>
+    </div>`;
+}
+
+// ── LIBRARY TAB ───────────────────────────────────────────────────────────────
+const CAT_LABELS = {
+  glute:'Glute & Hip', squat:'Squat & Lunge', hinge:'Hinge & Deadlift',
+  swing:'Swing & Power', snatch:'Snatch', clean:'Clean & Press', press:'Press',
+  row:'Row & Pull', carry:'Carries', get_up:'Get-Up & Windmill',
+  arms:'Arms', core:'Core', bodyweight:'Bodyweight',
+};
+const CAT_ORDER = ['glute','squat','hinge','swing','snatch','clean','press','row','carry','get_up','arms','core','bodyweight'];
+
+function renderLibrary() {
+  if (!movements.length) return;
+  document.getElementById('library-content').innerHTML = buildLib(movements);
+}
+
+function buildLib(mvs) {
+  const grouped = {};
+  for (const m of mvs) (grouped[m.category] = grouped[m.category] || []).push(m);
+  return CAT_ORDER.filter(c => grouped[c]).map(c => `
+    <div class="category-section">
+      <div class="category-label">${CAT_LABELS[c] || c}</div>
+      ${grouped[c].map(m => `
+        <div class="movement-card">
+          <div class="mv-header">
+            <div class="mv-name">${x(m.name)}</div>
+            <div class="mv-hint">${x(m.hint)}</div>
+          </div>
+          ${m.std_kg > 0 ? `<div class="mv-kg">${m.std_kg} kg std</div>` : ''}
+        </div>`).join('')}
+    </div>`).join('');
+}
+
+function filterLibrary(q) {
+  const lq = (q||'').toLowerCase();
+  const filtered = lq ? movements.filter(m =>
+    m.name.toLowerCase().includes(lq) || m.category.toLowerCase().includes(lq)
+  ) : movements;
+  document.getElementById('library-content').innerHTML = buildLib(filtered);
+}
+
+// ── Utilities ─────────────────────────────────────────────────────────────────
+function x(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+let _toastTimer = null;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => t.classList.remove('show'), 2400);
+}
 </script>
 </body>
 </html>
