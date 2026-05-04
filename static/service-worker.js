@@ -1,23 +1,22 @@
-const CACHE = "olympus-v7";
+const CACHE = "firstbell-v1";
 const ASSETS = [
-  "/", "/static/index.html", "/static/style.css",
-  "/static/main.js", "/static/manifest.json", "/static/coin.png"
+  "/", "/static/index.html", "/static/manifest.json"
 ];
 
-self.addEventListener("install", evt=>{
+self.addEventListener("install", evt => {
   evt.waitUntil(
-    caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())
+    caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting())
   );
 });
-self.addEventListener("activate", evt=>{
+self.addEventListener("activate", evt => {
   evt.waitUntil(
-    caches.keys().then(keys=>
-      Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))
-    ).then(()=>self.clients.claim())
+    caches.keys().then(keys =>
+      Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
+    ).then(() => self.clients.claim())
   );
 });
-self.addEventListener("fetch", evt=>{
+self.addEventListener("fetch", evt => {
   evt.respondWith(
-    caches.match(evt.request).then(r=> r || fetch(evt.request))
+    caches.match(evt.request).then(r => r || fetch(evt.request))
   );
 });

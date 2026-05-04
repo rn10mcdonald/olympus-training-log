@@ -1,482 +1,739 @@
 """
-core.py – pure-Python logic for Olympus Training PWA
-NO disk I/O, NO FastAPI; stateless functions that take `state: dict` and mutate it.
+core.py — First Bell training logic
+Pure Python, no I/O. Stateless functions that operate on state dicts.
 """
 
 import datetime as dt
-import random
 import time
 
-# ── Monster table (weighted probabilities) ────────────────────────────────────
-MONSTERS = [
-    # (display_name,                 folder_name,           probability %)
-    ("Satyrs & Woodland Imps",       "Saytr",               10.00),
-    ("Karkinos (Giant Crab)",        "Karkinos",            10.00),
-    ("Harpies",                      "Harpies",             10.00),
-    ("Sirens",                       "Sirens",              10.00),
-    ("Calydonian Boar",              "Calydonin_Boar",      10.00),
-    ("Stymphalian Birds",            "Stymphalian_Birds",    5.00),
-    ("The Sphinx",                   "Sphinx",               5.00),
-    ("Minotaur",                     "Minotaur",             5.00),
-    ("Polyphemus (Cyclops)",         "Polyphemus",           5.00),
-    ("Orthrus (Two-Headed Dog)",     "Orthrus",              5.00),
-    ("Medusa",                       "Medusa",               3.00),
-    ("Mares of Diomedes",            "Mares_of_Diomedes",    3.00),
-    ("Nemean Lion",                  "Nemean_Lion",          3.00),
-    ("Colchian Dragon",              "Colchian_Dragon",      3.00),
-    ("Lernaean Hydra",               "Lernaean_Hydra",       3.00),
-    ("Geryon",                       "Geryon",               1.40),
-    ("Chimera",                      "Chimera",              1.40),
-    ("Talos",                        "Talos",                1.40),
-    ("Cerberus",                     "Cerberus",             1.40),
-    ("Gigantes",                     "Gigantes",             1.40),
-    ("Scylla & Charybdis",           "Scylla_&_Charybdis",  0.75),
-    ("Echidna",                      "Echidna",              0.75),
-    ("Hecatoncheires",               "Hecatoncheires",       0.75),
-    ("Typhon",                       "Typhon",               0.75),
-]
-MONSTER_TOTAL = sum(p for _, _, p in MONSTERS)   # 100.0
-GILD_CHANCE   = 0.10   # 10 % chance the badge is the "Gold" variant
-
-OLYMPIANS = [
-    ("Zeus", "⚡"), ("Hera", "👑"), ("Athena", "🦉"), ("Ares", "🛡️"),
-    ("Apollo", "☀️"), ("Artemis", "🏹"), ("Hermes", "🪽"), ("Demeter", "🌾"),
-    ("Poseidon", "🌊"), ("Hades", "🖤"),
-]
-
-# ── Pheidippides Journey milestones (shared by rucking, running AND walking) ──
-# Ruck miles + run miles + walk miles combine into a single journey total.
-RUCK_STOPS = [
-    (0,   "Acropolis",
-     "\"Welcome to leg-day on hard mode!\" Athena's owl hoots, 'Hoot luck, buddy.'"),
-    (12,  "Eleusis",
-     "Demeter offers carbs—then turns bread into a kettlebell."),
-    (26,  "Megara",
-     "Heracles flexes and asks you to carry his lion skin too."),
-    (48,  "Corinth",
-     "Pegasus brags about 'flying the route'. You call him a hoverboard."),
-    (75,  "Nemea",
-     "Retired Nemean Lion still judges your squat depth."),
-    (99,  "Tegea",
-     "Atalanta rolls golden apples—you're too tired to bend."),
-    (153, "Sparta",
-     "Spartan mom: 'Come back with your ruck… or get roasted.'"),
-    (206, "Mantinea",
-     "Artemis fires a warning arrow—your shuffle scares turtles."),
-    (224, "Argos",
-     "Hera's all-seeing cam logs your pothole side-step as 'cowardice'."),
-    (249, "Epidaurus",
-     "Asclepius offers magic salve—if you pronounce his name right."),
-    (286, "Sounion",
-     "Poseidon: 'Try rucking underwater next time!'"),
-    (306, "Athens Return",
-     "Nike crowns you, whispers 'Drop the pack before gravity charges fees.'"),
-]
-TRIP_MILES = RUCK_STOPS[-1][0]   # 306
-
-# ── Drachma for lifting ────────────────────────────────────────────────────────
-# Base coins awarded per recommended session (at the standard bell weight).
-# Scales linearly with the bell weight used vs the session's standard (std_kg),
-# clamped to 0.5×–2.0× the base.  Custom workouts earn a flat 3 coins.
-BASE_WORKOUT_COINS  = 5.0
-CUSTOM_WORKOUT_COINS = 3.0
-
 # ── Training templates ────────────────────────────────────────────────────────
-# std_kg = conventional female kettlebell standard for the main movement
-# (per bell for bilateral movements such as double-KB front squat / deadlift).
+
 TEMPLATES = {
-    "hermes_power_forge": {
-        "name": "Hermes' Power Forge (2-week / 6 sessions)",
+
+    # ══════════════════════════════════════════════════════════════════════════
+    #  DAY A — GLUTE & LEGS
+    #  Anchor: Hip Thrust. Extra focus: glutes, quads, hamstrings, lateral hip.
+    #  Full body skeleton present every session.
+    # ══════════════════════════════════════════════════════════════════════════
+    "day_a_glute_legs": {
+        "name":     "Day A — Glute & Legs",
+        "day_type": "strength",
+        "focus":    "Glutes, quads, hamstrings, lateral hip — full body with lower emphasis",
+        "bell_guidance": (
+            "Hip thrust: 16 kg wk1 → 20 kg wk2 → 24 kg wk3 → 12 kg wk4. "
+            "Split squat: 12 kg wk1–2 → 16 kg wk3. "
+            "Floor press / row: 12 kg. Swings: 16–20 kg."
+        ),
         "sessions": [
-            {   # Wk-1 Day-1  Lower Push
-                "main":     "Double-KB Front Squat 5×5 @ RPE 7",
-                "std_kg":   12,
-                "accessory": [
-                    "Bulgarian Split Squat 3×8 /leg",
-                    "TRX Row 3×10",
-                    "20-lb-vest Glute-Bridge March 3×40 s",
+            {   # ── Session 1 · Week 1 feel · Build ─────────────────────────
+                "week_label": "Week 1 — Build the foundation",
+                "main": "KB Hip Thrust 4×10 @ 16 kg",
+                "std_kg": 16,
+                "full_body_block": [
+                    "KB Floor Press 3×10/side @ 12 kg  [PUSH]",
+                    "KB Bent-Over Row 3×10/side @ 12 kg  [PULL]",
+                    "Hanging Leg Raise 3×8 (or Lying Leg Raise)  [CORE]",
                 ],
-                "finisher": "30 s Goblet-Squat Pulse / 30 s rest × 4",
+                "focus_work": [
+                    "Bulgarian Split Squat 3×8/leg (bodyweight or 8 kg goblet)",
+                    "Banded Clamshell 3×20/side",
+                    "Lateral Band Walk 3×20 steps/side",
+                ],
+                "arms": [
+                    "KB Hammer Curl 3×12 @ 8 kg",
+                    "KB Tricep Kickback 3×12/side @ 8 kg",
+                ],
+                "finisher": (
+                    "KB Swing 30 s on / 30 s off × 8 rounds @ 16 kg  "
+                    "(~8 min — note how you feel at round 8)"
+                ),
             },
-            {   # Wk-1 Day-2  Upper
-                "main":     "Single-Arm Clean + Press 5×5 /side",
-                "std_kg":   12,
-                "accessory": [
-                    "Single-KB Floor Press 3×10 /side",
-                    "Bent-Over Row 3×8 /side",
-                    "TRX Face-Pull + Y-Raise superset 3×12 each",
+            {   # ── Session 2 · Week 1 feel · Volume ────────────────────────
+                "week_label": "Week 1 — Add volume, own the movement",
+                "main": "Double KB Front Squat 4×8 @ 12 kg/bell",
+                "std_kg": 12,
+                "full_body_block": [
+                    "KB Push Press 3×8/side @ 12 kg  [PUSH]",
+                    "KB Renegade Row 3×6/side @ 12 kg  [PULL]",
+                    "Ab Wheel Rollout 3×8 (or Dead Bug 3×10/side)  [CORE]",
                 ],
-                "finisher": "KB Hollow-Body OH Hold 20 s on / 10 s off × 4",
+                "focus_work": [
+                    "KB Hip Thrust 3×12 @ 16 kg (speed reps — squeeze hard at top)",
+                    "KB Reverse Lunge 3×10/leg @ 12 kg",
+                    "KB Curtsy Lunge 3×10/side @ 8 kg",
+                ],
+                "arms": [
+                    "KB Zottman Curl 3×10 @ 8 kg",
+                    "KB Overhead Tricep Extension 3×12 @ 8 kg",
+                ],
+                "finisher": (
+                    "Goblet Squat Pulse 20 s / KB Swing 40 s — alternating × 6 rounds @ 16 kg  "
+                    "(~6 min — no rest between movements)"
+                ),
             },
-            {   # Wk-1 Day-3  Lower Hinge
-                "main":     "Double-KB Deadlift 6×6 @ RPE 7",
-                "std_kg":   16,
-                "accessory": [
-                    "Alternating KB Swing EMOM 8 (12 reps)",
-                    "TRX Hamstring Curl 3×15",
-                    "Suitcase Carry 4×20 m /side",
+            {   # ── Session 3 · Week 2 feel · Develop ───────────────────────
+                "week_label": "Week 2 — Increase load, maintain quality",
+                "main": "KB Hip Thrust 4×8 @ 20 kg  (↑ from Session 1)",
+                "std_kg": 20,
+                "full_body_block": [
+                    "KB Floor Press 4×8/side @ 12 kg  [PUSH — add a set]",
+                    "KB Chest-Supported Row 4×10 @ 12 kg  [PULL]",
+                    "Hanging Leg Raise 3×10  [CORE — 2 more reps]",
                 ],
-                "finisher": "20-lb-vest Step-Ups 30 s / 15 s × 5",
+                "focus_work": [
+                    "Bulgarian Split Squat 3×10/leg @ 12 kg  (↑ load and reps)",
+                    "Single-Leg KB Hip Thrust 3×10/leg @ 12 kg",
+                    "Banded Hip Abduction Standing 3×15/side",
+                ],
+                "arms": [
+                    "KB Hammer Curl 3×12 @ 10 kg  (↑ load if available, else more reps)",
+                    "KB Tricep Kickback 3×15/side @ 8 kg  (↑ reps)",
+                ],
+                "finisher": (
+                    "KB Swing 30 s on / 20 s off × 10 rounds @ 16 kg  "
+                    "(~8 min — shorter rest than S1, harder)"
+                ),
             },
-            {   # Wk-2 Day-1  Lower Push Progression
-                "main":     "Double-KB Front Squat 6×4 (↑ load)",
-                "std_kg":   16,
-                "accessory": [
-                    "Goblet Box-Squat Pulse 3×12",
-                    "TRX Single-Leg Hip Thrust 3×10 /leg",
-                    "Front-Rack Squat-Hold 3×30 s",
+            {   # ── Session 4 · Week 2 feel · Volume push ───────────────────
+                "week_label": "Week 2 — Push the volume ceiling",
+                "main": "Double KB Front Squat 5×6 @ 16 kg/bell  (↑ load from S2)",
+                "std_kg": 16,
+                "full_body_block": [
+                    "KB Push Press 4×6/side @ 12 kg  [PUSH — heavier, fewer reps]",
+                    "KB Renegade Row 3×8/side @ 12 kg  [PULL — more reps]",
+                    "Hollow Rock 3×20  [CORE]",
                 ],
-                "finisher": "Tabata Alternating Swings (4 min)",
+                "focus_work": [
+                    "KB Hip Thrust 4×10 @ 20 kg (full squeeze, 1-s pause at top)",
+                    "KB Lateral Lunge 3×10/side @ 12 kg",
+                    "Banded Clamshell 3×25/side (more reps)",
+                ],
+                "arms": [
+                    "KB Zottman Curl 3×12 @ 8 kg",
+                    "KB Overhead Tricep Extension 3×15 @ 8 kg",
+                ],
+                "finisher": (
+                    "Tabata KB Swings: 20 s on / 10 s off × 8 rounds @ 16 kg  "
+                    "(4 min — all out, note total reps)"
+                ),
             },
-            {   # Wk-2 Day-2  Upper Progression
-                "main":     "Clean + Push-Press Ladder (1-2-3-2-1) × 3",
-                "std_kg":   12,
-                "accessory": [
-                    "Renegade Row 3×8 /side",
-                    "TRX Atomic Push-Up 3×10",
-                    "KB Windmill 3×6 /side",
+            {   # ── Session 5 · Week 3 feel · Overreach ─────────────────────
+                "week_label": "Week 3 — New top weight, dig deep",
+                "main": "KB Hip Thrust 5×6 @ 24 kg  (heaviest you've done — RPE 8–9)",
+                "std_kg": 24,
+                "full_body_block": [
+                    "KB Floor Press 4×6/side @ 16 kg  [PUSH — heavy]",
+                    "KB Bent-Over Row 4×6/side @ 16 kg  [PULL — heavy]",
+                    "Hanging Leg Raise 4×10  [CORE — add a set]",
                 ],
-                "finisher": "Farmer-Carry March 45 s / 15 s × 4",
+                "focus_work": [
+                    "Rear-Foot-Elevated Split Squat 3×6/leg @ 16 kg  (heavy, slow eccentric)",
+                    "Nordic Hamstring Curl 3×5 (eccentric only — lower as slow as possible)",
+                    "Single-Leg Glute Bridge 3×12/leg @ 16 kg (loaded, pause at top)",
+                ],
+                "arms": [
+                    "KB Hammer Curl 3×10 @ 12 kg  (↑ load)",
+                    "KB Tricep Kickback 3×12/side @ 10 kg  (↑ load)",
+                ],
+                "finisher": (
+                    "EMOM 10 min: odd minutes 10 KB Swings @ 20 kg, "
+                    "even minutes 10 Goblet Squat Pulses @ 16 kg  "
+                    "(power + burn — this is the hardest finisher in the cycle)"
+                ),
             },
-            {   # Wk-2 Day-3  Lower Hinge Progression
-                "main":     "Tempo KB RDL (3-s eccentric) 4×8",
-                "std_kg":   16,
-                "accessory": [
-                    "High Pull EMOM 10 (6 /side)",
-                    "Weighted Step-Up 3×12 /leg",
-                    "Plank Pull-Through 3×30 s",
+            {   # ── Session 6 · Week 4 · Deload ─────────────────────────────
+                "week_label": "Week 4 — Deload: restore, don't grind",
+                "main": "KB Hip Thrust 3×10 @ 12 kg  (light — perfect form, feel every rep)",
+                "std_kg": 12,
+                "full_body_block": [
+                    "KB Floor Press 2×10/side @ 8 kg  [PUSH — easy]",
+                    "KB Bent-Over Row 2×10/side @ 8 kg  [PULL — easy]",
+                    "Dead Bug 3×10/side  [CORE — controlled breathing]",
                 ],
-                "finisher": "Swing-Sprint: 10 Swings + 50 m run × 5",
+                "focus_work": [
+                    "Bodyweight Glute Bridge 3×20 (2-s squeeze at top)",
+                    "Banded Clamshell 2×20/side",
+                    "Hip Flexor Stretch 2×90 s/side + Pigeon Pose 2×90 s/side",
+                ],
+                "arms": [
+                    "KB Hammer Curl 2×12 @ 8 kg  (easy — feel the muscle)",
+                    "KB Overhead Tricep Extension 2×12 @ 8 kg",
+                ],
+                "finisher": (
+                    "KB Swing 20 s on / 40 s off × 6 rounds @ 12 kg  "
+                    "(light, technique focus — snap the hips, float the bell)"
+                ),
             },
         ],
     },
 
-    "ares_battle_conditioning": {
-        "name": "Ares' Battle Conditioning (2-week / 6 sessions)",
+    # ══════════════════════════════════════════════════════════════════════════
+    #  DAY B — PULL + CORE
+    #  Anchor: Rows / Carries. Extra focus: rows, carries, direct abs, arms.
+    #  Full body skeleton present every session.
+    #  Pull-up progression built into every session.
+    # ══════════════════════════════════════════════════════════════════════════
+    "day_b_pull_core": {
+        "name":     "Day B — Pull + Core",
+        "day_type": "strength",
+        "focus":    "Rows, carries, direct abs, arms — full body with upper pull emphasis",
+        "bell_guidance": (
+            "Rows: 12 kg wk1–2 → 16 kg wk3. "
+            "Carries: 16–20 kg. "
+            "Curls/triceps: 8–12 kg. "
+            "Press: 12 kg."
+        ),
         "sessions": [
-            {   # Wk-1 Day-1  Swing Power
-                "main":     "KB Swing EMOM 20 min (15 reps/min)",
-                "std_kg":   16,
-                "accessory": [
-                    "Goblet Squat 3×12",
-                    "Push-Up 3×15",
-                    "Dead Bug 3×10 /side",
+            {   # ── Session 1 · Week 1 feel · Build ─────────────────────────
+                "week_label": "Week 1 — Build the pull foundation",
+                "main": "KB Bent-Over Row 4×10/side @ 12 kg",
+                "std_kg": 12,
+                "full_body_block": [
+                    "KB Clean + Press 3×6/side @ 12 kg  [PUSH]",
+                    "KB Hip Thrust 3×12 @ 16 kg  [LOWER — glute maintenance]",
+                    "Hanging Leg Raise 3×8  [CORE]",
                 ],
-                "finisher": "30 Swings every minute on the minute × 5",
+                "focus_work": [
+                    "Farmer Carry 4×30 m @ 16 kg/hand  (walk tall, no lean)",
+                    "TRX Face Pull 3×15 (or Rear-Delt Fly @ 8 kg)",
+                    "Dead Hang 3×20 s  (pull-up foundation — grip and shoulder stability)",
+                ],
+                "arms": [
+                    "KB Hammer Curl 3×12 @ 8 kg",
+                    "KB Overhead Tricep Extension 3×12 @ 8 kg",
+                ],
+                "finisher": (
+                    "KB Snatch 30 s on / 30 s off × 8 rounds @ 12 kg  "
+                    "(alternate hands each round — note total reps)"
+                ),
             },
-            {   # Wk-1 Day-2  Clean & Press Complex
-                "main":     "KB Clean + Press Complex 5×(5+5) /side",
-                "std_kg":   12,
-                "accessory": [
-                    "Bent-Over Row 3×10 /side",
-                    "Lateral Lunge 3×8 /side",
-                    "Hollow-Body Rock 3×20",
+            {   # ── Session 2 · Week 1 feel · Volume ────────────────────────
+                "week_label": "Week 1 — Volume day, brace everything",
+                "main": "KB Renegade Row 3×6/side @ 12 kg  (slow — 3-s per rep)",
+                "std_kg": 12,
+                "full_body_block": [
+                    "KB Push Press 3×8/side @ 12 kg  [PUSH]",
+                    "KB Goblet Squat 3×12 @ 16 kg  [LOWER]",
+                    "Ab Wheel Rollout 3×8  [CORE]",
                 ],
-                "finisher": "5 Cleans + 5 Presses + 5 Squats /side × 3 (no rest)",
+                "focus_work": [
+                    "Suitcase Carry 4×20 m/side @ 16 kg  (resist the lean)",
+                    "TRX Row 3×12 (or Chest-Supported Row @ 12 kg)",
+                    "Pull-Up Negative 3×4  (jump to bar, 5-s controlled descent)",
+                ],
+                "arms": [
+                    "KB Zottman Curl 3×10 @ 8 kg",
+                    "KB Tricep Kickback 3×12/side @ 8 kg",
+                ],
+                "finisher": (
+                    "Clean + Press AMRAP 5 min @ 12 kg  "
+                    "(5 cleans + 5 presses/side, switch — note total rounds)"
+                ),
             },
-            {   # Wk-1 Day-3  Snatch Intervals
-                "main":     "KB Snatch Intervals 8 × 1 min (max reps, switch at will)",
-                "std_kg":   12,
-                "accessory": [
-                    "Hip Hinge Drill 3×10",
-                    "TRX Row 3×12",
-                    "Pallof Press 3×10 /side",
+            {   # ── Session 3 · Week 2 feel · Develop ───────────────────────
+                "week_label": "Week 2 — Heavier rows, more pull volume",
+                "main": "KB Chest-Supported Row 4×10 @ 12–16 kg  (↑ from S1)",
+                "std_kg": 14,
+                "full_body_block": [
+                    "KB Clean + Press 4×5/side @ 12 kg  [PUSH — add a set]",
+                    "KB Hip Thrust 3×10 @ 20 kg  [LOWER — heavier]",
+                    "Hollow Rock 3×20  [CORE]",
                 ],
-                "finisher": "100 Snatches for time (any split)",
+                "focus_work": [
+                    "Rack Carry 3×30 m/side @ 12 kg  (forearm vertical, brace)",
+                    "TRX Face Pull + Y-Raise superset 3×12 each",
+                    "Pull-Up Negative 3×5  (5-s descent — one more rep than S2)",
+                ],
+                "arms": [
+                    "KB Hammer Curl 3×12 @ 10 kg  (↑ load)",
+                    "KB Overhead Tricep Extension 3×15 @ 8 kg  (↑ reps)",
+                ],
+                "finisher": (
+                    "KB Snatch 40 s on / 20 s off × 8 rounds @ 12 kg  "
+                    "(longer work interval — harder than S1)"
+                ),
             },
-            {   # Wk-2 Day-1  Swing Ladder
-                "main":     "Double-KB Swing Ladder: 5-10-15-10-5 (rest = set time) × 3",
-                "std_kg":   16,
-                "accessory": [
-                    "Goblet Squat 4×10 (heavier)",
-                    "Single-Leg Deadlift 3×8 /side",
-                    "Plank 3×45 s",
+            {   # ── Session 4 · Week 2 feel · Volume push ───────────────────
+                "week_label": "Week 2 — Push the pull volume ceiling",
+                "main": "KB Bent-Over Row 5×8/side @ 14–16 kg  (↑ load and sets)",
+                "std_kg": 16,
+                "full_body_block": [
+                    "KB Push Press 4×6/side @ 12 kg  [PUSH]",
+                    "KB Reverse Lunge 3×10/leg @ 12 kg  [LOWER]",
+                    "Pallof Press 3×12/side  [CORE — anti-rotation]",
                 ],
-                "finisher": "200 Swings for time",
+                "focus_work": [
+                    "Overhead Carry 3×20 m/side @ 12 kg  (locked shoulder, eyes forward)",
+                    "KB Renegade Row 3×8/side @ 12 kg  (↑ reps from S2)",
+                    "Pull-Up Negative 3×5 @ 6-s descent  (slower = harder)",
+                ],
+                "arms": [
+                    "KB Zottman Curl 3×12 @ 8 kg",
+                    "KB Tricep Kickback 3×15/side @ 8 kg",
+                ],
+                "finisher": (
+                    "3-Round Core + Cardio Circuit (no rest within rounds, 60 s between):\n"
+                    "  10 Hanging Leg Raise → 15 Hollow Rock → "
+                    "30 s KB Swing @ 16 kg → 20 s Side Plank/side"
+                ),
             },
-            {   # Wk-2 Day-2  Long Cycle
-                "main":     "KB Long Cycle Clean & Jerk 2×5 min (switch hands each min)",
-                "std_kg":   12,
-                "accessory": [
-                    "Press 3×6 /side (strict)",
-                    "Renegade Row 3×6 /side",
-                    "Ab Wheel Rollout 3×8",
+            {   # ── Session 5 · Week 3 feel · Overreach ─────────────────────
+                "week_label": "Week 3 — Heaviest pull, dig in",
+                "main": "KB Renegade Row 4×6/side @ 16 kg  (heaviest manageable — RPE 8–9)",
+                "std_kg": 16,
+                "full_body_block": [
+                    "KB Floor Press 4×6/side @ 16 kg  [PUSH — heavy]",
+                    "KB Hip Thrust 4×8 @ 24 kg  [LOWER — heavy]",
+                    "Hanging Leg Raise 4×10  [CORE — add a set]",
                 ],
-                "finisher": "Max C&J in 5 min (one hand, no switching)",
+                "focus_work": [
+                    "Farmer Carry 5×30 m @ 20 kg/hand  (max load)",
+                    "Pull-Up Negative 4×5 @ 6-s descent  (add a set)",
+                    "Carry Medley: Rack 20 m → Overhead 20 m → Farmer 20 m (no put-down)",
+                ],
+                "arms": [
+                    "KB Hammer Curl 3×10 @ 12 kg  (↑ load — challenging)",
+                    "KB Overhead Tricep Extension 3×12 @ 10 kg  (↑ load)",
+                ],
+                "finisher": (
+                    "KB Snatch EMOM 10 min: 8 reps @ 12 kg  "
+                    "(switch hands each minute — 80 total snatches, note time to finish)"
+                ),
             },
-            {   # Wk-2 Day-3  Snatch Test Prep
-                "main":     "KB Snatch 10 min test-pace (switch every 60 s)",
-                "std_kg":   12,
-                "accessory": [
-                    "High Pull 3×8 /side",
-                    "Swing 3×20",
-                    "Wrist Mobility 2×2 min",
+            {   # ── Session 6 · Week 4 · Deload ─────────────────────────────
+                "week_label": "Week 4 — Deload: light, feel everything",
+                "main": "KB Bent-Over Row 3×10/side @ 8 kg  (light — perfect hinge, squeeze)",
+                "std_kg": 8,
+                "full_body_block": [
+                    "KB Clean + Press 2×8/side @ 8 kg  [PUSH — easy]",
+                    "KB Goblet Squat 2×12 @ 12 kg  [LOWER]",
+                    "Dead Bug 3×10/side  [CORE]",
                 ],
-                "finisher": "Swing Tabata 8 rounds (20 s on / 10 s off)",
+                "focus_work": [
+                    "Suitcase Carry 2×20 m/side @ 12 kg  (light)",
+                    "Dead Hang 3×30 s  (longer hang than wk1 — progress)",
+                    "Shoulder Mobility Flow: Arm Circles + Cross-Body Stretch 2×2 min",
+                ],
+                "arms": [
+                    "KB Hammer Curl 2×12 @ 8 kg  (easy, slow eccentric)",
+                    "KB Overhead Tricep Extension 2×12 @ 8 kg",
+                ],
+                "finisher": (
+                    "KB Swing 20 s on / 40 s off × 6 rounds @ 12 kg  "
+                    "(light and technical — this is active recovery)"
+                ),
             },
         ],
     },
 
-    "athena_tactical_strength": {
-        "name": "Athena's Tactical Strength (2-week / 6 sessions)",
+    # ══════════════════════════════════════════════════════════════════════════
+    #  DAY C — HARDSTYLE FULL BODY
+    #  Anchor: Swings / Snatches / Clean+Press. This is the conditioning day.
+    #  Still full body — push, pull, lower, core, arms present.
+    #  Cardio finisher is the hardest of the week.
+    # ══════════════════════════════════════════════════════════════════════════
+    "day_c_hardstyle": {
+        "name":     "Day C — Hardstyle Full Body",
+        "day_type": "strength",
+        "focus":    "Swings, cleans, snatches — power + conditioning, full body",
+        "bell_guidance": (
+            "Swings: 16 kg wk1 → 20 kg wk3. "
+            "Clean+Press: 12 kg. "
+            "Snatch: 12 kg. "
+            "Goblet: 16 kg. "
+            "Arms: 8 kg."
+        ),
         "sessions": [
-            {   # Wk-1 Day-1  TGU Foundation
-                "main":     "Turkish Get-Up 5×3 /side (light — perfect form)",
-                "std_kg":   8,
-                "accessory": [
-                    "Windmill 3×5 /side",
-                    "Arm Bar 2×60 s /side",
-                    "Hip Bridge 3×15",
+            {   # ── Session 1 · Week 1 feel · Build ─────────────────────────
+                "week_label": "Week 1 — Swing foundation, build the engine",
+                "main": "KB Swing EMOM 15 min: 12 reps/min @ 16 kg",
+                "std_kg": 16,
+                "full_body_block": [
+                    "KB Clean + Press 3×5/side @ 12 kg  [PUSH + full body]",
+                    "KB Goblet Squat 3×10 @ 16 kg  [LOWER]",
+                    "Push-Up 3×10  [PUSH — bodyweight]",
+                    "Hollow Rock 3×15  [CORE]",
                 ],
-                "finisher": "TGU + 5 Swings /side × 3 (flow circuit)",
+                "focus_work": [
+                    "KB High Pull 3×8/side @ 12 kg  (swing → explosive pull — shoulder health)",
+                    "KB Hip Thrust 3×10 @ 16 kg  (glute maintenance on hardstyle day)",
+                ],
+                "arms": [
+                    "KB Hammer Curl 3×10 @ 8 kg",
+                    "KB Tricep Kickback 3×10/side @ 8 kg",
+                ],
+                "finisher": (
+                    "100 KB Swings for time @ 16 kg  "
+                    "(note your time — this is your benchmark for the cycle)"
+                ),
             },
-            {   # Wk-1 Day-2  Strict Press
-                "main":     "Strict Military Press 5×5 /side @ RPE 7",
-                "std_kg":   12,
-                "accessory": [
-                    "Bent-Over Row 4×8 /side",
-                    "TRX Face-Pull 3×15",
-                    "Suitcase Carry 3×30 m /side",
+            {   # ── Session 2 · Week 1 feel · Clean+Press day ───────────────
+                "week_label": "Week 1 — Clean + Press ladders, classic hardstyle",
+                "main": "KB Clean + Press Ladder (1-2-3/side) × 4 @ 12 kg",
+                "std_kg": 12,
+                "full_body_block": [
+                    "KB Swing 5×12 @ 16 kg  [HINGE + power]",
+                    "KB Goblet Squat 3×12 @ 16 kg  [LOWER]",
+                    "KB Renegade Row 3×5/side @ 12 kg  [PULL]",
+                    "Dead Bug 3×10/side  [CORE]",
                 ],
-                "finisher": "Max strict press /side in 3 min (moderate bell)",
+                "focus_work": [
+                    "KB Hip Thrust 3×12 @ 16 kg  (glute maintenance)",
+                    "KB Single-Arm Swing 3×10/side @ 16 kg  (anti-rotation challenge)",
+                ],
+                "arms": [
+                    "KB Zottman Curl 3×10 @ 8 kg",
+                    "KB Overhead Tricep Extension 3×10 @ 8 kg",
+                ],
+                "finisher": (
+                    "5 Cleans + 5 Presses + 5 Front Squats/side × 4 rounds @ 12 kg  "
+                    "(no rest between sides — rest 60 s between rounds)"
+                ),
             },
-            {   # Wk-1 Day-3  Bent Press & Hinge
-                "main":     "Bent Press 4×3 /side (technical focus)",
-                "std_kg":   12,
-                "accessory": [
-                    "Single-Leg RDL 3×8 /side",
-                    "Goblet Squat 3×10",
-                    "Bottoms-Up Press 3×5 /side",
+            {   # ── Session 3 · Week 2 feel · Develop ───────────────────────
+                "week_label": "Week 2 — More swings, faster pace",
+                "main": "KB Swing EMOM 20 min: 15 reps/min @ 16 kg  (↑ reps/min and duration)",
+                "std_kg": 16,
+                "full_body_block": [
+                    "KB Clean + Push Press 3×5/side @ 12 kg  [PUSH — push press harder than press]",
+                    "KB Goblet Squat 4×10 @ 16 kg  [LOWER — add a set]",
+                    "Push-Up 3×12  [PUSH — more reps]",
+                    "Pallof Press 3×10/side  [CORE — anti-rotation]",
                 ],
-                "finisher": "Get-Up Sit-Up × 10 /side + 10 Swings × 3",
+                "focus_work": [
+                    "KB High Pull 3×10/side @ 12 kg  (↑ reps)",
+                    "KB Hip Thrust 4×10 @ 20 kg  (↑ load on hardstyle day)",
+                ],
+                "arms": [
+                    "KB Hammer Curl 3×12 @ 8 kg  (↑ reps)",
+                    "KB Tricep Kickback 3×12/side @ 8 kg",
+                ],
+                "finisher": (
+                    "Swing Tabata: 20 s on / 10 s off × 8 rounds @ 16 kg  "
+                    "(4 min — maximum effort, note total swing count)"
+                ),
             },
-            {   # Wk-2 Day-1  TGU Ladder
-                "main":     "TGU Ladder (1-2-3-2-1 /side) × 2 (add load from Wk-1)",
-                "std_kg":   12,
-                "accessory": [
-                    "Windmill 3×6 /side (heavier)",
-                    "Half-Kneeling Press 3×8 /side",
-                    "Dead Bug 3×12",
+            {   # ── Session 4 · Week 2 feel · Snatch day ────────────────────
+                "week_label": "Week 2 — Snatch intervals, the queen of KB movements",
+                "main": "KB Snatch Intervals: 8 × 1 min @ 12 kg  (max reps, switch hand each set)",
+                "std_kg": 12,
+                "full_body_block": [
+                    "KB Clean + Press 3×6/side @ 12 kg  [PUSH]",
+                    "KB Goblet Squat 3×12 @ 16 kg  [LOWER]",
+                    "KB Bent-Over Row 3×8/side @ 12 kg  [PULL]",
+                    "Hollow Rock 3×20  [CORE]",
                 ],
-                "finisher": "TGU AMRAP in 8 min (alternating sides)",
+                "focus_work": [
+                    "KB Half Snatch 3×8/side @ 12 kg  (snatch up, clean down — builds the pull)",
+                    "KB Hip Thrust 3×12 @ 20 kg  (glute maintenance)",
+                ],
+                "arms": [
+                    "KB Zottman Curl 3×10 @ 8 kg",
+                    "KB Overhead Tricep Extension 3×12 @ 8 kg",
+                ],
+                "finisher": (
+                    "Long Cycle Clean + Jerk 2 × 5 min @ 12 kg  "
+                    "(switch hands each minute — rest 2 min between sets)"
+                ),
             },
-            {   # Wk-2 Day-2  Push-Press + Floor Press
-                "main":     "Push-Press 5×5 /side + KB Floor Press 3×8 /side (superset)",
-                "std_kg":   12,
-                "accessory": [
-                    "Chest-Supported Row 3×10",
-                    "Overhead Carry 4×20 m /side",
-                    "Copenhagen Plank 3×20 s /side",
+            {   # ── Session 5 · Week 3 feel · Overreach ─────────────────────
+                "week_label": "Week 3 — Heavy swings + press, peak conditioning",
+                "main": "Double KB Swing 10×5 EMOM @ 20 kg/bell  (heaviest pair — RPE 8–9)",
+                "std_kg": 20,
+                "full_body_block": [
+                    "KB Clean + Push Press 4×5/side @ 12 kg  [PUSH — heavy]",
+                    "Double KB Front Squat 3×6 @ 16 kg/bell  [LOWER — heavy]",
+                    "Push-Up 3×15  [PUSH — higher reps for endurance]",
+                    "Hanging Leg Raise 3×10  [CORE]",
                 ],
-                "finisher": "5 Push-Press + 5 Floor Press /side × 4 (no rest)",
+                "focus_work": [
+                    "KB Snatch 5×5/side @ 12 kg  (heavy for snatch — note any grind)",
+                    "KB Hip Thrust 4×8 @ 24 kg  (heaviest glute work of the week)",
+                ],
+                "arms": [
+                    "KB Hammer Curl 3×10 @ 12 kg  (↑ load)",
+                    "KB Overhead Tricep Extension 3×10 @ 10 kg  (↑ load)",
+                ],
+                "finisher": (
+                    "200 KB Swings @ 16 kg — every time you put the bell down, 5 Push-Ups penalty  "
+                    "(note your time and how many breaks you took)"
+                ),
             },
-            {   # Wk-2 Day-3  Windmill + TGU Complex
-                "main":     "Windmill + TGU Complex: 5 Windmills → 1 TGU /side × 4",
-                "std_kg":   12,
-                "accessory": [
-                    "Bottoms-Up Carry 3×20 m /side",
-                    "Bent Press 3×3 /side",
-                    "Thoracic Rotation Drill 2×10 /side",
+            {   # ── Session 6 · Week 4 · Deload ─────────────────────────────
+                "week_label": "Week 4 — Deload: flow and feel",
+                "main": "KB Swing 5×10 @ 12 kg  (light — focus on hip snap, float the bell)",
+                "std_kg": 12,
+                "full_body_block": [
+                    "KB Clean + Press 2×5/side @ 8 kg  [PUSH — easy]",
+                    "KB Goblet Squat 2×10 @ 12 kg  [LOWER]",
+                    "Push-Up 2×8  [PUSH]",
+                    "Dead Bug 3×10/side  [CORE]",
                 ],
-                "finisher": "Heavy TGU 1/side every 2 min × 6",
+                "focus_work": [
+                    "KB TGU 2×1/side @ 8 kg  (very light — movement quality only)",
+                    "Hip Flexor Stretch 2×90 s/side",
+                ],
+                "arms": [
+                    "KB Hammer Curl 2×12 @ 8 kg  (easy, slow)",
+                    "KB Overhead Tricep Extension 2×12 @ 8 kg",
+                ],
+                "finisher": (
+                    "10 min flow: 5 Swings → 1 Goblet Squat → 5 Halos/side — "
+                    "repeat continuously @ 12 kg  (movement meditation, no rush)"
+                ),
             },
         ],
     },
 
-    "apollo_endurance_forge": {
-        "name": "Apollo's Endurance Forge (2-week / 6 sessions)",
+    # ══════════════════════════════════════════════════════════════════════════
+    #  DAY D — DOUBLE KB STRENGTH
+    #  Anchor: Heavy double KB compounds. Builds raw strength base.
+    #  Full body skeleton always present.
+    #  Optional 4th training day — do if you have energy, skip if not.
+    # ══════════════════════════════════════════════════════════════════════════
+    "day_d_double_kb": {
+        "name":     "Day D — Double KB Strength",
+        "day_type": "strength",
+        "focus":    "Heavy double KB compounds — strength base, full body",
+        "bell_guidance": (
+            "Double deadlift: 16 kg/bell wk1 → 20 kg wk2 → 24 kg wk3. "
+            "Double front squat: 12 kg/bell wk1 → 16 kg wk2–3. "
+            "Double clean: 12 kg/bell. "
+            "Press: 12 kg. Arms: 8–10 kg."
+        ),
         "sessions": [
-            {   # Wk-1 Day-1  Volume Squat
-                "main":     "Double-KB Front Squat 4×10 @ RPE 6",
-                "std_kg":   12,
-                "accessory": [
-                    "Step-Up 3×15 /leg",
-                    "TRX Squat Jump 3×12",
-                    "Lateral Band Walk 3×20 /side",
+            {   # ── Session 1 · Week 1 feel · Build ─────────────────────────
+                "week_label": "Week 1 — Double KB introduction",
+                "main": "Double KB Deadlift 5×5 @ 16 kg/bell",
+                "std_kg": 16,
+                "full_body_block": [
+                    "KB Clean + Press 3×5/side @ 12 kg  [PUSH]",
+                    "Double KB Front Squat 3×6 @ 12 kg/bell  [LOWER]",
+                    "Push-Up 3×12  [PUSH — bodyweight]",
+                    "Hanging Leg Raise 3×8  [CORE]",
                 ],
-                "finisher": "Goblet Squat 50 reps for time (1 weight)",
+                "focus_work": [
+                    "KB Single-Leg RDL 3×8/side @ 12 kg  (hinge quality work)",
+                    "KB Hip Thrust 3×12 @ 16 kg  (glute maintenance)",
+                    "KB Suitcase Carry 3×20 m/side @ 16 kg",
+                ],
+                "arms": [
+                    "KB Hammer Curl 3×12 @ 8 kg",
+                    "KB Tricep Kickback 3×12/side @ 8 kg",
+                ],
+                "finisher": (
+                    "5 Double KB Deadlifts + 5 Double KB Cleans × 4 rounds @ 12 kg/bell  "
+                    "(rest 90 s between rounds)"
+                ),
             },
-            {   # Wk-1 Day-2  Clean Volume
-                "main":     "KB Clean 5×8 /side (focus: linkage, no arm-curling)",
-                "std_kg":   12,
-                "accessory": [
-                    "KB Row 4×10 /side",
-                    "Push-Up 3×20",
-                    "Plank Shoulder Tap 3×20",
+            {   # ── Session 2 · Week 1 feel · Squat focus ───────────────────
+                "week_label": "Week 1 — Front squat focus",
+                "main": "Double KB Front Squat 4×6 @ 12 kg/bell",
+                "std_kg": 12,
+                "full_body_block": [
+                    "KB Push Press 3×6/side @ 12 kg  [PUSH]",
+                    "Double KB Deadlift 3×5 @ 16 kg/bell  [HINGE]",
+                    "KB Bent-Over Row 3×8/side @ 12 kg  [PULL]",
+                    "Ab Wheel Rollout 3×8  [CORE]",
                 ],
-                "finisher": "Ladder: 1-2-3-4-5 Clean /side, no rest between rungs",
+                "focus_work": [
+                    "KB Hip Thrust 3×12 @ 20 kg  (heavier glute work)",
+                    "Nordic Hamstring Curl 3×5 (eccentric — lower as slow as possible)",
+                    "Farmer Carry 4×30 m @ 20 kg/hand",
+                ],
+                "arms": [
+                    "KB Zottman Curl 3×10 @ 8 kg",
+                    "KB Overhead Tricep Extension 3×12 @ 8 kg",
+                ],
+                "finisher": (
+                    "Double KB Front Squat 3 reps EMOM × 8 min @ 12 kg/bell  "
+                    "(24 total reps — note if any got ugly)"
+                ),
             },
-            {   # Wk-1 Day-3  Swing Intervals
-                "main":     "Swing Intervals 30 s on / 30 s off × 15 rounds",
-                "std_kg":   16,
-                "accessory": [
-                    "Box Jump 3×8",
-                    "Hip Flexor Stretch 2×60 s /side",
-                    "Single-Leg Balance 2×45 s /side",
+            {   # ── Session 3 · Week 2 feel · Develop deadlift ──────────────
+                "week_label": "Week 2 — Load the deadlift",
+                "main": "Double KB Deadlift 5×4 @ 20 kg/bell  (↑ load)",
+                "std_kg": 20,
+                "full_body_block": [
+                    "KB Clean + Press 4×5/side @ 12 kg  [PUSH]",
+                    "Double KB Front Squat 4×5 @ 16 kg/bell  [LOWER — heavier]",
+                    "Push-Up 3×15  [PUSH — more reps]",
+                    "Hollow Rock 3×20  [CORE]",
                 ],
-                "finisher": "300 Swings — every time you put it down, 10 Push-Ups",
+                "focus_work": [
+                    "KB Single-Leg RDL 3×8/side @ 16 kg  (↑ load)",
+                    "KB Hip Thrust 4×8 @ 24 kg  (heaviest hip thrust of D days)",
+                    "Suitcase Carry 4×20 m/side @ 16 kg",
+                ],
+                "arms": [
+                    "KB Hammer Curl 3×12 @ 10 kg  (↑ load)",
+                    "KB Tricep Kickback 3×12/side @ 10 kg",
+                ],
+                "finisher": (
+                    "Heavy Complex × 4 rounds (rest 90 s):\n"
+                    "  3 Double KB Deadlifts + 3 Double KB Cleans + 3 Double KB Presses @ 12 kg/bell"
+                ),
             },
-            {   # Wk-2 Day-1  Goblet Volume
-                "main":     "Goblet Squat 5×15 (heavier than Wk-1)",
-                "std_kg":   16,
-                "accessory": [
-                    "Reverse Lunge 4×10 /leg",
-                    "TRX Row 4×15",
-                    "Side Plank 3×30 s /side",
+            {   # ── Session 4 · Week 2 feel · Squat volume ──────────────────
+                "week_label": "Week 2 — Squat volume, push the ceiling",
+                "main": "Double KB Front Squat 5×5 @ 16 kg/bell  (↑ load from S2)",
+                "std_kg": 16,
+                "full_body_block": [
+                    "KB Push Press 4×6/side @ 12 kg  [PUSH]",
+                    "Double KB Deadlift 4×4 @ 20 kg/bell  [HINGE — heavy]",
+                    "KB Renegade Row 3×6/side @ 12 kg  [PULL]",
+                    "Pallof Press 3×10/side  [CORE]",
                 ],
-                "finisher": "Goblet + Swing alternating: 10 each × 6 (no rest)",
+                "focus_work": [
+                    "KB Hip Thrust 4×10 @ 20 kg",
+                    "Nordic Hamstring Curl 3×5 (eccentric)",
+                    "Overhead Carry 3×20 m/side @ 12 kg",
+                ],
+                "arms": [
+                    "KB Zottman Curl 3×12 @ 8 kg",
+                    "KB Overhead Tricep Extension 3×15 @ 8 kg",
+                ],
+                "finisher": (
+                    "Double KB Front Squat: 1 rep every 30 s × 10 min @ 12 kg/bell  "
+                    "(20 total reps — stay sharp every single one)"
+                ),
             },
-            {   # Wk-2 Day-2  Push-Press Ladder
-                "main":     "Push-Press Ladder (1-2-3-4-5 /side) × 4",
-                "std_kg":   12,
-                "accessory": [
-                    "Single-Arm Row 4×12 /side",
-                    "Face-Pull 3×20",
-                    "Carry Medley: Rack → OH → Farmer 20 m each",
+            {   # ── Session 5 · Week 3 feel · Overreach ─────────────────────
+                "week_label": "Week 3 — Near-maximal, earn it",
+                "main": "Double KB Deadlift 6×3 @ 24 kg/bell  (near-max — RPE 9)",
+                "std_kg": 24,
+                "full_body_block": [
+                    "KB Floor Press 4×6/side @ 16 kg  [PUSH — heavy]",
+                    "Double KB Front Squat 4×3 @ 20 kg/bell  [LOWER — 2-s pause at bottom]",
+                    "Push-Up 3×15  [PUSH]",
+                    "Hanging Leg Raise 4×10  [CORE]",
                 ],
-                "finisher": "AMRAP in 5 min: 5 Push-Press + 5 Row /side",
+                "focus_work": [
+                    "Rear-Foot-Elevated Split Squat 3×5/leg @ 16 kg  (heavy, slow eccentric)",
+                    "Farmer Carry 5×30 m @ 20 kg/hand  (max load)",
+                    "KB Hip Thrust 4×6 @ 24 kg  (heavy)",
+                ],
+                "arms": [
+                    "KB Hammer Curl 3×10 @ 12 kg  (↑ load)",
+                    "KB Overhead Tricep Extension 3×10 @ 10 kg  (↑ load)",
+                ],
+                "finisher": (
+                    "Max Double KB Deadlifts in 3 min @ 20 kg/bell  "
+                    "(note your number — this is a benchmark)"
+                ),
             },
-            {   # Wk-2 Day-3  200 Swing Challenge
-                "main":     "200 KB Swings EMOM — 10 reps at the top of every minute",
-                "std_kg":   16,
-                "accessory": [
-                    "Hip Hinge Mobility 2×10",
-                    "Glute Bridge Hold 3×30 s",
-                    "Dead Bug 3×10 /side",
+            {   # ── Session 6 · Week 4 · Deload ─────────────────────────────
+                "week_label": "Week 4 — Deload: light and mobile",
+                "main": "Double KB Deadlift 3×5 @ 12 kg/bell  (light — perfect tension)",
+                "std_kg": 12,
+                "full_body_block": [
+                    "KB Clean + Press 2×6/side @ 8 kg  [PUSH — easy]",
+                    "Double KB Front Squat 2×8 @ 12 kg/bell  [LOWER — light]",
+                    "Push-Up 2×10  [PUSH]",
+                    "Dead Bug 3×10/side  [CORE]",
                 ],
-                "finisher": "Max swings in 4 min (go until form breaks)",
+                "focus_work": [
+                    "Single-Leg RDL 2×8/side @ 8 kg  (bodyweight or very light)",
+                    "Hip Flexor Mobilization 2×90 s/side",
+                    "Thoracic Rotation + Rib Grab 2×10/side",
+                ],
+                "arms": [
+                    "KB Hammer Curl 2×12 @ 8 kg  (easy)",
+                    "KB Overhead Tricep Extension 2×12 @ 8 kg",
+                ],
+                "finisher": (
+                    "Hip mobility flow 10 min:\n"
+                    "  90/90 Hip Switch × 10 → World's Greatest Stretch × 5/side → "
+                    "Pigeon Pose 90 s/side → Cat-Cow × 10"
+                ),
             },
         ],
     },
 
-    "poseidon_wave_protocol": {
-        "name": "Poseidon's Wave Protocol (2-week / 6 sessions)",
+    # ══════════════════════════════════════════════════════════════════════════
+    #  MOBILITY — FLOW & RESTORE
+    #  TGU anchor. Hip/thoracic mobility. Low CNS cost.
+    #  Counts toward weekly streak. Not a rest day — active restoration.
+    #  3 session variants rotate. ~25–30 min total.
+    #  NO heavy loading. GO LIGHTER THAN YOU THINK.
+    # ══════════════════════════════════════════════════════════════════════════
+    "mobility_flow": {
+        "name":     "Mobility — Flow & Restore",
+        "day_type": "mobility",
+        "focus":    "TGU, windmill, hip + thoracic mobility — active restoration",
+        "bell_guidance": (
+            "TGU: 8 kg only. Windmill: 8–12 kg. "
+            "Everything else: bodyweight or 8 kg. "
+            "Lighter than you think. Quality over load."
+        ),
         "sessions": [
-            {   # Wk-1 Day-1  Wave Deadlift
-                "main":     "Wave-Load KB Deadlift: (3 @ heavy, 2 @ heavier, 1 @ heaviest) × 3 waves",
-                "std_kg":   16,
-                "accessory": [
-                    "Romanian Deadlift 3×8 /side",
-                    "Reverse Hyper (body weight) 3×15",
-                    "Pallof Press 3×8 /side",
+            {   # ── Mobility Session 1 · Standard ────────────────────────────
+                "week_label": "Standard mobility — foundation",
+                "main": "Turkish Get-Up 3×3/side @ 8 kg  (slow — full pause at each position)",
+                "std_kg": 8,
+                "full_body_block": [
+                    "KB Windmill 3×5/side @ 8 kg  [shoulder + lateral chain]",
+                    "KB Arm Bar 2×60 s/side @ 8 kg  [shoulder external rotation]",
+                    "Dead Bug 3×10/side  [core — breathing focus]",
                 ],
-                "finisher": "Single-Leg RDL 10 /side + 10 Swings × 3 (no rest)",
+                "focus_work": [
+                    "Hip Flexor Stretch 2×90 s/side (couch stretch or kneeling)",
+                    "Thoracic Rotation + Rib Grab 2×10/side",
+                    "Pigeon Pose 2×90 s/side",
+                ],
+                "arms": [
+                    "KB Bottoms-Up Press 3×5/side @ 8 kg  (shoulder stability — very controlled)",
+                ],
+                "finisher": (
+                    "10 min flow (continuous, no rushing):\n"
+                    "  Cat-Cow × 10 → World's Greatest Stretch × 5/side → "
+                    "90/90 Hip Switch × 10 → Child's Pose 60 s"
+                ),
             },
-            {   # Wk-1 Day-2  Wave Press
-                "main":     "Wave-Load Strict Press: (5, 3, 2 /side) × 2 waves",
-                "std_kg":   12,
-                "accessory": [
-                    "Pull-Up or TRX Row 4×8",
-                    "Lateral Raise 3×15",
-                    "Overhead Carry 3×30 m /side",
+            {   # ── Mobility Session 2 · TGU Ladder ──────────────────────────
+                "week_label": "TGU ladder — build the skill",
+                "main": "TGU Ladder (1-2-3-2-1/side) × 2 @ 8 kg  (rest fully between sides)",
+                "std_kg": 8,
+                "full_body_block": [
+                    "KB Windmill 3×6/side @ 10 kg  (slightly heavier than S1)",
+                    "KB Bottoms-Up Press 3×5/side @ 8 kg  [shoulder stability]",
+                    "Hollow Body Hold 3×20 s  [core]",
                 ],
-                "finisher": "Push-Press max reps in 3 min (one bell, switch once)",
+                "focus_work": [
+                    "Hip Flexor + Quad Stretch 2×2 min/side",
+                    "Banded Hip Distraction 2×90 s/side (if band available)",
+                    "Seated Thoracic Extension over foam roller 2×60 s",
+                ],
+                "arms": [
+                    "KB Arm Bar 2×60 s/side @ 8 kg",
+                ],
+                "finisher": (
+                    "TGU AMRAP 6 min @ 8 kg (alternating sides — note total reps)\n"
+                    "  Goal: smooth, no rushing, every position deliberate"
+                ),
             },
-            {   # Wk-1 Day-3  Wave Swing
-                "main":     "Swing Wave: 10-20-30-20-10 (rest = equal work time) × 2",
-                "std_kg":   16,
-                "accessory": [
-                    "Goblet Squat 3×10",
-                    "Hip Flexor Mobilization 2×90 s /side",
-                    "Single-Leg Glute Bridge 3×12 /side",
+            {   # ── Mobility Session 3 · Windmill + Bent Press ───────────────
+                "week_label": "Windmill + bent press — lateral chain",
+                "main": "KB Windmill 4×5/side @ 12 kg + Bent Press 3×3/side @ 12 kg",
+                "std_kg": 12,
+                "full_body_block": [
+                    "KB TGU 2×2/side @ 8 kg  (heavy for mobility day — focus on smooth)",
+                    "KB Arm Bar 2×60 s/side @ 8 kg",
+                    "Dead Bug 3×10/side  [core — exhale as limbs extend]",
                 ],
-                "finisher": "30 s max swings / 30 s rest × 10 rounds",
-            },
-            {   # Wk-2 Day-1  Heavy Wave Deadlift
-                "main":     "Heavy Wave KB DL: (2 @ near-max, 1 @ max) × 4 waves",
-                "std_kg":   20,
-                "accessory": [
-                    "Suitcase Deadlift 3×5 /side (heavy)",
-                    "Nordic Hamstring Curl (eccentric) 3×5",
-                    "Bird Dog 3×10 /side",
+                "focus_work": [
+                    "Pigeon Pose 2×2 min/side",
+                    "World's Greatest Stretch 2×5/side",
+                    "Thoracic Rotation — hands behind head 2×10/side",
                 ],
-                "finisher": "Heavy Swing 5 × 10 with 90 s rest",
-            },
-            {   # Wk-2 Day-2  Heavy Wave Press
-                "main":     "Heavy Wave Press: (3, 2, 1 /side) × 3 waves (add load)",
-                "std_kg":   16,
-                "accessory": [
-                    "Weighted Pull-Up or TRX Archer Row 4×5",
-                    "KB Windmill 3×5 /side",
-                    "Farmer Carry 4×30 m (heavy)",
+                "arms": [
+                    "KB Bottoms-Up Press 3×5/side @ 8 kg",
                 ],
-                "finisher": "5 Strict + 5 Push-Press /side × 4 (no rest between)",
-            },
-            {   # Wk-2 Day-3  Full-Body Wave Complex
-                "main":     "Wave Complex /side: (Swing + Clean + Press + Squat) × 3-2-1 × 3",
-                "std_kg":   12,
-                "accessory": [
-                    "Turkish Get-Up 2×2 /side",
-                    "Mobility Flow (hip + thoracic) 2×5 min",
-                    "Dead Hang 3×30 s",
-                ],
-                "finisher": "Descending ladder: 10-8-6-4-2 of complex /side (no rest)",
-            },
-        ],
-    },
-
-    "hades_iron_temple": {
-        "name": "Hades' Iron Temple (2-week / 6 sessions)",
-        "sessions": [
-            {   # Wk-1 Day-1  Heavy Squat
-                "main":     "Double-KB Front Squat 6×3 @ RPE 8–9",
-                "std_kg":   20,
-                "accessory": [
-                    "Pause Goblet Squat (3-s hold) 3×5",
-                    "Single-Leg Press (wall-sit variant) 3×30 s /leg",
-                    "Ab Wheel Rollout 3×8",
-                ],
-                "finisher": "Heavy Goblet Hold (max weight) 3×45 s",
-            },
-            {   # Wk-1 Day-2  Heavy Floor Press
-                "main":     "Single-KB Floor Press 5×5 /side (heaviest possible)",
-                "std_kg":   16,
-                "accessory": [
-                    "Chest-Supported Row 4×6 (heavy)",
-                    "Triceps Extension 3×10",
-                    "Rear-Delt Fly 3×15",
-                ],
-                "finisher": "Floor Press Max Set /side (no set-down to failure)",
-            },
-            {   # Wk-1 Day-3  Heavy Hinge
-                "main":     "Double-KB Deadlift 5×3 @ RPE 9 (near-maximal)",
-                "std_kg":   24,
-                "accessory": [
-                    "Banded Good Morning 3×12",
-                    "Copenhagen Plank 3×25 s /side",
-                    "GHR or Nordic Curl 3×5",
-                ],
-                "finisher": "Heavy Swing 10 × 5 EMOM (competition-pace)",
-            },
-            {   # Wk-2 Day-1  Squat + Pause
-                "main":     "Double-KB Front Squat 5×2 (↑ load from Wk-1) + 3-s pause",
-                "std_kg":   24,
-                "accessory": [
-                    "Rear-Foot-Elevated Split Squat 3×5 /leg (heavy)",
-                    "Glute-Ham Walkout 3×10",
-                    "Hanging Knee Raise 3×10",
-                ],
-                "finisher": "Double-KB Front Squat × 3 reps on the minute × 8",
-            },
-            {   # Wk-2 Day-2  Strict Press Max
-                "main":     "Strict Press 5×3 /side (heavier than Wk-1) — no leg drive",
-                "std_kg":   16,
-                "accessory": [
-                    "Weighted Pull-Up or TRX One-Arm Row 4×4 /side",
-                    "Bottoms-Up Press 3×3 /side",
-                    "Prone Y-T-W Raise 3×10 each",
-                ],
-                "finisher": "Strict Press 1RM attempt /side (3 warm-up singles → PR)",
-            },
-            {   # Wk-2 Day-3  Total Grind
-                "main":     "Heavy Complex /side: (DL + Clean + Press + Squat) 5×3",
-                "std_kg":   16,
-                "accessory": [
-                    "Turkish Get-Up 3×1 /side (heaviest manageable)",
-                    "Farmers Carry 3×40 m (max load)",
-                    "Core Anti-Rotation Hold 3×30 s /side",
-                ],
-                "finisher": "1 rep every 30 s of the complex /side × 10 min",
+                "finisher": (
+                    "5 min flow — no rest:\n"
+                    "  5 Windmills/side → 1 TGU/side → 5 Halos/side @ 8 kg\n"
+                    "  Repeat until time is up — this is moving meditation"
+                ),
             },
         ],
     },
@@ -537,149 +794,153 @@ TEMPLATES = {
 }
 
 TRACK_KEYS      = list(TEMPLATES.keys())
-SESSIONS_NEEDED = 6      # workouts per 2-week cycle
-WK_TARGET       = 3      # any activities per calendar week for a laurel
+SESSIONS_NEEDED = 6
+WK_TARGET       = 4   # activities/week for streak
 
 # ── Movement registry ─────────────────────────────────────────────────────────
-# (slug, display_name, category, std_kg_female, sets_reps_hint)
-# std_kg = 0 for barbell and bodyweight movements (user sets own load).
+
 _MOVEMENT_TABLE = [
+    # KB — Hip/Glute
+    ("kb_hip_thrust",           "KB Hip Thrust",              "glute",      16, "4×10"),
+    ("kb_glute_bridge",         "KB Glute Bridge",            "glute",      16, "3×15"),
     # KB — Swing
-    ("kb_swing",            "KB Swing",               "swing",     16, "5×15"),
-    ("kb_double_swing",     "Double KB Swing",         "swing",     16, "5×10"),
-    ("kb_american_swing",   "American Swing",          "swing",     12, "EMOM 10"),
+    ("kb_swing",                "KB Swing",                   "swing",      16, "5×15"),
+    ("kb_double_swing",         "Double KB Swing",            "swing",      16, "5×10"),
+    ("kb_american_swing",       "American Swing",             "swing",      12, "EMOM 10"),
     # KB — Snatch
-    ("kb_snatch",           "KB Snatch",               "snatch",    12, "10×6/side"),
-    ("kb_half_snatch",      "KB Half Snatch",          "snatch",    12, "3×8/side"),
+    ("kb_snatch",               "KB Snatch",                  "snatch",     12, "10×6/side"),
+    ("kb_half_snatch",          "KB Half Snatch",             "snatch",     12, "3×8/side"),
     # KB — Clean
-    ("kb_clean",            "KB Clean",                "clean",     12, "5×5/side"),
-    ("kb_double_clean",     "Double KB Clean",         "clean",     12, "5×5"),
+    ("kb_clean",                "KB Clean",                   "clean",      12, "5×5/side"),
+    ("kb_double_clean",         "Double KB Clean",            "clean",      12, "5×5"),
+    ("kb_clean_press",          "KB Clean + Press",           "press",      12, "5×5/side"),
     # KB — Press
-    ("kb_press",            "KB Press",                "press",     12, "5×5/side"),
-    ("kb_push_press",       "KB Push-Press",           "press",     12, "5×5/side"),
-    ("kb_jerk",             "KB Jerk",                 "press",     12, "2×5 min"),
-    ("kb_long_cycle",       "Long Cycle C&J",          "press",     12, "2×5 min"),
-    ("kb_floor_press",      "KB Floor Press",          "press",     12, "3×8/side"),
-    ("kb_clean_press",      "KB Clean + Press",        "press",     12, "5×5/side"),
-    ("kb_bottoms_up_press", "Bottoms-Up Press",        "press",      8, "3×5/side"),
+    ("kb_press",                "KB Press",                   "press",      12, "5×5/side"),
+    ("kb_push_press",           "KB Push-Press",              "press",      12, "5×5/side"),
+    ("kb_jerk",                 "KB Jerk",                    "press",      12, "2×5 min"),
+    ("kb_long_cycle",           "Long Cycle C&J",             "press",      12, "2×5 min"),
+    ("kb_floor_press",          "KB Floor Press",             "press",      12, "3×8/side"),
+    ("kb_bottoms_up_press",     "Bottoms-Up Press",           "press",       8, "3×5/side"),
+    ("kb_oh_tricep_ext",        "KB Overhead Tricep Ext",     "arms",        8, "3×12"),
+    ("kb_tricep_kickback",      "KB Tricep Kickback",         "arms",        8, "3×12/side"),
+    ("kb_hammer_curl",          "KB Hammer Curl",             "arms",        8, "3×12"),
+    ("kb_zottman_curl",         "KB Zottman Curl",            "arms",        8, "3×10"),
     # KB — Squat
-    ("kb_goblet_squat",     "Goblet Squat",            "squat",     16, "4×10"),
-    ("kb_front_squat",      "Double KB Front Squat",   "squat",     12, "5×5"),
-    ("kb_split_squat",      "KB Split Squat",          "squat",     12, "3×8/leg"),
+    ("kb_goblet_squat",         "Goblet Squat",               "squat",      16, "4×10"),
+    ("kb_front_squat",          "Double KB Front Squat",      "squat",      12, "5×5"),
+    ("kb_lateral_lunge",        "KB Lateral Lunge",           "squat",      12, "3×8/side"),
+    ("kb_curtsy_lunge",         "KB Curtsy Lunge",            "squat",      12, "3×10/side"),
+    ("kb_reverse_lunge",        "KB Reverse Lunge",           "squat",      12, "3×10/leg"),
+    ("kb_step_up",              "KB Step-Up",                 "squat",      12, "3×12/leg"),
     # KB — Hinge
-    ("kb_deadlift",         "KB Deadlift",             "hinge",     16, "5×5"),
-    ("kb_rdl",              "KB RDL",                  "hinge",     16, "4×8/side"),
-    ("kb_suitcase_dl",      "Suitcase Deadlift",       "hinge",     16, "3×5/side"),
-    ("kb_sl_rdl",           "Single-Leg RDL",          "hinge",     12, "3×8/side"),
-    ("kb_high_pull",        "KB High Pull",            "hinge",     16, "3×8/side"),
+    ("kb_deadlift",             "KB Deadlift",                "hinge",      16, "5×5"),
+    ("kb_double_deadlift",      "Double KB Deadlift",         "hinge",      16, "5×5"),
+    ("kb_rdl",                  "KB RDL",                     "hinge",      16, "4×8/side"),
+    ("kb_suitcase_dl",          "Suitcase Deadlift",          "hinge",      16, "3×5/side"),
+    ("kb_sl_rdl",               "Single-Leg RDL",             "hinge",      12, "3×8/side"),
+    ("kb_high_pull",            "KB High Pull",               "hinge",      16, "3×8/side"),
     # KB — Get-Up / Windmill
-    ("kb_tgu",              "Turkish Get-Up",          "get_up",     8, "5×3/side"),
-    ("kb_windmill",         "KB Windmill",             "get_up",    12, "3×5/side"),
-    ("kb_bent_press",       "Bent Press",              "get_up",    12, "4×3/side"),
+    ("kb_tgu",                  "Turkish Get-Up",             "get_up",      8, "5×3/side"),
+    ("kb_windmill",             "KB Windmill",                "get_up",     12, "3×5/side"),
+    ("kb_bent_press",           "Bent Press",                 "get_up",     12, "4×3/side"),
+    ("kb_arm_bar",              "KB Arm Bar",                 "get_up",      8, "2×60 s/side"),
     # KB — Row
-    ("kb_row",              "KB Row",                  "row",       12, "4×8/side"),
-    ("kb_renegade_row",     "Renegade Row",            "row",       12, "3×6/side"),
+    ("kb_row",                  "KB Bent-Over Row",           "row",        12, "4×8/side"),
+    ("kb_renegade_row",         "Renegade Row",               "row",        12, "3×6/side"),
+    ("kb_chest_supported_row",  "KB Chest-Supported Row",     "row",        12, "4×10"),
     # KB — Carry
-    ("kb_farmer_carry",     "Farmer Carry",            "carry",     16, "4×30 m"),
-    ("kb_rack_carry",       "Rack Carry",              "carry",     12, "3×30 m/side"),
-    ("kb_oh_carry",         "Overhead Carry",          "carry",     12, "3×20 m/side"),
-    ("kb_suitcase_carry",   "Suitcase Carry",          "carry",     16, "4×20 m/side"),
-    ("kb_bu_carry",         "Bottoms-Up Carry",        "carry",      8, "3×20 m/side"),
-    # Barbell
-    ("bb_squat",            "Barbell Back Squat",      "barbell",    0, "5×5"),
-    ("bb_front_squat",      "Barbell Front Squat",     "barbell",    0, "4×5"),
-    ("bb_deadlift",         "Barbell Deadlift",        "barbell",    0, "5×3"),
-    ("bb_rdl",              "Barbell RDL",             "barbell",    0, "4×8"),
-    ("bb_ohp",              "Overhead Press",          "barbell",    0, "5×5"),
-    ("bb_bench",            "Bench Press",             "barbell",    0, "5×5"),
-    ("bb_row",              "Barbell Row",             "barbell",    0, "4×8"),
-    ("bb_power_clean",      "Power Clean",             "barbell",    0, "5×3"),
+    ("kb_farmer_carry",         "Farmer Carry",               "carry",      16, "4×30 m"),
+    ("kb_rack_carry",           "Rack Carry",                 "carry",      12, "3×30 m/side"),
+    ("kb_oh_carry",             "Overhead Carry",             "carry",      12, "3×20 m/side"),
+    ("kb_suitcase_carry",       "Suitcase Carry",             "carry",      16, "4×20 m/side"),
+    ("kb_bu_carry",             "Bottoms-Up Carry",           "carry",       8, "3×20 m/side"),
     # Bodyweight
-    ("bw_push_up",          "Push-Up",                 "bodyweight", 0, "3×15"),
-    ("bw_pull_up",          "Pull-Up",                 "bodyweight", 0, "4×5"),
-    ("bw_dip",              "Dip",                     "bodyweight", 0, "3×10"),
-    ("bw_lunge",            "Lunge",                   "bodyweight", 0, "3×10/leg"),
-    ("bw_step_up",          "Step-Up",                 "bodyweight", 0, "3×12/leg"),
-    ("bw_box_jump",         "Box Jump",                "bodyweight", 0, "3×8"),
-    ("bw_burpee",           "Burpee",                  "bodyweight", 0, "3×10"),
-    ("bw_plank",            "Plank",                   "bodyweight", 0, "3×45 s"),
-    ("bw_dead_bug",         "Dead Bug",                "bodyweight", 0, "3×10/side"),
-    ("bw_hollow_rock",      "Hollow Rock",             "bodyweight", 0, "3×20"),
-    ("bw_ab_wheel",         "Ab Wheel Rollout",        "bodyweight", 0, "3×8"),
-    ("bw_nordic_curl",      "Nordic Curl",             "bodyweight", 0, "3×5 (ecc)"),
-    ("bw_bulgarian",        "Bulgarian Split Squat",   "bodyweight", 0, "3×8/leg"),
-    ("bw_hip_bridge",       "Glute Bridge",            "bodyweight", 0, "3×15"),
-    ("bw_pallof",           "Pallof Press",            "bodyweight", 0, "3×10/side"),
-    # Dumbbell
-    ("db_goblet_squat",     "DB Goblet Squat",         "dumbbell",   8, "4×10"),
-    ("db_rdl",              "DB RDL",                  "dumbbell",   8, "4×10"),
-    ("db_lunge",            "DB Lunge",                "dumbbell",   8, "3×10/leg"),
-    ("db_press",            "DB Shoulder Press",       "dumbbell",   8, "4×10"),
-    ("db_bench_press",      "DB Bench Press",          "dumbbell",  10, "4×10"),
-    ("db_row",              "DB Row",                  "dumbbell",  10, "4×10/side"),
-    ("db_curl",             "DB Bicep Curl",           "dumbbell",   8, "3×12"),
-    ("db_tricep_ext",       "DB Tricep Extension",     "dumbbell",   6, "3×12"),
-    ("db_lateral_raise",    "Lateral Raise",           "dumbbell",   4, "3×15"),
-    ("db_fly",              "DB Chest Fly",            "dumbbell",   8, "3×12"),
-    ("db_step_up",          "DB Step-Up",              "dumbbell",   8, "3×10/leg"),
-    ("db_split_squat",      "DB Split Squat",          "dumbbell",   8, "3×10/leg"),
-    ("db_snatch",           "DB Snatch",               "dumbbell",   8, "5×5/side"),
-    ("db_clean_press",      "DB Clean + Press",        "dumbbell",   8, "4×8/side"),
+    ("bw_push_up",              "Push-Up",                    "bodyweight",  0, "3×15"),
+    ("bw_pull_up",              "Pull-Up",                    "bodyweight",  0, "4×5"),
+    ("bw_bulgarian",            "Bulgarian Split Squat",      "bodyweight",  0, "3×8/leg"),
+    ("bw_nordic_curl",          "Nordic Hamstring Curl",      "bodyweight",  0, "3×5 (ecc)"),
+    ("bw_hip_bridge",           "Glute Bridge",               "bodyweight",  0, "3×15"),
+    ("bw_clamshell",            "Banded Clamshell",           "bodyweight",  0, "3×20/side"),
+    ("bw_lateral_band_walk",    "Lateral Band Walk",          "bodyweight",  0, "3×20/side"),
+    ("bw_donkey_kick",          "Donkey Kick",                "bodyweight",  0, "3×15/side"),
+    ("bw_fire_hydrant",         "Fire Hydrant",               "bodyweight",  0, "3×15/side"),
+    ("bw_plank",                "Plank",                      "core",        0, "3×45 s"),
+    ("bw_dead_bug",             "Dead Bug",                   "core",        0, "3×10/side"),
+    ("bw_hollow_rock",          "Hollow Rock",                "core",        0, "3×20"),
+    ("bw_ab_wheel",             "Ab Wheel Rollout",           "core",        0, "3×8"),
+    ("bw_hanging_leg_raise",    "Hanging Leg Raise",          "core",        0, "3×10"),
+    ("bw_pallof",               "Pallof Press",               "core",        0, "3×10/side"),
+    ("bw_face_pull",            "TRX Face Pull",              "bodyweight",  0, "3×15"),
+    ("bw_lunge",                "Lunge",                      "bodyweight",  0, "3×10/leg"),
+    ("bw_box_jump",             "Box Jump",                   "bodyweight",  0, "3×8"),
+    ("bw_burpee",               "Burpee",                     "bodyweight",  0, "3×10"),
 ]
 
 
 def get_movements() -> list:
-    """Return the full movement registry as a list of dicts."""
     return [
         {"slug": s, "name": n, "category": c, "std_kg": kg, "hint": h}
         for s, n, c, kg, h in _MOVEMENT_TABLE
     ]
 
+
 # ── Default state ─────────────────────────────────────────────────────────────
+
 def default_state() -> dict:
     return {
-        "track": TRACK_KEYS[0],
+        "track":                    TRACK_KEYS[0],
+        "cycle_week":               1,
+        "strength_sessions_in_wave": 0,
         "microcycle": {
-            "id": 0,
+            "id":                 0,
             "sessions_completed": 0,
-            "start_date": str(dt.date.today()),
-            "badge_given": False,
+            "start_date":         str(dt.date.today()),
+            "completed":          False,
         },
-        "workouts":          [],   # list[{date, type, details, coins, weight_kg?}]
-        "ruck_log":          [],   # list[{date, distance_miles, weight_lbs, coins}]
-        "run_log":           [],   # list[{date, distance_miles, coins, pace_min_per_mile?}]
-        "walk_log":          [],   # list[{date, distance_miles, coins}]
-        "badges":            [],   # list of badge records
-        "treasury":          0.0,  # drachma accumulated (lift + ruck + run + walk)
-        "total_ruck_miles":  0.0,  # lifetime ruck distance
-        "total_run_miles":   0.0,  # lifetime run distance
-        "total_walk_miles":  0.0,  # lifetime walk distance
-        "journey_miles":     0.0,  # combined ruck + run + walk (used for milestone checks)
-        "week_log":          {},   # {"(year, week)": count} — any activity
-        "custom_tracks":     [],   # list of user-built track dicts
-        "templates":         {k: v["name"] for k, v in TEMPLATES.items()},
+        "workouts":           [],
+        "ruck_log":           [],
+        "run_log":            [],
+        "walk_log":           [],
+        "week_log":           {},
+        "custom_tracks":      [],
+        "templates":          {k: v["name"] for k, v in TEMPLATES.items()},
+        "total_ruck_miles":   0.0,
+        "total_run_miles":    0.0,
+        "total_walk_miles":   0.0,
+        "journey_miles":      0.0,
     }
 
-# ── Public API ────────────────────────────────────────────────────────────────
+
+# ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _get_custom_track(state: dict, track_key: str) -> dict | None:
-    """Return the custom track dict for a 'custom_<id>' key, or None."""
     if not track_key or not track_key.startswith("custom_"):
         return None
-    track_id = track_key[7:]   # strip "custom_" prefix
+    track_id = track_key[7:]
     for ct in state.get("custom_tracks", []):
         if str(ct.get("id", "")) == str(track_id):
             return ct
     return None
 
 
+def _week_key(d: dt.date) -> str:
+    iso = d.isocalendar()
+    return f"{iso[0]}-{iso[1]:02d}"
+
+
+def _increment_weekly_count(state: dict) -> None:
+    wk = _week_key(dt.date.today())
+    state.setdefault("week_log", {})
+    state["week_log"][wk] = state["week_log"].get(wk, 0) + 1
+
+
+# ── Public API ────────────────────────────────────────────────────────────────
+
 def get_today_workout(state: dict) -> dict:
-    """Return structured data for the current session (no mutation)."""
     track = state.get("track")
     if not track:
         return {"status": "no_track", "message": "No track selected."}
 
-    # ── Custom track ──────────────────────────────────────────────────────────
     if track.startswith("custom_"):
         ct = _get_custom_track(state, track)
         if ct is None:
@@ -690,54 +951,75 @@ def get_today_workout(state: dict) -> dict:
         idx = mc["sessions_completed"]
         if idx >= sessions_needed:
             return {"status": "cycle_complete",
-                    "message": "Cycle complete! Log a custom workout or start a new track."}
+                    "message": "Cycle complete! Start a new track."}
         sess = ct["sessions"][idx]
         return {
-            "status":         "active",
-            "session_num":    idx + 1,
-            "total_sessions": sessions_needed,
-            "main":           sess.get("main", ""),
-            "std_kg":         float(sess.get("std_kg", 16) or 16),
-            "accessory":      sess.get("accessory", []),
-            "finisher":       sess.get("finisher", ""),
-            "track_name":     ct["name"],
+            "status":           "active",
+            "track_key":        track,
+            "track_name":       ct["name"],
+            "day_type":         "strength",
+            "focus":            "",
+            "week_label":       sess.get("week_label", ""),
+            "session_idx":      idx,
+            "total_sessions":   sessions_needed,
+            "main":             sess.get("main", ""),
+            "std_kg":           float(sess.get("std_kg", 16) or 16),
+            "accessory":        sess.get("accessory", []),
+            "finisher":         sess.get("finisher", ""),
+            "bell_guidance":    "",
+            "cycle_week":       state.get("cycle_week", 1),
+            "suggested_weight": float(sess.get("std_kg", 16) or 16),
         }
 
-    # ── Built-in template track ───────────────────────────────────────────────
     if track not in TEMPLATES:
         return {"status": "no_track", "message": "No track selected."}
+
+    tpl = TEMPLATES[track]
     mc  = state["microcycle"]
     idx = mc["sessions_completed"]
-    if idx >= SESSIONS_NEEDED:
+    sessions_needed = len(tpl["sessions"])
+    if idx >= sessions_needed:
         return {"status": "cycle_complete",
-                "message": "Cycle complete! Log a custom workout or start a new track."}
-    sess = TEMPLATES[track]["sessions"][idx]
+                "message": "Cycle complete! Select a new session or restart the track."}
+
+    sess = tpl["sessions"][idx]
+    std_kg = float(sess.get("std_kg", 16) or 16)
     return {
-        "status":         "active",
-        "session_num":    idx + 1,
-        "total_sessions": SESSIONS_NEEDED,
-        "main":           sess["main"],
-        "std_kg":         sess.get("std_kg", 16),   # standard bell weight for drachma scaling
-        "accessory":      sess["accessory"],
-        "finisher":       sess["finisher"],
-        "track_name":     TEMPLATES[track]["name"],
+        "status":           "active",
+        "track_key":        track,
+        "track_name":       tpl["name"],
+        "day_type":         tpl.get("day_type", "strength"),
+        "focus":            tpl.get("focus", ""),
+        "week_label":       sess.get("week_label", ""),
+        "session_idx":      idx,
+        "total_sessions":   sessions_needed,
+        "main":             sess["main"],
+        "std_kg":           std_kg,
+        "full_body_block":  sess.get("full_body_block", []),
+        "focus_work":       sess.get("focus_work", []),
+        "arms":             sess.get("arms", []),
+        "finisher":         sess["finisher"],
+        "bell_guidance":    tpl.get("bell_guidance", ""),
+        "cycle_week":       state.get("cycle_week", 1),
+        "suggested_weight": std_kg,
     }
 
 
 def get_track_detail(key: str) -> dict | None:
-    """Return full track template with all sessions for preview (no mutation)."""
     if key not in TEMPLATES:
         return None
     t = TEMPLATES[key]
     return {
-        "key":      key,
-        "name":     t["name"],
-        "sessions": t["sessions"],
+        "key":          key,
+        "name":         t["name"],
+        "day_type":     t.get("day_type", "strength"),
+        "focus":        t.get("focus", ""),
+        "bell_guidance": t.get("bell_guidance", ""),
+        "sessions":     t["sessions"],
     }
 
 
 def get_custom_track_detail(state: dict, track_id: str) -> dict | None:
-    """Return a user's custom track by id (no mutation)."""
     for ct in state.get("custom_tracks", []):
         if str(ct.get("id", "")) == str(track_id):
             return ct
@@ -745,318 +1027,225 @@ def get_custom_track_detail(state: dict, track_id: str) -> dict | None:
 
 
 def init_track(state: dict, key: str) -> str:
-    """Start a new micro-cycle on the given track (built-in or custom)."""
     if key.startswith("custom_"):
         ct = _get_custom_track(state, key)
         if ct is None:
             return f"Custom track not found: {key}"
         state["track"] = key
         state["microcycle"] = {
-            "id":                  state["microcycle"]["id"] + 1,
-            "sessions_completed":  0,
-            "start_date":          str(dt.date.today()),
-            "badge_given":         False,
+            "id":                 state["microcycle"]["id"] + 1,
+            "sessions_completed": 0,
+            "start_date":         str(dt.date.today()),
+            "completed":          False,
         }
         return f"Started {ct['name']}"
     if key not in TEMPLATES:
         return f"Unknown track: {key}"
     state["track"] = key
     state["microcycle"] = {
-        "id":                  state["microcycle"]["id"] + 1,
-        "sessions_completed":  0,
-        "start_date":          str(dt.date.today()),
-        "badge_given":         False,
+        "id":                 state["microcycle"]["id"] + 1,
+        "sessions_completed": 0,
+        "start_date":         str(dt.date.today()),
+        "completed":          False,
     }
     return f"Started {TEMPLATES[key]['name']}"
 
 
 def log_rec(state: dict, weights_lbs: dict | None = None) -> str:
-    """Log the next recommended session.
-
-    weights_lbs – dict of per-movement bell weights in lbs, e.g.:
-        {"main": 35, "acc_0": 26, "acc_1": None, "finisher": 25}
-    Keys: "main", "acc_0", "acc_1", "acc_2", "finisher".
-    Only non-zero values are stored.
-
-    Drachma scales on the MAIN lift weight vs the session's std_kg
-    (clamped 0.5×–2.0×, so 2.50–10.00 per session).
-    Skipping weight entry awards the flat BASE_WORKOUT_COINS.
-    """
     track = state.get("track")
     if not track:
         return "No active track. Please select a track first."
     mc  = state["microcycle"]
     idx = mc["sessions_completed"]
 
-    # Resolve session template (custom vs built-in)
     if track.startswith("custom_"):
         ct = _get_custom_track(state, track)
         if ct is None:
             return "Custom track not found. Please select a new track."
-        sessions_needed = len(ct["sessions"])
+        if idx >= len(ct["sessions"]):
+            return "Cycle complete. Select a new track."
+        tpl = ct["sessions"][idx]
+        day_type = "strength"
+    elif track not in TEMPLATES:
+        return "No active track. Please select a track first."
+    else:
+        sessions_needed = len(TEMPLATES[track]["sessions"])
         if idx >= sessions_needed:
-            return "Cycle already complete. Log custom or start a new track."
-        tpl    = ct["sessions"][idx]
-        std_kg = float(tpl.get("std_kg", 16) or 16)
-    else:
-        if track not in TEMPLATES:
-            return "No active track. Please select a track first."
-        if idx >= SESSIONS_NEEDED:
-            return "Cycle already complete. Log custom or start a new track."
-        tpl    = TEMPLATES[track]["sessions"][idx]
-        std_kg = tpl.get("std_kg", 16)
+            return "Cycle complete. Select a new track or restart."
+        tpl = TEMPLATES[track]["sessions"][idx]
+        day_type = TEMPLATES[track].get("day_type", "strength")
 
-    main_lbs = float((weights_lbs or {}).get("main") or 0)
-    if main_lbs > 0:
-        main_kg = main_lbs * 0.453592
-        ratio   = min(max(main_kg / std_kg, 0.5), 2.0)
-        coins   = round(BASE_WORKOUT_COINS * ratio, 2)
-    else:
-        coins = BASE_WORKOUT_COINS
+    entry: dict = {
+        "date":        str(dt.date.today()),
+        "type":        "recommended",
+        "details":     tpl["main"],
+        "track":       track,
+        "session_idx": idx,
+        "day_type":    day_type,
+    }
 
-    # Store only movements that had a weight entered
-    stored_weights: dict = {}
     if weights_lbs:
+        stored: dict = {}
         for k, v in weights_lbs.items():
             try:
                 f = float(v or 0)
                 if f > 0:
-                    stored_weights[k] = f
+                    stored[k] = f
             except (TypeError, ValueError):
                 pass
-
-    entry: dict = {
-        "date":    str(dt.date.today()),
-        "type":    "recommended",
-        "details": tpl["main"],
-        "std_kg":  std_kg,
-        "coins":   coins,
-    }
-    if stored_weights:
-        entry["weights_lbs"] = stored_weights
+        if stored:
+            entry["weights_lbs"] = stored
 
     state["workouts"].append(entry)
-    state["treasury"] = round(state.get("treasury", 0.0) + coins, 2)
     mc["sessions_completed"] += 1
-    _increment_weekly_streak(state)
-    _maybe_award_cycle_badge(state)
+    _increment_weekly_count(state)
 
-    if main_lbs > 0:
-        return f"⚔️ Logged: {tpl['main']} @ {int(main_lbs)} lbs — earned 🪙 {coins:.2f} Drachma"
-    return f"⚔️ Logged: {tpl['main']} — earned 🪙 {coins:.2f} Drachma"
+    if day_type == "strength":
+        state["strength_sessions_in_wave"] = state.get("strength_sessions_in_wave", 0) + 1
+        if state["strength_sessions_in_wave"] >= SESSIONS_NEEDED:
+            state["strength_sessions_in_wave"] = 0
+            state["cycle_week"] = (state.get("cycle_week", 1) % 4) + 1
+
+    return f"Session logged: {tpl['main']}"
 
 
 def log_custom(state: dict, text: str) -> str:
-    """Log a free-text custom workout (earns a flat CUSTOM_WORKOUT_COINS)."""
-    coins = CUSTOM_WORKOUT_COINS
     state["workouts"].append({
-        "date":    str(dt.date.today()),
-        "type":    "custom",
-        "details": text,
-        "coins":   coins,
+        "date":     str(dt.date.today()),
+        "type":     "custom",
+        "details":  text,
+        "day_type": "custom",
     })
-    state["treasury"] = round(state.get("treasury", 0.0) + coins, 2)
     state["microcycle"]["sessions_completed"] += 1
-    _increment_weekly_streak(state)
-    _maybe_award_cycle_badge(state)
-    return f"⚔️ Custom workout logged — earned 🪙 {coins:.2f} Drachma"
+    _increment_weekly_count(state)
+    return f"Custom workout logged: {text[:80]}"
 
 
 def log_ruck(state: dict, miles: float, pounds: float) -> str:
-    """Log a ruck session, award drachma, check journey milestones."""
-    coins         = round(miles * 20.0, 2)
-    prev_journey  = state.get("journey_miles",
-                              state.get("total_ruck_miles", 0.0))
-    new_journey   = prev_journey + miles
-
     state["ruck_log"].append({
         "date":           str(dt.date.today()),
         "distance_miles": miles,
         "weight_lbs":     pounds,
-        "coins":          coins,
     })
-    state["treasury"]        = round(state.get("treasury", 0.0) + coins, 2)
     state["total_ruck_miles"] = state.get("total_ruck_miles", 0.0) + miles
-    state["journey_miles"]    = new_journey
-
-    _check_journey_milestone(state, prev_journey, new_journey)
-    _increment_weekly_streak(state)   # rucks count toward weekly laurels
-    return (f"🪙 Earned {coins:.2f} Drachma.  "
-            f"Journey: {new_journey:.1f} mi.")
+    prev = state.get("journey_miles", 0.0)
+    state["journey_miles"] = prev + miles
+    _increment_weekly_count(state)
+    return f"Ruck logged: {miles:.1f} mi @ {pounds:.0f} lbs"
 
 
 def log_run(state: dict, miles: float, pace: float | None = None) -> str:
-    """Log a run, award base-rate drachma (no weight bonus), check journey milestones."""
-    coins        = round(miles * 18.0, 2)
-    prev_journey = state.get("journey_miles",
-                             state.get("total_ruck_miles", 0.0))
-    new_journey  = prev_journey + miles
-
     entry: dict = {
         "date":           str(dt.date.today()),
         "distance_miles": miles,
-        "coins":          coins,
     }
     if pace is not None:
         entry["pace_min_per_mile"] = pace
-
     state.setdefault("run_log", []).append(entry)
-    state["treasury"]       = round(state.get("treasury", 0.0) + coins, 2)
     state["total_run_miles"] = state.get("total_run_miles", 0.0) + miles
-    state["journey_miles"]   = new_journey
-
-    _check_journey_milestone(state, prev_journey, new_journey)
-    _increment_weekly_streak(state)   # runs count toward weekly laurels
-    return (f"🏃 Ran {miles:.1f} mi — earned {coins:.2f} Drachma.  "
-            f"Journey: {new_journey:.1f} mi.")
+    prev = state.get("journey_miles", 0.0)
+    state["journey_miles"] = prev + miles
+    _increment_weekly_count(state)
+    return f"Run logged: {miles:.1f} mi"
 
 
 def log_walk(state: dict, miles: float) -> str:
-    """Log a walk, award half the run rate, count toward the journey."""
-    coins        = round(miles * 12.0, 2)
-    prev_journey = state.get("journey_miles", 0.0)
-    new_journey  = prev_journey + miles
-
     state.setdefault("walk_log", []).append({
         "date":           str(dt.date.today()),
         "distance_miles": miles,
-        "coins":          coins,
     })
-    state["treasury"]        = round(state.get("treasury", 0.0) + coins, 2)
     state["total_walk_miles"] = state.get("total_walk_miles", 0.0) + miles
-    state["journey_miles"]    = new_journey
-
-    _check_journey_milestone(state, prev_journey, new_journey)
-    _increment_weekly_streak(state)   # walks count toward weekly laurels
-    return (f"🚶 Walked {miles:.1f} mi — earned {coins:.2f} Drachma.  "
-            f"Journey: {new_journey:.1f} mi.")
-
-# ── Internal helpers ──────────────────────────────────────────────────────────
-
-def _maybe_award_cycle_badge(state: dict) -> None:
-    """Award monster trophy when all sessions in the cycle are completed."""
-    mc = state["microcycle"]
-    if mc["badge_given"]:
-        return
-    # Determine how many sessions this cycle requires
-    track = state.get("track", "")
-    if track.startswith("custom_"):
-        ct = _get_custom_track(state, track)
-        sessions_needed = len(ct["sessions"]) if ct else SESSIONS_NEEDED
-    else:
-        sessions_needed = SESSIONS_NEEDED
-    if mc["sessions_completed"] < sessions_needed:
-        return
-    _award_monster_badge(state)
-    mc["badge_given"] = True
+    prev = state.get("journey_miles", 0.0)
+    state["journey_miles"] = prev + miles
+    _increment_weekly_count(state)
+    return f"Walk logged: {miles:.1f} mi"
 
 
-def _increment_weekly_streak(state: dict) -> None:
-    """Award an Olympian Laurel after WK_TARGET distinct workout DAYS in a calendar week.
-    Multiple workouts on the same day count as ONE day (Monday–Sunday ISO week).
-    A "{week_key}_laurel_given" flag prevents re-awarding within the same week."""
-    today_date = dt.date.today()
-    iso_year, iso_week, _ = today_date.isocalendar()
-    week_key = f"{iso_year}-W{iso_week:02d}"
-    today_str = str(today_date)
+def get_streak_info(state: dict) -> dict:
+    today    = dt.date.today()
+    wk_log   = state.get("week_log", {})
+    curr_key = _week_key(today)
+    this_week = wk_log.get(curr_key, 0)
 
-    state.setdefault("week_log", {})
-    laurel_key = f"{week_key}_laurel_given"
+    # Count consecutive completed weeks going backwards from last week
+    streak_weeks = 0
+    check = today - dt.timedelta(weeks=1)
+    while True:
+        k = _week_key(check)
+        if wk_log.get(k, 0) >= WK_TARGET:
+            streak_weeks += 1
+            check -= dt.timedelta(weeks=1)
+        else:
+            break
+    # Include current week if already hit
+    if this_week >= WK_TARGET:
+        streak_weeks += 1
 
-    # Already awarded a laurel this week — do not fire again.
-    if state["week_log"].get(laurel_key):
-        return
+    last_week_date = today - dt.timedelta(weeks=1)
+    last_week_hit  = wk_log.get(_week_key(last_week_date), 0) >= WK_TARGET
 
-    # Track distinct days in the week via a set stored alongside the count
-    distinct_key = f"{week_key}_days"
-    days_set = set(state["week_log"].get(distinct_key, []))
-    days_set.add(today_str)
-    state["week_log"][distinct_key] = list(days_set)
-    count = len(days_set)
-    state["week_log"][week_key] = count
+    # ISO week: Mon=1, Sun=7. Days remaining = 7 - isoweekday
+    days_remaining      = 7 - today.isoweekday()
+    activities_remaining = max(0, WK_TARGET - this_week)
 
-    if count >= WK_TARGET:
-        god, icon = random.choice(OLYMPIANS)
-        state["badges"].append({
-            "date":       today_str,
-            "name":       f"{icon} {god} Laurel",
-            "type":       "laurel",
-            "image_path": None,
-        })
-        state["week_log"][laurel_key] = 1  # guard: only one laurel per week
-
-
-def _check_journey_milestone(state: dict,
-                              prev_miles: float,
-                              new_miles:  float) -> None:
-    """Award Pheidippides way-point postcards for every waypoint crossed.
-    Journey miles = ruck + run combined. Loop-aware."""
-    if TRIP_MILES <= 0:
-        return
-
-    prev_loop = int(prev_miles // TRIP_MILES)
-    new_loop  = int(new_miles  // TRIP_MILES)
-
-    # Build set of already-earned (loop, city) pairs to prevent duplicates
-    earned: set = set()
-    for b in state["badges"]:
-        if b.get("type") == "ruck_quest":
-            earned.add((b.get("loop", 0), b.get("stop", "")))
-
-    for loop in range(prev_loop, new_loop + 1):
-        base = loop * TRIP_MILES
-        for offset, city, caption in RUCK_STOPS:
-            abs_mark = base + offset
-            if prev_miles <= abs_mark <= new_miles and (loop, city) not in earned:
-                slug = city.replace(" ", "_")
-                state["badges"].append({
-                    "type":       "ruck_quest",
-                    "loop":       loop,
-                    "stop":       city,
-                    "name":       f"📜 {city} Way-Point",
-                    "date":       str(dt.date.today()),
-                    "caption":    caption,
-                    "image_path": f"Pheidippides/{slug}.png",
-                })
+    return {
+        "week_target":         WK_TARGET,
+        "this_week":           this_week,
+        "streak_weeks":        streak_weeks,
+        "last_week_hit":       last_week_hit,
+        "days_remaining":      days_remaining,
+        "activities_remaining": activities_remaining,
+    }
 
 
-def _pick_monster() -> tuple:
-    """Return (display_name, folder_name) using weighted random selection."""
-    r   = random.uniform(0, MONSTER_TOTAL)
-    cum = 0.0
-    for name, folder, prob in MONSTERS:
-        cum += prob
-        if r <= cum:
-            return name, folder
-    return MONSTERS[-1][:2]   # fallback
+def get_next_weight(state: dict, movement_slug: str) -> float | None:
+    for w in reversed(state.get("workouts", [])):
+        wl = w.get("weights_lbs", {})
+        if wl and "main" in wl:
+            main_kg = float(wl["main"]) * 0.453592
+            return round(main_kg)
+    return None
 
 
-def _award_monster_badge(state: dict) -> None:
-    """Add a randomly-selected monster trophy (10 % chance of gilded variant)."""
-    name, folder = _pick_monster()
-    gilded   = random.random() < GILD_CHANCE
-    variant  = "Gold" if gilded else "Vibrant"
-    img_path = f"{folder}/{variant}/{folder}.png"
-    state["badges"].append({
-        "date":       str(dt.date.today()),
-        "name":       name + (" ★" if gilded else ""),
-        "type":       "monster",
-        "image_path": img_path,
-    })
+def get_week_summary(state: dict) -> dict:
+    today      = dt.date.today()
+    iso        = today.isocalendar()
+    week_start = today - dt.timedelta(days=iso[2] - 1)
+    week_end   = week_start + dt.timedelta(days=6)
+
+    summary: dict = {"strength": 0, "mobility": 0, "cardio": 0, "total": 0}
+
+    for w in state.get("workouts", []):
+        try:
+            d = dt.date.fromisoformat(w["date"])
+        except (KeyError, ValueError):
+            continue
+        if week_start <= d <= week_end:
+            track    = w.get("track", "")
+            day_type = TEMPLATES.get(track, {}).get("day_type", "strength") if track in TEMPLATES else "strength"
+            summary[day_type] = summary.get(day_type, 0) + 1
+            summary["total"] += 1
+
+    for log_key in ("ruck_log", "run_log", "walk_log"):
+        for entry in state.get(log_key, []):
+            try:
+                d = dt.date.fromisoformat(entry["date"])
+            except (KeyError, ValueError):
+                continue
+            if week_start <= d <= week_end:
+                summary["cardio"] += 1
+                summary["total"]  += 1
+
+    return summary
 
 
 # ── Custom track management ───────────────────────────────────────────────────
 
 def save_custom_track(state: dict, name: str, sessions: list) -> dict:
-    """Validate and persist a new custom training track.
-
-    Returns the saved track dict (with generated id).
-    Raises ValueError for invalid inputs.
-    """
     name = (name or "").strip()
     if not name:
         raise ValueError("Track name cannot be empty.")
-    if not sessions or len(sessions) < 1:
+    if not sessions:
         raise ValueError("A cycle must have at least 1 session.")
     if len(sessions) > 6:
         raise ValueError("A cycle can have at most 6 sessions.")
@@ -1073,10 +1262,11 @@ def save_custom_track(state: dict, name: str, sessions: list) -> dict:
         except (TypeError, ValueError):
             std_kg = 16.0
         cleaned.append({
-            "main":      main,
-            "std_kg":    std_kg,
-            "accessory": acc,
-            "finisher":  finisher,
+            "week_label": str(s.get("week_label", f"Session {i + 1}")).strip(),
+            "main":       main,
+            "std_kg":     std_kg,
+            "accessory":  acc,
+            "finisher":   finisher,
         })
 
     track_id = str(int(time.time() * 1000))
@@ -1086,13 +1276,11 @@ def save_custom_track(state: dict, name: str, sessions: list) -> dict:
 
 
 def delete_custom_track(state: dict, track_id: str) -> bool:
-    """Remove a custom track by id. Returns True if found and removed."""
     tracks     = state.get("custom_tracks", [])
     new_tracks = [t for t in tracks if str(t.get("id", "")) != str(track_id)]
     if len(new_tracks) == len(tracks):
         return False
     state["custom_tracks"] = new_tracks
-    # If this was the active track, fall back to the first built-in track
     if state.get("track") == f"custom_{track_id}":
         state["track"] = TRACK_KEYS[0]
     return True

@@ -2,25 +2,16 @@ from fastapi import FastAPI, Request, HTTPException, Depends
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
-import json, core, datetime as dt, os, time as _time, logging, re as _re
+import core, datetime as dt, os, time as _time
 
-log = logging.getLogger(__name__)
-
-# Version string: process start-time so every new Render deploy gets a new token
 _APP_VERSION = str(int(_time.time()))
 import db
 import auth as _auth
-from laurel_of_olympus import game_state as gs
-from laurel_of_olympus import workout_engine, farm_engine, event_engine
-from laurel_of_olympus import oracle_engine, title_engine
-from laurel_of_olympus import creature_engine, relic_engine, buff_engine
-from laurel_of_olympus import army_engine, processing_engine, trophy_engine
 
 BASE   = Path(__file__).parent
 STATIC = BASE / "static"
 
-# ── FastAPI ───────────────────────────────────────────────────────────────────
-app = FastAPI(title="Olympus Training Log")
+app = FastAPI(title="First Bell")
 
 app.add_middleware(
     CORSMiddleware,
@@ -30,210 +21,55 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ── Auth dependency alias ─────────────────────────────────────────────────────
 CurrentUser = Depends(_auth.get_current_user)
 
-# ── Per-user state helpers ────────────────────────────────────────────────────
 
-def _parse_total_reps(text: str) -> int:
-    """Extract total reps from movement description strings.
-    Handles: '5×5', '3×8/leg', '(1-2-3-2-1)×3', '4×20 m/side', etc.
-    Returns a sensible default (20) when no pattern matches.
-    """
-    # Standard N×M or NxM
-    m = _re.search(r'(\d+)\s*[x×]\s*(\d+)', text)
-    if m:
-        return int(m.group(1)) * int(m.group(2))
-    # Ladder (1-2-3-2-1) × N
-    ladder = _re.search(r'\(([\d\-]+)\)\s*[x×]\s*(\d+)', text)
-    if ladder:
-        total = sum(int(v) for v in ladder.group(1).split('-') if v.isdigit())
-        return total * int(ladder.group(2))
-    return 20  # fallback for bodyweight / unstructured finishers
+# ── Per-user training state helpers ──────────────────────────────────────────
 
-
-def _session_volume_lbs(session: dict, weights_lbs: dict | None) -> float:
-    """Sum volume (lbs × reps) for all movements in a microcycle session.
-    Uses user-submitted weights_lbs when available, falls back to std_kg.
-    """
-    std_lbs = float(session.get("std_kg", 16) or 16) * 2.20462
-
-    def _weight(key: str) -> float:
-        if weights_lbs:
-            v = weights_lbs.get(key)
-            if v and float(v) > 0:
-                return float(v)
-        return std_lbs
-
-    total = 0.0
-    # Main lift
-    main_text = session.get("main", "")
-    if main_text:
-        total += _weight("main") * _parse_total_reps(main_text)
-    # Accessories
-    for i, acc in enumerate(session.get("accessory") or []):
-        total += _weight(f"acc_{i}") * _parse_total_reps(acc)
-    # Finisher (optional weight entry)
-    finisher = session.get("finisher", "")
-    if finisher:
-        fin_lbs = _weight("finisher")
-        total += fin_lbs * _parse_total_reps(finisher)
-    return round(total, 2)
-
-
-def _load_estate(user_id: int) -> gs.PlayerState:
-    raw = db.load_estate(user_id)
-    if raw is None:
-        # New user — return default state (will be saved on first mutation)
-        return gs.PlayerState()
-    try:
-        return gs.PlayerState.from_dict(raw)
-    except Exception as exc:
-        # Deserialization failure: log and preserve raw data rather than silently
-        # returning an empty state (which would wipe the player's estate on next save).
-        log.error(
-            "Failed to deserialize estate for user %d: %s — serving empty state "
-            "without overwriting DB record. Raw keys: %s",
-            user_id, exc, list(raw.keys()) if isinstance(raw, dict) else type(raw),
-        )
-        # Return empty state IN MEMORY but do NOT save it — the DB record is safe.
-        state = gs.PlayerState()
-        state._load_error = True  # sentinel so callers can detect degraded state
-        return state
-
-
-def _save_estate(user_id: int, state: gs.PlayerState) -> None:
-    if getattr(state, "_load_error", False):
-        log.warning("Refusing to save degraded estate state for user %d — DB record preserved.", user_id)
-        return
-    db.save_estate(user_id, state.to_dict())
-
-
-def _local_today(p: dict | None = None) -> str:
-    """Return the player's local date as YYYY-MM-DD.
-
-    Prefers client_date from the request payload (most accurate: the player's
-    device knows their timezone). Falls back to the server date, which is UTC
-    on Railway/Render. Passing the client date avoids day-boundary mismatches
-    for users in non-UTC timezones.
-    """
-    if p:
-        cd = str(p.get("client_date") or "").strip()
-        if len(cd) == 10:
-            try:
-                dt.date.fromisoformat(cd)
-                return cd
-            except ValueError:
-                pass
-    return str(dt.date.today())
-
-
-def _post_workout_events(
-    estate: gs.PlayerState,
-    buffs: dict,
-    events: list,
-    raw_workout_events: list,
-    trophy_award=None,
-    include_oracle: bool = True,
-    today: str | None = None,
-) -> dict:
-    """
-    Centralised post-workout side-effect handler.  Appends to *events* in place.
-    Called after process_workout() and any workout-specific blessing consumption.
-
-    This is the ONLY place produce_farms() is called.  All workout endpoints
-    must route through here for farm production — never call produce_farms()
-    directly from an endpoint or startup code.
-
-    Detects laurel from *raw_workout_events* only (before farm/title strings are
-    mixed in) to prevent false positives from any string that contains "laurel".
-
-    include_oracle: set False when the caller handles oracle/narrative separately
-        (e.g. _run_estate_workout which has Kassandra-specific oracle logic).
-
-    Returns extra keys to merge into the endpoint JSON response:
-        farm_harvest, farm_events, newly_unlocked, oracle_event, laurel_earned
-    """
-    # ── Laurel detection (raw process_workout output only) ───────────────────
-    laurel_earned: bool = any(
-        isinstance(e, str) and "LAUREL EARNED" in e
-        for e in raw_workout_events
-    )
-    if laurel_earned:
-        _append_estate_log(estate, "🌿 Laurel earned — weekly discipline recognized.", "reward")
-
-    # ── Farm production (once per calendar day) ──────────────────────────────
-    # This is the single authoritative call site for produce_farms().
-    # Farm production is strictly tied to real user workout actions — never to
-    # background jobs, app initialisation, or login/session load.
-    farm_events, farm_produced = farm_engine.produce_farms(estate, buffs=buffs, today=today)
-    events.extend(farm_events)
-    for fe in farm_events:
-        _append_estate_log(estate, fe, "farm")
-    farm_harvest = {"resources": farm_produced} if farm_produced else None
-
-    # Demeter blessing: consume only when farm actually produced this call
-    if buffs.get("blessing_demeter") and farm_produced:
-        estate.active_blessings["demeter"] = max(
-            0, estate.active_blessings.get("demeter", 1) - 1
-        )
-        events.append("  🌾 Blessing of Demeter consumed.")
-
-    # ── Title unlocks ─────────────────────────────────────────────────────────
-    newly_unlocked = title_engine.check_and_unlock_titles(estate)
-    for tid in newly_unlocked:
-        events.append(f"  🏅 Title unlocked: {tid.replace('_', ' ').title()}")
-
-    # ── Oracle roll ───────────────────────────────────────────────────────────
-    # Guaranteed on laurel earned / title unlock / microcycle trophy.
-    # ~25 % chance on standard workouts.
-    # Skipped when the caller manages oracle/narrative itself (include_oracle=False).
-    if include_oracle:
-        oracle_chance = 1.0 if (laurel_earned or newly_unlocked or trophy_award) else 0.25
-        oracle_evt = oracle_engine.maybe_oracle_visit(estate, chance=oracle_chance)
-    else:
-        oracle_evt = None
-
-    return {
-        "farm_harvest":   farm_harvest,
-        "farm_events":    farm_events,
-        "newly_unlocked": newly_unlocked,
-        "oracle_event":   oracle_evt,
-        "laurel_earned":  laurel_earned,
-    }
-
-
-def _load_legacy(user_id: int) -> dict:
+def _load_training(user_id: int) -> dict:
     raw = db.load_legacy(user_id)
     if raw is None:
         raw = core.default_state()
         db.save_legacy(user_id, raw)
-    raw.setdefault("total_ruck_miles",
-                   sum(r.get("distance_miles", 0)
-                       for r in raw.get("ruck_log", []) if isinstance(r, dict)))
-    raw.setdefault("total_run_miles",
-                   sum(r.get("distance_miles", 0)
-                       for r in raw.get("run_log", []) if isinstance(r, dict)))
-    raw.setdefault("walk_log", [])
-    raw.setdefault("total_walk_miles",
-                   sum(r.get("distance_miles", 0)
-                       for r in raw.get("walk_log", []) if isinstance(r, dict)))
-    raw.setdefault("run_log", [])
-    raw.setdefault("week_log", {})
-    raw.setdefault("journey_miles",
-                   raw["total_ruck_miles"] + raw["total_run_miles"] + raw["total_walk_miles"])
+
+    # Migrate old track keys that no longer exist
+    if raw.get("track") and not raw["track"].startswith("custom_") \
+            and raw["track"] not in core.TEMPLATES:
+        raw["track"] = core.TRACK_KEYS[0]
+        raw["microcycle"] = {
+            "id":                 raw.get("microcycle", {}).get("id", 0),
+            "sessions_completed": 0,
+            "start_date":         str(dt.date.today()),
+            "completed":          False,
+        }
+
+    # Ensure new state keys are present
+    raw.setdefault("cycle_week", 1)
+    raw.setdefault("strength_sessions_in_wave", 0)
     mc = raw.setdefault("microcycle", {})
-    mc.setdefault("start_date",        str(dt.date.today()))
-    mc.setdefault("badge_given",        False)
     mc.setdefault("id",                 0)
     mc.setdefault("sessions_completed", 0)
-    raw["ruck_log"] = [r for r in raw.get("ruck_log", []) if isinstance(r, dict)]
-    raw["run_log"]  = [r for r in raw.get("run_log",  []) if isinstance(r, dict)]
-    raw.setdefault("custom_tracks", [])
+    mc.setdefault("start_date",         str(dt.date.today()))
+    mc.setdefault("completed",          False)
+    raw.setdefault("week_log",           {})
+    raw.setdefault("ruck_log",           [])
+    raw.setdefault("run_log",            [])
+    raw.setdefault("walk_log",           [])
+    raw.setdefault("workouts",           [])
+    raw.setdefault("custom_tracks",      [])
+    raw.setdefault("total_ruck_miles",   sum(r.get("distance_miles", 0) for r in raw["ruck_log"] if isinstance(r, dict)))
+    raw.setdefault("total_run_miles",    sum(r.get("distance_miles", 0) for r in raw["run_log"]  if isinstance(r, dict)))
+    raw.setdefault("total_walk_miles",   sum(r.get("distance_miles", 0) for r in raw["walk_log"] if isinstance(r, dict)))
+    raw.setdefault("journey_miles",
+                   raw["total_ruck_miles"] + raw["total_run_miles"] + raw["total_walk_miles"])
+
+    raw["ruck_log"] = [r for r in raw["ruck_log"] if isinstance(r, dict)]
+    raw["run_log"]  = [r for r in raw["run_log"]  if isinstance(r, dict)]
+    raw["walk_log"] = [r for r in raw["walk_log"] if isinstance(r, dict)]
     return raw
 
 
-def _save_legacy(user_id: int, d: dict) -> None:
+def _save_training(user_id: int, d: dict) -> None:
     db.save_legacy(user_id, d)
 
 
@@ -258,10 +94,9 @@ def index():
 
 @app.get("/service-worker.js")
 def service_worker_root():
-    """Serve SW from root path so its scope covers '/' (not just '/static/')."""
-    fp = STATIC / "service-worker.js"
+    fp   = STATIC / "service-worker.js"
     resp = FileResponse(fp, media_type="application/javascript")
-    resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    resp.headers["Cache-Control"]        = "no-cache, no-store, must-revalidate"
     resp.headers["Service-Worker-Allowed"] = "/"
     return resp
 
@@ -274,30 +109,20 @@ def statics(path: str):
     resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     return resp
 
-@app.get("/img/{path:path}")
-def images(path: str):
-    fp = BASE / path
-    if not fp.exists():
-        raise HTTPException(404)
-    return FileResponse(fp)
-
-# ── Health check ──────────────────────────────────────────────────────────────
-
 @app.get("/health")
 def health():
     return {"status": "ok", "version": _APP_VERSION}
 
 @app.get("/api/version")
 def api_version():
-    """Returns the server start-time as a version token.
-    Clients poll this every 60 s and reload when it changes (new deploy)."""
     return {"version": _APP_VERSION}
 
-# ── Auth endpoints ────────────────────────────────────────────────────────────
+
+# ── Auth ──────────────────────────────────────────────────────────────────────
 
 @app.post("/register")
 async def register(req: Request):
-    p = await req.json()
+    p        = await req.json()
     username = (p.get("username") or "").strip()
     password = (p.get("password") or "").strip()
     if not username or not password:
@@ -318,7 +143,7 @@ async def register(req: Request):
 
 @app.post("/login")
 async def login(req: Request):
-    p = await req.json()
+    p        = await req.json()
     username = (p.get("username") or "").strip()
     password = (p.get("password") or "").strip()
     if not username or not password:
@@ -329,49 +154,30 @@ async def login(req: Request):
     token = _auth.create_token(user["id"], user["username"])
     return {"status": "ok", "token": token, "username": user["username"]}
 
-# ── Deployment-friendly shorthand endpoints (protected) ───────────────────────
 
-@app.get("/player-state")
-def player_state(u: dict = CurrentUser):
-    uid = u["user_id"]
-    return {
-        "workout":  _load_legacy(uid),
-        "estate":   _load_estate(uid).to_dict(),
-        "username": u["username"],
-    }
-
-@app.get("/estate")
-def get_estate(u: dict = CurrentUser):
-    return _load_estate(u["user_id"]).to_dict()
-
-@app.get("/creatures")
-def get_creatures(u: dict = CurrentUser):
-    state = _load_estate(u["user_id"])
-    return {
-        "sanctuary":     creature_engine.get_sanctuary_details(state),
-        "capacity":      state.sanctuary_capacity,
-        "all_creatures": creature_engine.get_all_creatures(),
-    }
-
-@app.post("/log-workout")
-async def log_workout(req: Request, u: dict = CurrentUser):
-    p = await req.json()
-    return await _run_estate_workout(u["user_id"], p)
-
-@app.post("/campaign")
-async def campaign(req: Request, u: dict = CurrentUser):
-    p = await req.json()
-    return await _run_campaign(u["user_id"], p)
-
-# ── Legacy workout API (protected) ────────────────────────────────────────────
+# ── Training state ────────────────────────────────────────────────────────────
 
 @app.get("/api/state")
 def get_state(u: dict = CurrentUser):
-    return _load_legacy(u["user_id"])
+    return _load_training(u["user_id"])
 
 @app.get("/api/workout/today")
 def get_today(u: dict = CurrentUser):
-    return core.get_today_workout(_load_legacy(u["user_id"]))
+    state   = _load_training(u["user_id"])
+    workout = core.get_today_workout(state)
+    # Augment suggested_weight from db history if possible
+    if workout.get("status") == "active":
+        track = workout.get("track_key", "")
+        if track and track in core.TEMPLATES:
+            main_text = workout.get("main", "")
+            # Try to find a matching movement in history
+            history = db.get_workouts(u["user_id"], limit=50)
+            for row in history:
+                if row.get("movement") and row.get("weight_kg") and \
+                        row.get("type") in ("recommended", "strength"):
+                    workout["suggested_weight"] = float(row["weight_kg"])
+                    break
+    return workout
 
 @app.get("/api/movements")
 def get_movements():
@@ -379,7 +185,6 @@ def get_movements():
 
 @app.get("/api/movement_history/{movement}")
 def get_movement_history(movement: str, u: dict = CurrentUser):
-    """Return the last logged sets/reps/weight_kg for a given movement slug."""
     workouts = db.get_workouts(u["user_id"], limit=200)
     for w in workouts:
         if w.get("movement") == movement and w.get("sets") and w.get("reps"):
@@ -394,11 +199,11 @@ def get_movement_history(movement: str, u: dict = CurrentUser):
 
 @app.get("/api/tracks")
 def get_tracks(u: dict = CurrentUser):
-    state  = _load_legacy(u["user_id"])
+    state  = _load_training(u["user_id"])
     tracks = {k: v["name"] for k, v in core.TEMPLATES.items()}
     for ct in state.get("custom_tracks", []):
         n = len(ct.get("sessions", []))
-        tracks[f"custom_{ct['id']}"] = f"⚒ {ct['name']} ({n} sessions)"
+        tracks[f"custom_{ct['id']}"] = f"{ct['name']} ({n} sessions)"
     return tracks
 
 @app.get("/api/tracks/{key}")
@@ -413,18 +218,21 @@ def get_track_detail(key: str):
 @app.post("/api/track/select")
 async def select_track(req: Request, u: dict = CurrentUser):
     payload = await req.json()
-    key = payload.get("key", "").strip()
+    key     = payload.get("key", "").strip()
     if not key.startswith("custom_") and key not in core.TEMPLATES:
         raise HTTPException(400, f"Unknown track: {key}")
     uid   = u["user_id"]
-    state = _load_legacy(uid)
+    state = _load_training(uid)
     if key.startswith("custom_"):
         track_id = key[7:]
         if core.get_custom_track_detail(state, track_id) is None:
             raise HTTPException(404, f"Custom track not found: {key}")
     msg = core.init_track(state, key)
-    _save_legacy(uid, state)
+    _save_training(uid, state)
     return {"status": "ok", "msg": msg, "state": state}
+
+
+# ── Workout logging ───────────────────────────────────────────────────────────
 
 @app.post("/api/workout/recommended")
 async def log_recommended(req: Request, u: dict = CurrentUser):
@@ -435,74 +243,15 @@ async def log_recommended(req: Request, u: dict = CurrentUser):
     except Exception:
         pass
     uid   = u["user_id"]
-    state = _load_legacy(uid)
-
-    # Snapshot microcycle state so we can detect completion after the call
-    mc_badge_before = state["microcycle"]["badge_given"]
-    old_treasury    = state.get("treasury", 0.0)
-    msg             = core.log_rec(state, weights_lbs=weights_lbs)
-    _save_legacy(uid, state)
-    cycle_just_completed = (not mc_badge_before) and state["microcycle"]["badge_given"]
-    base_coins = round(state.get("treasury", 0.0) - old_treasury, 2)
-
-    # ── Estate processing ────────────────────────────────────────────────────
-    today  = _local_today(p)
-    estate = _load_estate(uid)
-    buffs  = buff_engine.get_all_buffs(estate)
-
-    # Trophy: awarded only when a microcycle just completed (detected above)
-    trophy_award = None
-    if cycle_just_completed:
-        trophy_award = trophy_engine.award_random_trophy(estate)
-        if trophy_award:
-            desc = (f"⚔️ Trophy earned: {trophy_award['emoji']} {trophy_award['name']} "
-                    f"({trophy_award['rarity']}) — {trophy_award.get('buff_label', '')}")
-            _append_estate_log(estate, desc, "trophy")
-
-    # process_workout: flat 50 drachmae, applies buff multipliers, tracks
-    # weekly streak + laurel progress, appends to workout_log.
-    # Hephaestus blessing is keyed to "strength" so pass that type.
-    raw_evts = workout_engine.process_workout(
-        estate, "strength", buffs=buffs, reward_override=50.0, today_override=today
-    )
-    events: list = list(raw_evts)
-
-    if trophy_award:
-        events.append(f"⚔️ Microcycle complete! Trophy: {trophy_award['name']}")
-
-    if buffs.get("blessing_hephaestus"):
-        estate.active_blessings["hephaestus"] = max(
-            0, estate.active_blessings.get("hephaestus", 1) - 1
-        )
-
-    # Farm production, title unlocks, oracle via _post_workout_events
-    post = _post_workout_events(estate, buffs, events, raw_evts, trophy_award=trophy_award, today=today)
-
-    # Single save
-    _save_estate(uid, estate)
-
-    earned = next(
-        (float(ev.split("+")[1].split(" ")[0]) for ev in events
-         if isinstance(ev, str) and "drachmae" in ev),
-        0.0,
-    )
-    movement_name = ""
+    state = _load_training(uid)
+    msg   = core.log_rec(state, weights_lbs=weights_lbs)
+    _save_training(uid, state)
+    today = str(dt.date.today())
     if state.get("workouts"):
-        movement_name = state["workouts"][-1].get("details", "")
-    db.insert_workout(uid, today, "recommended", earned, notes=movement_name)
-
-    return {
-        "status":        "ok",
-        "msg":           msg,
-        "state":         state,
-        "oracle_event":  post["oracle_event"],
-        "trophy_award":  trophy_award,
-        "events":        events,
-        "estate_log":    estate.estate_log,
-        "estate_state":  estate.to_dict(),
-        "laurel_earned": post["laurel_earned"],
-        "farm_harvest":  post["farm_harvest"],
-    }
+        last = state["workouts"][-1]
+        db.insert_workout(uid, today, "recommended", 0,
+                          notes=last.get("details", "")[:200])
+    return {"status": "ok", "msg": msg, "state": state}
 
 @app.post("/api/workout/custom")
 async def log_custom(req: Request, u: dict = CurrentUser):
@@ -511,62 +260,11 @@ async def log_custom(req: Request, u: dict = CurrentUser):
     if not text:
         raise HTTPException(400, "Empty workout description")
     uid   = u["user_id"]
-    state = _load_legacy(uid)
-    mc_badge_before = state["microcycle"]["badge_given"]
-    old_treasury    = state.get("treasury", 0.0)
-    msg             = core.log_custom(state, text)
-    _save_legacy(uid, state)
-    cycle_just_completed = (not mc_badge_before) and state["microcycle"]["badge_given"]
-    base_coins = round(state.get("treasury", 0.0) - old_treasury, 2)
-
-    # ── Estate processing ────────────────────────────────────────────────────
-    today  = _local_today(payload)
-    estate = _load_estate(uid)
-    buffs  = buff_engine.get_all_buffs(estate)
-    events: list = []
-
-    earned = buff_engine.apply_workout_buff(buffs, "strength", base_coins)
-    if base_coins > 0:
-        estate.drachmae = round(estate.drachmae + earned, 2)
-        events.append(f"[Custom] {text[:40]}  →  +{earned} drachmae")
-        _append_estate_log(estate, events[-1], "reward")
-    if buffs.get("blessing_hephaestus") and base_coins > 0:
-        estate.active_blessings["hephaestus"] = max(
-            0, estate.active_blessings.get("hephaestus", 1) - 1
-        )
-
-    # Trophy: microcycle completion
-    trophy_award = None
-    if cycle_just_completed:
-        trophy_award = trophy_engine.award_random_trophy(estate)
-        if trophy_award:
-            desc = (f"⚔️ Trophy earned: {trophy_award['emoji']} {trophy_award['name']} "
-                    f"({trophy_award['rarity']}) — {trophy_award.get('buff_label', '')}")
-            _append_estate_log(estate, desc, "trophy")
-            events.append(f"⚔️ Microcycle complete! {desc}")
-
-    # Farm production, title unlocks, oracle via _post_workout_events
-    post = _post_workout_events(estate, buffs, events, events[:], trophy_award=trophy_award, today=today)
-    oracle_evt = post["oracle_event"]
-
-    # Single save
-    _save_estate(uid, estate)
-
-    if earned > 0:
-        db.insert_workout(uid, today, "custom", earned, notes=text[:200])
-
-    return {
-        "status":        "ok",
-        "msg":           msg,
-        "state":         state,
-        "oracle_event":  oracle_evt,
-        "trophy_award":  trophy_award,
-        "events":        events,
-        "estate_log":    estate.estate_log,
-        "estate_state":  estate.to_dict(),
-        "laurel_earned": post["laurel_earned"],
-        "farm_harvest":  post["farm_harvest"],
-    }
+    state = _load_training(uid)
+    msg   = core.log_custom(state, text)
+    _save_training(uid, state)
+    db.insert_workout(uid, str(dt.date.today()), "custom", 0, notes=text[:200])
+    return {"status": "ok", "msg": msg, "state": state}
 
 @app.post("/api/ruck")
 async def log_ruck(req: Request, u: dict = CurrentUser):
@@ -579,63 +277,13 @@ async def log_ruck(req: Request, u: dict = CurrentUser):
     if miles <= 0:
         raise HTTPException(400, "miles must be positive")
     uid   = u["user_id"]
-    state = _load_legacy(uid)
-    waypoints_before = len([b for b in state.get("badges", []) if b.get("type") == "ruck_quest"])
+    state = _load_training(uid)
     msg   = core.log_ruck(state, miles, pounds)
-    _save_legacy(uid, state)
-    new_waypoints = [b for b in state.get("badges", []) if b.get("type") == "ruck_quest"][waypoints_before:]
-
-    today  = _local_today(p)
-    estate = _load_estate(uid)
-    buffs  = buff_engine.get_all_buffs(estate)
-    events = workout_engine.process_workout(estate, "rucking", buffs=buffs,
-                                            miles=miles, lbs=pounds,
-                                            count_as_workout=False,
-                                            today_override=today)
-    raw_evts = list(events)
-    if buffs.get("blessing_poseidon"):
-        estate.active_blessings["poseidon"] = max(
-            0, estate.active_blessings.get("poseidon", 1) - 1
-        )
-        events.append("  🌊 Blessing of Poseidon consumed.")
-
-    # Farm production, title unlocks, oracle via _post_workout_events
-    post = _post_workout_events(estate, buffs, events, raw_evts, today=today)
-
-    # Waypoint event
-    waypoint_event = None
-    if new_waypoints:
-        w = new_waypoints[0]
-        waypoint_event = {
-            "type":       "waypoint",
-            "title":      f"📜 {w['stop']} Reached!",
-            "icon":       "📜",
-            "image_path": w.get("image_path"),
-            "lines":      [w.get("caption", "A milestone on the road of Pheidippides.")],
-            "waypoint":   w,
-        }
-        _append_estate_log(estate, f"📜 Waypoint reached: {w['stop']}", "waypoint")
-
-    # Single save
-    _save_estate(uid, estate)
-    earned = next((float(ev.split("+")[1].split(" ")[0]) for ev in events
-                   if isinstance(ev, str) and "drachmae" in ev), 0.0)
-    db.insert_workout(uid, today, "rucking", earned,
-                      distance_miles=miles, weight_lbs=pounds,
+    _save_training(uid, state)
+    db.insert_workout(uid, str(dt.date.today()), "rucking", 0,
+                      distance_miles=miles, weight_lbs=pounds or None,
                       duration_min=float(p.get("duration_min") or 0) or None)
-    return {
-        "status":          "ok",
-        "msg":             msg,
-        "state":           state,
-        "events":          events,
-        "trophy_award":    None,
-        "oracle_event":    post["oracle_event"],
-        "waypoint_event":  waypoint_event,
-        "estate_log":      estate.estate_log,
-        "estate_state":    estate.to_dict(),
-        "laurel_earned":   post["laurel_earned"],
-        "farm_harvest":    post["farm_harvest"],
-    }
+    return {"status": "ok", "msg": msg, "state": state}
 
 @app.post("/api/walk")
 async def log_walk(req: Request, u: dict = CurrentUser):
@@ -647,56 +295,13 @@ async def log_walk(req: Request, u: dict = CurrentUser):
     if miles <= 0:
         raise HTTPException(400, "miles must be positive")
     uid   = u["user_id"]
-    state = _load_legacy(uid)
-    waypoints_before = len([b for b in state.get("badges", []) if b.get("type") == "ruck_quest"])
+    state = _load_training(uid)
     msg   = core.log_walk(state, miles)
-    _save_legacy(uid, state)
-    new_waypoints = [b for b in state.get("badges", []) if b.get("type") == "ruck_quest"][waypoints_before:]
-
-    today  = _local_today(p)
-    estate = _load_estate(uid)
-    buffs  = buff_engine.get_all_buffs(estate)
-    events = workout_engine.process_workout(estate, "walking", buffs=buffs, miles=miles,
-                                            count_as_workout=False, today_override=today)
-    raw_evts = list(events)
-
-    # Farm production, title unlocks, oracle via _post_workout_events
-    post = _post_workout_events(estate, buffs, events, raw_evts, today=today)
-
-    # Waypoint event
-    waypoint_event = None
-    if new_waypoints:
-        w = new_waypoints[0]
-        waypoint_event = {
-            "type":       "waypoint",
-            "title":      f"📜 {w['stop']} Reached!",
-            "icon":       "📜",
-            "image_path": w.get("image_path"),
-            "lines":      [w.get("caption", "A milestone on the road of Pheidippides.")],
-            "waypoint":   w,
-        }
-        _append_estate_log(estate, f"📜 Waypoint reached: {w['stop']}", "waypoint")
-
-    # Single save
-    _save_estate(uid, estate)
-    earned = next((float(ev.split("+")[1].split(" ")[0]) for ev in events
-                   if isinstance(ev, str) and "drachmae" in ev), 0.0)
-    db.insert_workout(uid, today, "walking", earned,
+    _save_training(uid, state)
+    db.insert_workout(uid, str(dt.date.today()), "walking", 0,
                       distance_miles=miles,
                       duration_min=float(p.get("duration_min") or 0) or None)
-    return {
-        "status":         "ok",
-        "msg":            msg,
-        "state":          state,
-        "events":         events,
-        "trophy_award":   None,
-        "oracle_event":   post["oracle_event"],
-        "waypoint_event": waypoint_event,
-        "estate_log":     estate.estate_log,
-        "estate_state":   estate.to_dict(),
-        "laurel_earned":  post["laurel_earned"],
-        "farm_harvest":   post["farm_harvest"],
-    }
+    return {"status": "ok", "msg": msg, "state": state}
 
 @app.post("/api/run")
 async def log_run(req: Request, u: dict = CurrentUser):
@@ -714,136 +319,17 @@ async def log_run(req: Request, u: dict = CurrentUser):
         except (TypeError, ValueError):
             pace = None
     uid   = u["user_id"]
-    state = _load_legacy(uid)
-    waypoints_before = len([b for b in state.get("badges", []) if b.get("type") == "ruck_quest"])
+    state = _load_training(uid)
     msg   = core.log_run(state, miles, pace)
-    _save_legacy(uid, state)
-    new_waypoints = [b for b in state.get("badges", []) if b.get("type") == "ruck_quest"][waypoints_before:]
-
-    today  = _local_today(p)
-    estate = _load_estate(uid)
-    buffs  = buff_engine.get_all_buffs(estate)
-    events = workout_engine.process_workout(estate, "running", buffs=buffs, miles=miles,
-                                            count_as_workout=False, today_override=today)
-    raw_evts = list(events)
-    if buffs.get("blessing_hermes"):
-        estate.active_blessings["hermes"] = max(
-            0, estate.active_blessings.get("hermes", 1) - 1
-        )
-        events.append("  🪶 Blessing of Hermes consumed.")
-
-    # Farm production, title unlocks, oracle via _post_workout_events
-    post = _post_workout_events(estate, buffs, events, raw_evts, today=today)
-
-    # Waypoint event
-    waypoint_event = None
-    if new_waypoints:
-        w = new_waypoints[0]
-        waypoint_event = {
-            "type":       "waypoint",
-            "title":      f"📜 {w['stop']} Reached!",
-            "icon":       "📜",
-            "image_path": w.get("image_path"),
-            "lines":      [w.get("caption", "A milestone on the road of Pheidippides.")],
-            "waypoint":   w,
-        }
-        _append_estate_log(estate, f"📜 Waypoint reached: {w['stop']}", "waypoint")
-
-    # Single save
-    _save_estate(uid, estate)
-    earned = next((float(ev.split("+")[1].split(" ")[0]) for ev in events
-                   if isinstance(ev, str) and "drachmae" in ev), 0.0)
-    db.insert_workout(uid, today, "running", earned,
+    _save_training(uid, state)
+    db.insert_workout(uid, str(dt.date.today()), "running", 0,
                       distance_miles=miles,
                       duration_min=float(p.get("duration_min") or 0) or None)
-    return {
-        "status":         "ok",
-        "msg":            msg,
-        "state":          state,
-        "events":         events,
-        "trophy_award":   None,
-        "oracle_event":   post["oracle_event"],
-        "waypoint_event": waypoint_event,
-        "estate_log":     estate.estate_log,
-        "estate_state":   estate.to_dict(),
-        "laurel_earned":  post["laurel_earned"],
-        "farm_harvest":   post["farm_harvest"],
-    }
-
-@app.post("/api/hike")
-async def log_hike(req: Request, u: dict = CurrentUser):
-    """Hike: like a ruck but counts toward walking miles."""
-    p = await req.json()
-    try:
-        miles  = float(p["miles"])
-        pounds = float(p.get("pounds", 0) or 0)
-    except (KeyError, ValueError):
-        raise HTTPException(400, "miles must be numeric")
-    if miles <= 0:
-        raise HTTPException(400, "miles must be positive")
-    uid   = u["user_id"]
-    state = _load_legacy(uid)
-    waypoints_before = len([b for b in state.get("badges", []) if b.get("type") == "ruck_quest"])
-    msg   = core.log_walk(state, miles)   # counts toward walk miles
-    _save_legacy(uid, state)
-    new_waypoints = [b for b in state.get("badges", []) if b.get("type") == "ruck_quest"][waypoints_before:]
-
-    today  = _local_today(p)
-    estate = _load_estate(uid)
-    buffs  = buff_engine.get_all_buffs(estate)
-    events = workout_engine.process_workout(estate, "rucking", buffs=buffs,
-                                            miles=miles, lbs=pounds,
-                                            count_as_workout=False, today_override=today)
-    raw_evts = list(events)
-    if buffs.get("blessing_poseidon"):
-        estate.active_blessings["poseidon"] = max(
-            0, estate.active_blessings.get("poseidon", 1) - 1
-        )
-        events.append("  🌊 Blessing of Poseidon consumed.")
-
-    # Farm production, title unlocks, oracle via _post_workout_events
-    post = _post_workout_events(estate, buffs, events, raw_evts, today=today)
-
-    # Waypoint event
-    waypoint_event = None
-    if new_waypoints:
-        w = new_waypoints[0]
-        waypoint_event = {
-            "type":       "waypoint",
-            "title":      f"📜 {w['stop']} Reached!",
-            "icon":       "📜",
-            "image_path": w.get("image_path"),
-            "lines":      [w.get("caption", "A milestone on the road of Pheidippides.")],
-            "waypoint":   w,
-        }
-        _append_estate_log(estate, f"📜 Waypoint reached: {w['stop']}", "waypoint")
-
-    # Single save
-    _save_estate(uid, estate)
-
-    earned = next((float(ev.split("+")[1].split(" ")[0]) for ev in events
-                   if isinstance(ev, str) and "drachmae" in ev), 0.0)
-    db.insert_workout(uid, today, "hiking", earned,
-                      distance_miles=miles, weight_lbs=pounds or None,
-                      duration_min=float(p.get("duration_min") or 0) or None)
-    return {
-        "status":         "ok",
-        "msg":            f"⛰️ Hike logged! {msg}",
-        "state":          state,
-        "events":         events,
-        "trophy_award":   None,
-        "oracle_event":   post["oracle_event"],
-        "waypoint_event": waypoint_event,
-        "estate_log":     estate.estate_log,
-        "estate_state":   estate.to_dict(),
-        "laurel_earned":  post["laurel_earned"],
-        "farm_harvest":   post["farm_harvest"],
-    }
+    return {"status": "ok", "msg": msg, "state": state}
 
 @app.post("/api/strength")
 async def log_strength(req: Request, u: dict = CurrentUser):
-    """Free-form strength workout logging with movement selector."""
-    p = await req.json()
+    p          = await req.json()
     movement   = (p.get("movement") or "").strip()
     weight_kg  = float(p.get("weight_kg") or 0)
     sets_n     = int(p.get("sets") or 1)
@@ -852,231 +338,46 @@ async def log_strength(req: Request, u: dict = CurrentUser):
         raise HTTPException(400, "movement is required")
     if sets_n < 1 or reps_n < 1:
         raise HTTPException(400, "sets and reps must be at least 1")
-    # Use normalized weight scaling: sqrt(weight_lbs) × reps × sets × 0.03
-    weight_lbs = weight_kg * 2.20462
-    uid    = u["user_id"]
-    today  = _local_today(p)
-    estate = _load_estate(uid)
-    buffs  = buff_engine.get_all_buffs(estate)
-    drachmae_before = estate.drachmae
-    events = list(workout_engine.process_workout(
-        estate, "strength", buffs=buffs,
-        weight_lbs=weight_lbs, reps=reps_n, sets=sets_n,
-        count_as_workout=False, today_override=today
-    ))
-    raw_evts = list(events)
-    earned = round(estate.drachmae - drachmae_before, 2)
-    if buffs.get("blessing_hephaestus"):
-        estate.active_blessings["hephaestus"] = max(
-            0, estate.active_blessings.get("hephaestus", 1) - 1
-        )
-        events.append("  🔥 Blessing of Hephaestus consumed.")
-
-    # Farm production, title unlocks, oracle via _post_workout_events
-    post = _post_workout_events(estate, buffs, events, raw_evts, today=today)
-
-    # Single save
-    _save_estate(uid, estate)
-
-    db.insert_workout(uid, today, "strength", earned,
+    uid   = u["user_id"]
+    today = str(dt.date.today())
+    db.insert_workout(uid, today, "strength", 0,
                       movement=movement, weight_kg=weight_kg,
                       sets=sets_n, reps=reps_n)
     move_name = next((m["name"] for m in core.get_movements() if m["slug"] == movement),
                      movement.replace("_", " ").title())
     return {
-        "status":       "ok",
-        "msg":          f"💪 {move_name} — {sets_n}×{reps_n} @ {weight_kg}kg logged! +{earned:.2f} ⚡",
-        "events":       events,
-        "trophy_award": None,
-        "oracle_event":  post["oracle_event"],
-        "estate_state":  estate.to_dict(),
-        "estate_log":    estate.estate_log,
-        "laurel_earned": post["laurel_earned"],
-        "farm_harvest":  post["farm_harvest"],
+        "status": "ok",
+        "msg":    f"{move_name} — {sets_n}×{reps_n} @ {weight_kg}kg logged",
     }
 
-@app.post("/api/workout/timed")
-async def log_timed(req: Request, u: dict = CurrentUser):
-    """Log a workout by duration (strength / yoga / pilates / general).
-    Body: { workout_subtype, minutes, seconds }
-    Reward: minutes_total × rate, capped at 60 🪙.
-    """
-    p = await req.json()
-    workout_subtype = (p.get("workout_subtype") or "general").strip().lower()
-    valid_subtypes  = {"strength", "yoga", "pilates", "general"}
-    if workout_subtype not in valid_subtypes:
-        raise HTTPException(400, f"workout_subtype must be one of {sorted(valid_subtypes)}")
-
-    try:
-        minutes = float(p.get("minutes") or 0)
-        seconds = float(p.get("seconds") or 0)
-    except (TypeError, ValueError):
-        raise HTTPException(400, "minutes and seconds must be numeric")
-
-    total_minutes = minutes + seconds / 60.0
-    if total_minutes <= 0:
-        raise HTTPException(400, "Duration must be greater than 0")
-
-    uid    = u["user_id"]
-    today  = _local_today(p)
-    estate = _load_estate(uid)
-    buffs  = buff_engine.get_all_buffs(estate)
-
-    # Use "timed" type for estate engine; subtype controls the rate
-    raw_evts = workout_engine.process_workout(
-        estate, "timed", buffs=buffs,
-        minutes=total_minutes, workout_subtype=workout_subtype,
-        count_as_workout=False, today_override=today
-    )
-    trophy_award = None
-    events = []
-    for e in raw_evts:
-        if isinstance(e, dict) and e.get("type") == "trophy":
-            trophy_award = e["trophy"]
-            events.append(e["msg"])
-        else:
-            events.append(e)
-
-    post = _post_workout_events(estate, buffs, events, raw_evts, trophy_award=trophy_award, today=today)
-    _save_estate(uid, estate)
-
-    # Parse earned amount from events
-    earned = next(
-        (float(ev.split("+")[1].split(" ")[0]) for ev in events
-         if isinstance(ev, str) and "drachmae" in ev),
-        0.0,
-    )
-    db.insert_workout(uid, today, "timed", earned,
-                      duration_min=total_minutes,
-                      notes=workout_subtype)
-
-    label_map = {"strength": "Strength session", "yoga": "Yoga",
-                 "pilates": "Pilates", "general": "Workout"}
-    label = label_map.get(workout_subtype, workout_subtype.title())
-    dur_str = (f"{int(minutes)}m {int(seconds)}s" if seconds
-               else f"{int(total_minutes)}m")
-    msg = f"⏱ {label} — {dur_str} logged! +{earned:.2f} ⚡"
-
-    return {
-        "status": "ok", "msg": msg,
-        "events": events, "trophy_award": trophy_award,
-        "estate_state": estate.to_dict(),
-        **post,
-    }
+@app.post("/api/session")
+async def log_session(req: Request, u: dict = CurrentUser):
+    p          = await req.json()
+    session_type = (p.get("type") or "custom").strip()
+    notes        = (p.get("notes") or "").strip()
+    uid          = u["user_id"]
+    state        = _load_training(uid)
+    msg          = core.log_custom(state, notes or session_type)
+    _save_training(uid, state)
+    db.insert_workout(uid, str(dt.date.today()), session_type, 0,
+                      notes=notes[:200] if notes else None)
+    return {"status": "ok", "msg": msg, "state": state}
 
 
-# ── Workout history CRUD ───────────────────────────────────────────────────────
+# ── Workout history CRUD ──────────────────────────────────────────────────────
 
 @app.get("/api/workouts")
 def get_workouts_list(u: dict = CurrentUser):
     return {"workouts": db.get_workouts(u["user_id"])}
 
-
-@app.get("/api/movement_history/{movement}")
-def get_movement_history_api(movement: str, u: dict = CurrentUser):
-    """Return the most recent sets/reps/weight_kg logged for a movement."""
-    history = db.get_movement_history(u["user_id"], movement)
-    return {"history": history}
-
-
-@app.post("/api/session")
-async def log_session(req: Request, u: dict = CurrentUser):
-    """
-    Log a multi-exercise session (Issue #1 custom workout builder).
-
-    Body: {
-        "exercises": [
-            {"movement": str, "weight_kg": float, "sets": int, "reps": int, "notes"?: str},
-            ...
-        ],
-        "date": "YYYY-MM-DD"   # optional, defaults to today
-    }
-    """
-    p         = await req.json()
-    exercises = p.get("exercises") or []
-    date      = _local_today(p)  # prefer client_date; fall back to date field, then server
-
-    if not exercises:
-        raise HTTPException(400, "exercises list is required")
-    for ex in exercises:
-        if not ex.get("movement"):
-            raise HTTPException(400, "Each exercise must have a movement")
-        if int(ex.get("sets") or 0) < 1 or int(ex.get("reps") or 0) < 1:
-            raise HTTPException(400, "Each exercise must have sets and reps ≥ 1")
-
-    uid    = u["user_id"]
-    estate = _load_estate(uid)
-    buffs  = buff_engine.get_all_buffs(estate)
-
-    # Compute total volume across all exercises (in lbs)
-    total_volume = 0.0
-    for ex in exercises:
-        wkg  = float(ex.get("weight_kg") or 0)
-        sets = int(ex.get("sets") or 1)
-        reps = int(ex.get("reps") or 1)
-        total_volume += wkg * 2.20462 * sets * reps
-
-    raw_evts = workout_engine.process_workout(
-        estate, "strength", buffs=buffs, volume=total_volume, today_override=date
-    )
-    trophy_award = None
-    events = []
-    for e in raw_evts:
-        if isinstance(e, dict) and e.get("type") == "trophy":
-            trophy_award = e["trophy"]
-            events.append(e["msg"])
-        else:
-            events.append(e)
-    post = _post_workout_events(estate, buffs, events, raw_evts, trophy_award=trophy_award, today=date)
-    _save_estate(uid, estate)
-
-    # Persist: create session row, then one workout row per exercise
-    total_earned = next(
-        (float(ev.split("+")[1].split(" ")[0]) for ev in events
-         if isinstance(ev, str) and "drachmae" in ev),
-        0.0,
-    )
-    session_id = db.create_session(uid, date, total_earned)
-    workout_ids = []
-    for ex in exercises:
-        wkg  = float(ex.get("weight_kg") or 0)
-        sets = int(ex.get("sets") or 1)
-        reps = int(ex.get("reps") or 1)
-        wid  = db.insert_workout(
-            uid, date, "strength",
-            drachmae_earned=0.0,   # total on session; each exercise row gets 0
-            session_id=session_id,
-            movement=ex["movement"],
-            weight_kg=wkg if wkg > 0 else None,
-            sets=sets, reps=reps,
-            notes=ex.get("notes") or None,
-        )
-        workout_ids.append(wid)
-    # Assign full drachmae to the first exercise row for history display
-    if workout_ids and total_earned > 0:
-        db.update_workout(workout_ids[0], uid, drachmae_earned=total_earned)
-
-    move_names = {m["slug"]: m["name"] for m in core.get_movements()}
-    parts = []
-    for ex in exercises:
-        name = move_names.get(ex["movement"], ex["movement"].replace("_", " ").title())
-        parts.append(f"{name} {ex['sets']}×{ex['reps']} @ {ex.get('weight_kg', 0)}kg")
-
-    return {
-        "status":       "ok",
-        "msg":          "💪 Session logged: " + " | ".join(parts),
-        "events":       events,
-        "session_id":   session_id,
-        "trophy_award": trophy_award,
-        "estate_state": estate.to_dict(),
-        **post,
-    }
+@app.get("/api/sessions")
+def get_sessions(u: dict = CurrentUser):
+    return {"sessions": db.get_workouts(u["user_id"], limit=50)}
 
 @app.put("/api/workout/{workout_id}")
 async def edit_workout(workout_id: int, req: Request, u: dict = CurrentUser):
     p   = await req.json()
     uid = u["user_id"]
-    # Get old drachmae to compute diff
     old_rows = db.get_workouts(uid, limit=500)
     old = next((r for r in old_rows if r["id"] == workout_id), None)
     if not old:
@@ -1086,19 +387,9 @@ async def edit_workout(workout_id: int, req: Request, u: dict = CurrentUser):
                   "distance_miles", "duration_min", "weight_lbs", "notes"):
         if field in p:
             update_fields[field] = p[field]
-    new_drachmae = p.get("drachmae_earned")
-    if new_drachmae is not None:
-        update_fields["drachmae_earned"] = float(new_drachmae)
     ok = db.update_workout(workout_id, uid, **update_fields)
     if not ok:
         raise HTTPException(404, "Workout not found or no changes")
-    # Adjust estate drachmae if changed
-    if new_drachmae is not None:
-        diff = float(new_drachmae) - float(old["drachmae_earned"] or 0)
-        if abs(diff) > 0.001:
-            estate = _load_estate(uid)
-            estate.drachmae = round(estate.drachmae + diff, 2)
-            _save_estate(uid, estate)
     return {"status": "ok", "workouts": db.get_workouts(uid)}
 
 @app.delete("/api/workout/{workout_id}")
@@ -1107,13 +398,10 @@ def del_workout(workout_id: int, u: dict = CurrentUser):
     deleted = db.delete_workout(workout_id, uid)
     if not deleted:
         raise HTTPException(404, "Workout not found")
-    # Subtract drachmae from estate
-    earned = float(deleted.get("drachmae_earned") or 0)
-    if earned > 0:
-        estate = _load_estate(uid)
-        estate.drachmae = max(0.0, round(estate.drachmae - earned, 2))
-        _save_estate(uid, estate)
     return {"status": "ok", "workouts": db.get_workouts(uid)}
+
+
+# ── Custom tracks ─────────────────────────────────────────────────────────────
 
 @app.post("/api/tracks/custom")
 async def save_custom_track(req: Request, u: dict = CurrentUser):
@@ -1125,596 +413,33 @@ async def save_custom_track(req: Request, u: dict = CurrentUser):
     if not sessions:
         raise HTTPException(400, "At least one session is required.")
     uid   = u["user_id"]
-    state = _load_legacy(uid)
+    state = _load_training(uid)
     try:
         track = core.save_custom_track(state, name, sessions)
     except ValueError as e:
         raise HTTPException(400, str(e))
-    _save_legacy(uid, state)
+    _save_training(uid, state)
     return {"status": "ok", "track": track, "state": state}
 
 @app.delete("/api/tracks/custom/{track_id}")
 def delete_custom_track(track_id: str, u: dict = CurrentUser):
     uid   = u["user_id"]
-    state = _load_legacy(uid)
+    state = _load_training(uid)
     found = core.delete_custom_track(state, track_id)
     if not found:
         raise HTTPException(404, f"Custom track not found: {track_id}")
-    _save_legacy(uid, state)
+    _save_training(uid, state)
     return {"status": "ok", "state": state}
 
-# ── Estate (Laurel of Olympus RPG) — all endpoints protected ─────────────────
 
-@app.get("/api/estate/state")
-def get_estate_state(u: dict = CurrentUser):
-    return _load_estate(u["user_id"]).to_dict()
+# ── New analytics endpoints ───────────────────────────────────────────────────
 
+@app.get("/api/streak")
+def get_streak(u: dict = CurrentUser):
+    state = _load_training(u["user_id"])
+    return core.get_streak_info(state)
 
-async def _run_estate_workout(user_id: int, p: dict) -> dict:
-    """
-    Centralized estate workout pipeline (simulate-workout / log-workout).
-
-    Post-workout order:
-      1. workout_engine.process_workout  (drachmae, laurels)
-      2. farm production                 (once per day)
-      3. title unlock check
-      4. creature encounter roll
-      5. Kassandra break / oracle visit / flavour event
-      6. relic find roll
-      7. single save
-    """
-    workout_type = p.get("workout_type", "strength")
-    kwargs = {k: v for k, v in p.items() if k != "workout_type"}
-
-    # Normalise strength kwargs for new formula (weight_lbs, reps, sets).
-    # If the caller still sends legacy "volume", convert it to a single movement
-    # equivalent using a representative weight (sqrt keeps it bounded).
-    if workout_type == "strength":
-        if "weight_lbs" not in kwargs:
-            if "volume" in kwargs:
-                # Derive representative weight from volume (weight_lbs × reps × sets)
-                # Use 5×3=15 as assumed rep-set, solve for weight_lbs
-                assumed_reps_sets = 15.0
-                kwargs["weight_lbs"] = max(1.0, float(kwargs.pop("volume", 5000.0)) / assumed_reps_sets)
-                kwargs.setdefault("reps", 5)
-                kwargs.setdefault("sets", 3)
-            else:
-                # Default: moderate single movement
-                kwargs["weight_lbs"] = 100.0
-                kwargs.setdefault("reps", 5)
-                kwargs.setdefault("sets", 3)
-        # Remove legacy 'volume' key if it snuck through
-        kwargs.pop("volume", None)
-    elif workout_type in ("walking", "running", "rucking") and "miles" not in kwargs:
-        kwargs["miles"] = 2.0
-
-    today  = _local_today(p)
-    state  = _load_estate(user_id)
-    buffs  = buff_engine.get_all_buffs(state)
-
-    # 1. Workout
-    events = workout_engine.process_workout(state, workout_type, buffs=buffs,
-                                            today_override=today, **kwargs)
-    raw_workout_events = list(events)  # snapshot for laurel detection in _post_workout_events
-    if events:
-        _append_estate_log(state, events[0], "reward")
-
-    # Consume relevant blessing
-    if buffs.get("blessing_hermes") and workout_type == "running":
-        state.active_blessings["hermes"] = max(0, state.active_blessings.get("hermes", 1) - 1)
-        events.append("  🪶 Blessing of Hermes consumed.")
-    elif buffs.get("blessing_poseidon") and workout_type == "rucking":
-        state.active_blessings["poseidon"] = max(0, state.active_blessings.get("poseidon", 1) - 1)
-        events.append("  🌊 Blessing of Poseidon consumed.")
-    elif buffs.get("blessing_hephaestus") and workout_type == "strength":
-        state.active_blessings["hephaestus"] = max(0, state.active_blessings.get("hephaestus", 1) - 1)
-        events.append("  🔥 Blessing of Hephaestus consumed.")
-
-    # 2-3. Farm production, Demeter blessing, title unlocks via _post_workout_events.
-    # oracle is handled separately below (Kassandra narrative logic).
-    post = _post_workout_events(state, buffs, events, raw_workout_events,
-                                include_oracle=False, today=today)
-
-    # 4. Creature encounter
-    encounter_chance = buff_engine.effective_event_chance(buffs, 0.05)
-    encounter_chance = min(1.0, encounter_chance + buffs.get("creature_chance", 0.0))
-    creature_encounter = creature_engine.maybe_creature_encounter(
-        workout_type, chance=encounter_chance
-    )
-
-    # 5. Oracle / Kassandra / flavour event (only one fires)
-    narrative_event = oracle_engine.maybe_kassandra_break(state, chance=0.001)
-    if narrative_event:
-        if "favorite_of_kassandra" not in state.titles_unlocked:
-            state.titles_unlocked.append("favorite_of_kassandra")
-            state.active_titles["legendary"] = "favorite_of_kassandra"
-            events.append("  🌟 Title unlocked: Favorite of Kassandra")
-    else:
-        if army_engine.check_army_unlock_hint(state):
-            narrative_event = {
-                "type":  "oracle", "title": "Kassandra Stirs", "icon": "🏛️",
-                "lines": [
-                    "The Oracle sets down her scroll.",
-                    "She regards the estate — the fields, the sanctuary, the growing stores.",
-                    "'You have built something here. It would be a shame to lose it.'",
-                    "'Perhaps... it is time to consider defending it.'",
-                    "She says nothing more. But the thought lingers.",
-                ],
-            }
-        laurel_earned = post["laurel_earned"]
-        oracle_sim_chance = 1.0 if (laurel_earned or post["newly_unlocked"]) else 0.25
-        if narrative_event is None:
-            narrative_event = oracle_engine.maybe_oracle_visit(state, chance=oracle_sim_chance)
-        if narrative_event is None:
-            flavour_chance = buff_engine.effective_event_chance(buffs, 0.20)
-            narrative_event = event_engine.maybe_trigger_event(
-                state.to_dict(), chance=flavour_chance
-            )
-
-    # 6. Relic find
-    relic_find = None
-    import random as _random
-    relic_chance = buff_engine.effective_event_chance(buffs, 0.03)
-    relic_chance = min(1.0, relic_chance + buffs.get("relic_chance", 0.0))
-    if _random.random() < relic_chance:
-        candidate = relic_engine.roll_relic_reward()
-        if candidate:
-            ok_r, _ = relic_engine.add_relic(state, candidate["id"])
-            relic_find = candidate if ok_r else {**candidate, "not_added": True}
-
-    # 7. Single save
-    _save_estate(user_id, state)
-    return {
-        "status":             "ok",
-        "events":             events,
-        "state":              state.to_dict(),
-        "estate_state":       state.to_dict(),
-        "event":              narrative_event,
-        "creature_encounter": creature_encounter,
-        "relic_find":         relic_find,
-        "trophy_award":       None,   # trophies only via recommended/custom microcycle
-        "estate_log":         state.estate_log,
-        "laurel_earned":      post["laurel_earned"],
-        "farm_harvest":       post["farm_harvest"],
-    }
-
-
-@app.post("/api/estate/simulate-workout")
-async def estate_simulate_workout(req: Request, u: dict = CurrentUser):
-    return await _run_estate_workout(u["user_id"], await req.json())
-
-
-@app.get("/api/estate/prophecy")
-def get_prophecy_scroll(u: dict = CurrentUser):
-    uid   = u["user_id"]
-    state = _load_estate(uid)
-    scroll = title_engine.get_prophecy_scroll(state)
-    _save_estate(uid, state)
-    return scroll
-
-
-@app.get("/api/estate/sanctuary")
-def get_sanctuary(u: dict = CurrentUser):
-    state = _load_estate(u["user_id"])
-    return {
-        "sanctuary":     creature_engine.get_sanctuary_details(state),
-        "capacity":      state.sanctuary_capacity,
-        "sanctuary_ids": state.sanctuary,
-        "all_creatures": creature_engine.get_all_creatures(),
-        "buffs":         creature_engine.get_sanctuary_buffs(state),
-    }
-
-@app.post("/api/estate/creature/recruit")
-async def recruit_creature(req: Request, u: dict = CurrentUser):
-    p = await req.json()
-    creature_id = p.get("creature_id", "").strip()
-    if not creature_id:
-        raise HTTPException(400, "creature_id is required")
-    uid   = u["user_id"]
-    state = _load_estate(uid)
-    ok, msg = creature_engine.recruit_creature(state, creature_id)
-    if not ok:
-        raise HTTPException(400, msg)
-    _save_estate(uid, state)
-    return {"status": "ok", "msg": msg, "state": state.to_dict()}
-
-@app.post("/api/estate/creature/release")
-async def release_creature(req: Request, u: dict = CurrentUser):
-    p = await req.json()
-    creature_id = p.get("creature_id", "").strip()
-    if not creature_id:
-        raise HTTPException(400, "creature_id is required")
-    uid   = u["user_id"]
-    state = _load_estate(uid)
-    ok, msg, reward = creature_engine.release_creature(state, creature_id)
-    if not ok:
-        raise HTTPException(400, msg)
-    _save_estate(uid, state)
-    return {"status": "ok", "msg": msg, "reward": reward, "state": state.to_dict()}
-
-
-@app.get("/api/estate/relics")
-def get_relics(u: dict = CurrentUser):
-    state = _load_estate(u["user_id"])
-    return {
-        "inventory":  relic_engine.get_inventory_details(state),
-        "capacity":   state.relic_capacity,
-        "relic_ids":  state.relics,
-        "all_relics": relic_engine.get_all_relics(),
-        "buffs":      relic_engine.get_relic_buffs(state),
-    }
-
-@app.post("/api/estate/relic/add")
-async def add_relic(req: Request, u: dict = CurrentUser):
-    p = await req.json()
-    relic_id = p.get("relic_id", "").strip()
-    if not relic_id:
-        raise HTTPException(400, "relic_id is required")
-    uid   = u["user_id"]
-    state = _load_estate(uid)
-    ok, msg = relic_engine.add_relic(state, relic_id)
-    if not ok:
-        raise HTTPException(400, msg)
-    _save_estate(uid, state)
-    return {"status": "ok", "msg": msg, "state": state.to_dict()}
-
-@app.post("/api/estate/relic/remove")
-async def remove_relic(req: Request, u: dict = CurrentUser):
-    p = await req.json()
-    relic_id = p.get("relic_id", "").strip()
-    if not relic_id:
-        raise HTTPException(400, "relic_id is required")
-    uid   = u["user_id"]
-    state = _load_estate(uid)
-    ok, msg = relic_engine.remove_relic(state, relic_id)
-    if not ok:
-        raise HTTPException(400, msg)
-    _save_estate(uid, state)
-    return {"status": "ok", "msg": msg, "state": state.to_dict()}
-
-
-@app.get("/api/estate/trophies")
-def get_trophies(u: dict = CurrentUser):
-    state = _load_estate(u["user_id"])
-    return {
-        "trophies":     trophy_engine.get_trophy_inventory(state),
-        "buff_summary": trophy_engine.get_buff_summary(state),
-        "total":        len(getattr(state, "trophies", None) or []),
-    }
-
-
-@app.get("/api/estate/army")
-def get_army(u: dict = CurrentUser):
-    state = _load_estate(u["user_id"])
-    buffs = buff_engine.get_all_buffs(state)
-    return {
-        "barracks_built": state.barracks_built,
-        "barracks_cost":  army_engine.BARRACKS_COST,
-        "army":           army_engine.get_army_details(state),
-        "army_ids":       state.army,
-        "army_limit":     state.army_limit,
-        "army_strength":  army_engine.get_army_strength(state, buffs),
-        "campaigns_won":  state.campaigns_won,
-        "all_units":      army_engine.get_all_units(),
-        "all_regions":    army_engine.get_all_regions(),
-        "buffs":          buffs,
-    }
-
-@app.post("/api/estate/barracks/build")
-async def build_barracks(req: Request, u: dict = CurrentUser):
-    uid   = u["user_id"]
-    state = _load_estate(uid)
-    ok, msg = army_engine.build_barracks(state)
-    if not ok:
-        raise HTTPException(400, msg)
-    _save_estate(uid, state)
-    return {"status": "ok", "msg": msg, "state": state.to_dict()}
-
-@app.post("/api/estate/army/recruit")
-async def recruit_unit(req: Request, u: dict = CurrentUser):
-    p = await req.json()
-    unit_id = p.get("unit_id", "").strip()
-    if not unit_id:
-        raise HTTPException(400, "unit_id is required")
-    uid   = u["user_id"]
-    state = _load_estate(uid)
-    ok, msg = army_engine.recruit_unit(state, unit_id)
-    if not ok:
-        raise HTTPException(400, msg)
-    _save_estate(uid, state)
-    return {"status": "ok", "msg": msg, "state": state.to_dict()}
-
-@app.post("/api/estate/army/disband")
-async def disband_unit(req: Request, u: dict = CurrentUser):
-    p = await req.json()
-    unit_id = p.get("unit_id", "").strip()
-    if not unit_id:
-        raise HTTPException(400, "unit_id is required")
-    uid   = u["user_id"]
-    state = _load_estate(uid)
-    ok, msg = army_engine.disband_unit(state, unit_id)
-    if not ok:
-        raise HTTPException(400, msg)
-    _save_estate(uid, state)
-    return {"status": "ok", "msg": msg, "state": state.to_dict()}
-
-
-async def _run_campaign(user_id: int, p: dict) -> dict:
-    region_id = p.get("region_id", "").strip()
-    if not region_id:
-        raise HTTPException(400, "region_id is required")
-    state = _load_estate(user_id)
-    buffs = buff_engine.get_all_buffs(state)
-    result = army_engine.launch_campaign(state, region_id, buffs=buffs)
-    if "error" in result:
-        raise HTTPException(400, result["error"])
-    if buffs.get("blessing_ares"):
-        state.active_blessings["ares"] = max(0, state.active_blessings.get("ares", 1) - 1)
-    if result.get("relic_reward"):
-        ok_relic, _ = relic_engine.add_relic(state, result["relic_reward"]["id"])
-        if not ok_relic:
-            result["relic_reward"]["not_added"] = True
-    import random as _random
-    if result.get("victory") and _random.random() < 0.15:
-        state.laurels += 1
-        result["laurel_earned"] = 1
-        newly_t = title_engine.check_and_unlock_titles(state)
-        if newly_t:
-            result["titles_unlocked"] = newly_t
-    if state.campaigns_won >= 20 and "champion_of_the_gods" not in state.titles_unlocked:
-        state.titles_unlocked.append("champion_of_the_gods")
-        state.active_titles["legendary"] = "champion_of_the_gods"
-        result["title_unlocked"] = "Champion of the Gods"
-    _save_estate(user_id, state)
-    return {
-        "status":             "ok",
-        "result":             result,
-        "creature_encounter": result.get("creature_reward"),
-        "state":              state.to_dict(),
-    }
-
-@app.post("/api/estate/campaign/launch")
-async def launch_campaign(req: Request, u: dict = CurrentUser):
-    return await _run_campaign(u["user_id"], await req.json())
-
-
-@app.get("/api/estate/farm-types")
-def get_farm_types():
-    return {"farm_types": farm_engine.get_all_farm_types()}
-
-@app.post("/api/estate/farm/build")
-async def build_farm(req: Request, u: dict = CurrentUser):
-    p = await req.json()
-    farm_type = p.get("farm_type", "").strip()
-    col = int(p.get("col", 0))
-    row = int(p.get("row", 0))
-    if not farm_type:
-        raise HTTPException(400, "farm_type is required")
-    uid   = u["user_id"]
-    state = _load_estate(uid)
-    ok, msg = farm_engine.build_farm(state, farm_type, col, row)
-    if ok:
-        title_engine.check_and_unlock_titles(state)
-        _save_estate(uid, state)
-    return {"status": "ok" if ok else "error", "message": msg, "state": state.to_dict()}
-
-@app.post("/api/estate/farm/upgrade")
-async def upgrade_farm(req: Request, u: dict = CurrentUser):
-    p = await req.json()
-    col = int(p.get("col", 0))
-    row = int(p.get("row", 0))
-    uid   = u["user_id"]
-    state = _load_estate(uid)
-    ok, msg = farm_engine.upgrade_farm(state, col, row)
-    if ok:
-        _save_estate(uid, state)
-    return {"status": "ok" if ok else "error", "message": msg, "state": state.to_dict()}
-
-
-@app.get("/api/estate/processing")
-def get_processing(u: dict = CurrentUser):
-    state = _load_estate(u["user_id"])
-    return {"buildings": processing_engine.get_player_buildings(state), "state": state.to_dict()}
-
-@app.post("/api/estate/processing/build")
-async def build_processing(req: Request, u: dict = CurrentUser):
-    p = await req.json()
-    building_id = p.get("building_id", "").strip()
-    if not building_id:
-        raise HTTPException(400, "building_id is required")
-    uid   = u["user_id"]
-    state = _load_estate(uid)
-    ok, msg = processing_engine.build_processing_building(state, building_id)
-    if ok:
-        _save_estate(uid, state)
-    return {"status": "ok" if ok else "error", "message": msg, "state": state.to_dict()}
-
-@app.post("/api/estate/processing/process")
-async def process_goods(req: Request, u: dict = CurrentUser):
-    p = await req.json()
-    building_id = p.get("building_id", "").strip()
-    amount = int(p.get("amount", 1))
-    if not building_id:
-        raise HTTPException(400, "building_id is required")
-    uid   = u["user_id"]
-    state = _load_estate(uid)
-    ok, msg, detail = processing_engine.process_goods(state, building_id, amount)
-    if ok:
-        title_engine.check_and_unlock_titles(state)
-        _save_estate(uid, state)
-    return {"status": "ok" if ok else "error", "message": msg, "detail": detail, "state": state.to_dict()}
-
-
-@app.get("/api/estate/villa")
-def get_villa(u: dict = CurrentUser):
-    state = _load_estate(u["user_id"])
-    level = getattr(state, "villa_level", 1)
-    return {
-        "villa_level":  level,
-        "max_level":    3,
-        "upgrade_cost": army_engine.VILLA_UPGRADE_COSTS.get(level + 1),
-        "army_limit":   state.army_limit,
-        "barracks_unlock": {
-            "laurels_needed":     3,
-            "farms_needed":       3,
-            "villa_level_needed": 2,
-            "laurels_have":       state.laurels,
-            "farms_have":         len(state.farms),
-            "villa_have":         level,
-            "unlocked": (state.laurels >= 3 and len(state.farms) >= 3 and level >= 2),
-        },
-    }
-
-@app.post("/api/estate/villa/upgrade")
-async def upgrade_villa(req: Request, u: dict = CurrentUser):
-    uid   = u["user_id"]
-    state = _load_estate(uid)
-    ok, msg = army_engine.upgrade_villa(state)
-    if ok:
-        _save_estate(uid, state)
-    return {"status": "ok" if ok else "error", "message": msg, "state": state.to_dict()}
-
-
-_BLESSINGS = {
-    "hermes": {"id": "hermes", "name": "Blessing of Hermes", "icon": "🪶",
-               "cost_laurels": 1, "effect": "+30% running drachmae for your next run",
-               "buff_key": "blessing_hermes", "expires": "after next run"},
-    "demeter": {"id": "demeter", "name": "Blessing of Demeter", "icon": "🌾",
-                "cost_laurels": 1, "effect": "+50% farm production for next harvest",
-                "buff_key": "blessing_demeter", "expires": "after next farm harvest"},
-    "ares":   {"id": "ares",   "name": "Blessing of Ares",   "icon": "⚔️",
-               "cost_laurels": 1, "effect": "+50% army strength for next campaign",
-               "buff_key": "blessing_ares", "expires": "after next campaign"},
-    "poseidon": {"id": "poseidon", "name": "Blessing of Poseidon", "icon": "🌊",
-                 "cost_laurels": 1, "effect": "+30% rucking drachmae for your next ruck",
-                 "buff_key": "blessing_poseidon", "expires": "after next ruck"},
-    "hephaestus": {"id": "hephaestus", "name": "Blessing of Hephaestus", "icon": "🔥",
-                   "cost_laurels": 1,
-                   "effect": "+30% strength drachmae for your next strength workout",
-                   "buff_key": "blessing_hephaestus", "expires": "after next strength workout"},
-}
-
-@app.get("/api/estate/blessings")
-def get_blessings(u: dict = CurrentUser):
-    state  = _load_estate(u["user_id"])
-    active = getattr(state, "active_blessings", {})
-    return {
-        "blessings": [{**b, "active": active.get(b["id"], 0) > 0,
-                       "remaining": active.get(b["id"], 0)} for b in _BLESSINGS.values()],
-        "laurels": state.laurels,
-    }
-
-@app.post("/api/estate/blessing/activate")
-async def activate_blessing(req: Request, u: dict = CurrentUser):
-    p = await req.json()
-    blessing_id = p.get("blessing_id", "").strip()
-    if blessing_id not in _BLESSINGS:
-        raise HTTPException(400, f"Unknown blessing: {blessing_id}")
-    uid   = u["user_id"]
-    state = _load_estate(uid)
-    b     = _BLESSINGS[blessing_id]
-    cost  = b["cost_laurels"]
-    if state.laurels < cost:
-        return {"status": "error",
-                "message": f"Need {cost} laurel (have {state.laurels}).",
-                "state": state.to_dict()}
-    state.laurels -= cost
-    if not hasattr(state, "active_blessings") or state.active_blessings is None:
-        state.active_blessings = {}
-    state.active_blessings[blessing_id] = state.active_blessings.get(blessing_id, 0) + 1
-    _save_estate(uid, state)
-    return {"status": "ok", "message": f"{b['icon']} {b['name']} activated! {b['effect']}",
-            "state": state.to_dict()}
-
-
-# ── Agora — sell goods for drachmae ───────────────────────────────────────────
-
-import json as _json
-
-_MARKET_PATH = BASE / "static" / "market_prices.json"
-
-def _market_prices() -> dict:
-    try:
-        return _json.loads(_MARKET_PATH.read_text())
-    except Exception:
-        return {}
-
-@app.get("/api/estate/agora/prices")
-def agora_prices():
-    return _market_prices()
-
-@app.post("/api/estate/agora/sell")
-async def agora_sell(req: Request, u: dict = CurrentUser):
-    p        = await req.json()
-    resource = (p.get("resource") or "").strip()
-    quantity = int(p.get("quantity") or 1)
-    if quantity < 1:
-        raise HTTPException(400, "quantity must be at least 1")
-    prices = _market_prices()
-    if resource not in prices:
-        raise HTTPException(400, f"Unknown resource: {resource}")
-    uid   = u["user_id"]
-    state = _load_estate(uid)
-    stock = getattr(state, resource, 0)
-    if stock < quantity:
-        raise HTTPException(400, f"Not enough {resource} (have {stock}, need {quantity})")
-    setattr(state, resource, stock - quantity)
-    earned = prices[resource]["price"] * quantity
-    state.drachmae = round(state.drachmae + earned, 2)
-    _save_estate(uid, state)
-    label = prices[resource]["label"]
-    emoji = prices[resource]["emoji"]
-    return {
-        "status":   "ok",
-        "message":  f"Sold {quantity}× {emoji} {label} for +{earned} 🪙",
-        "earned":   earned,
-        "state":    state.to_dict(),
-    }
-
-# ── Admin endpoints ───────────────────────────────────────────────────────────
-
-@app.post("/admin/backup")
-async def admin_backup(req: Request):
-    """
-    Export a JSON snapshot of all player data for backup purposes.
-    Requires the ADMIN_SECRET env var to match the X-Admin-Secret header.
-    """
-    secret = os.environ.get("ADMIN_SECRET", "")
-    if not secret or req.headers.get("X-Admin-Secret", "") != secret:
-        raise HTTPException(403, "Forbidden")
-
-    from sqlalchemy import text as _text
-    backup: dict = {"created_at": dt.datetime.utcnow().isoformat(), "tables": {}}
-
-    with db._db() as sess:
-        for table in ("users", "player_estate", "player_legacy", "workouts", "workout_sessions"):
-            try:
-                rows = sess.execute(_text(f"SELECT * FROM {table}")).fetchall()
-                backup["tables"][table] = [dict(r._mapping) for r in rows]
-            except Exception as e:
-                backup["tables"][table] = {"error": str(e)}
-
-    timestamp = dt.datetime.utcnow().strftime("%Y_%m_%d_%H%M%S")
-    filename  = f"backup_{timestamp}.json"
-
-    # Write locally (useful for SQLite; on Render this is ephemeral storage)
-    backup_path = BASE / filename
-    try:
-        backup_path.write_text(json.dumps(backup, default=str, indent=2))
-        log.info("Backup written to %s", backup_path)
-    except Exception as e:
-        log.warning("Could not write backup file: %s", e)
-
-    return JSONResponse(content={"status": "ok", "filename": filename, "backup": backup})
-
-
-# ── Startup logging ───────────────────────────────────────────────────────────
-
-@app.on_event("startup")
-async def _startup_log():
-    db_type = "PostgreSQL" if db._IS_PG else f"SQLite ({os.environ.get('DB_PATH', 'olympus.db')})"
-    log.info("=" * 60)
-    log.info("Olympus Training Log — server starting")
-    log.info("App version : %s", _APP_VERSION)
-    log.info("Database    : %s", db_type)
-    log.info("=" * 60)
+@app.get("/api/progress/{movement}")
+def get_progress(movement: str, u: dict = CurrentUser):
+    history = db.get_movement_history_all(u["user_id"], movement, limit=20)
+    return {"movement": movement, "history": history}

@@ -433,7 +433,7 @@ def update_workout(workout_id: int, user_id: int, **kwargs) -> bool:
 
 
 def delete_workout(workout_id: int, user_id: int) -> dict | None:
-    """Delete a workout; return its row data (for drachmae adjustment) or None."""
+    """Delete a workout; return its row data or None."""
     with _db() as sess:
         row = sess.execute(
             text("SELECT * FROM workouts WHERE id = :wid AND user_id = :uid"),
@@ -446,3 +446,18 @@ def delete_workout(workout_id: int, user_id: int) -> dict | None:
             {"wid": workout_id, "uid": user_id},
         )
         return dict(row._mapping)
+
+
+def get_movement_history_all(user_id: int, movement: str, limit: int = 20) -> list:
+    """Return up to limit rows for a movement, oldest first, for charting."""
+    with _db() as sess:
+        rows = sess.execute(
+            text(
+                "SELECT date, sets, reps, weight_kg FROM workouts "
+                "WHERE user_id = :uid AND movement = :mvt "
+                "  AND sets IS NOT NULL AND reps IS NOT NULL AND weight_kg IS NOT NULL "
+                "ORDER BY date ASC, id ASC LIMIT :limit"
+            ),
+            {"uid": user_id, "mvt": movement, "limit": limit},
+        ).fetchall()
+        return [dict(r._mapping) for r in rows]
