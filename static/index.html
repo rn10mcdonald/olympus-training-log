@@ -720,15 +720,18 @@ main {
 <script>
 // ── App state ─────────────────────────────────────────────────────────────────
 let TOKEN    = localStorage.getItem('fb_token');
-let appState   = null;
-let todayWk    = null;
-let streakInfo = null;
-let allWorkouts = [];
-let movements  = [];
-let logFilter  = 'all';
-let cardioType = null;
-let authMode   = 'login';
-let sessionItems = [];
+let appState        = null;
+let todayWk         = null;
+let streakInfo      = null;
+let allWorkouts     = [];
+let movements       = [];
+let movementSlugMap = {};
+let logFilter       = 'all';
+let cardioType      = null;
+let authMode        = 'login';
+let sessionItems    = [];
+let todayLogged     = false;
+let activeDayPreview = null;
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
@@ -787,16 +790,35 @@ async function api(path, method = 'GET', body = null) {
 }
 
 async function loadAll() {
-  const [s, w, st, mv] = await Promise.all([
+  const [s, w, st, mv, wl] = await Promise.all([
     api('/api/state'),
     api('/api/workout/today'),
     api('/api/streak'),
     api('/api/movements'),
+    api('/api/workouts'),
   ]);
   if (s)  appState    = s;
   if (w)  todayWk     = w;
   if (st) streakInfo  = st;
-  if (mv) movements   = mv;
+  if (mv) {
+    movements = mv;
+    movementSlugMap = Object.fromEntries(mv.map(m => [m.name, m.slug]));
+  }
+  if (wl) allWorkouts = wl.workouts || [];
+  todayLogged = checkTodayLogged();
+}
+
+function checkTodayLogged() {
+  const today = new Date().toISOString().slice(0, 10);
+  return allWorkouts.some(w => w.date === today && (w.type === 'recommended' || w.type === 'strength'));
+}
+
+function getMovementSlug(labelText) {
+  if (!labelText) return null;
+  for (const [name, slug] of Object.entries(movementSlugMap)) {
+    if (labelText.startsWith(name)) return slug;
+  }
+  return null;
 }
 
 async function loadWorkouts() {
@@ -970,7 +992,11 @@ function renderSessionCard(wk) {
       <div class="section-finisher-text">${x(wk.finisher)}</div>
     </div>` : ''}
   </div>
-  <button class="btn btn-primary btn-full" style="margin-bottom:10px" onclick="openSessionSheet()">Log This Session</button>
+  ${todayLogged
+    ? `<button class="btn btn-full" style="background:#7A9E7E;color:#fff;margin-bottom:6px;cursor:default;font-weight:600" disabled>Completed ✓</button>
+       <div style="text-align:center;margin-bottom:8px"><a href="#" class="btn-text" onclick="event.preventDefault();openSessionSheet()" style="font-size:12px;color:var(--warm-gray)">Log again</a></div>`
+    : `<button class="btn btn-primary btn-full" style="margin-bottom:10px" onclick="openSessionSheet()">Log This Session</button>`
+  }
   <button class="btn-text" onclick="openCustomSheet()">Log Custom Workout</button>
 </div>`;
 }
@@ -1133,9 +1159,16 @@ async function submitSession() {
   btn.disabled = false; btn.textContent = 'Complete Session';
   if (!res) { showToast('Error logging session'); return; }
 
-  appState   = res.state;
-  todayWk    = await api('/api/workout/today');
-  streakInfo = await api('/api/streak');
+  appState = res.state;
+  const [wkRes, stRes, wlRes] = await Promise.all([
+    api('/api/workout/today'),
+    api('/api/streak'),
+    api('/api/workouts'),
+  ]);
+  if (wkRes) todayWk    = wkRes;
+  if (stRes) streakInfo = stRes;
+  if (wlRes) allWorkouts = wlRes.workouts || [];
+  todayLogged = checkTodayLogged();
   closeSessionSheet();
   renderToday();
   showToast('Session logged ✓');
