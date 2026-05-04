@@ -523,6 +523,7 @@ main {
   text-align:center; appearance:none; -webkit-appearance:none;
 }
 .ex-field input:focus { outline:none; border-color:var(--terracotta); }
+.ex-hint { font-size:11px; color:var(--light-gray); margin-top:3px; line-height:1.3; }
 
 /* ── Auth ────────────────────────────────────────────────────────────────── */
 #auth-screen {
@@ -1109,35 +1110,79 @@ function renderQuickCardio() {
 }
 
 // ── Session sheet ─────────────────────────────────────────────────────────────
-function openSessionSheet() {
+function _parsePrescription(text) {
+  const sr  = text ? text.match(/(\d+)×(\d+)/) : null;
+  const wkg = text ? text.match(/@\s*(\d+(?:\.\d+)?)\s*kg/) : null;
+  return {
+    sets:        sr  ? parseInt(sr[1])         : null,
+    reps:        sr  ? parseInt(sr[2])         : null,
+    prescribedKg: wkg ? parseFloat(wkg[1])    : null,
+  };
+}
+
+function _renderSessionBody() {
+  document.getElementById('sheet-body').innerHTML = sessionItems.map((item, idx) => {
+    const hint = (item.sets && item.reps)
+      ? `Prescribed: ${item.sets}×${item.reps}${item.prescribedKg ? ` @ ${item.prescribedKg} kg` : ''}`
+      : '';
+    return `
+    <div class="exercise-row">
+      <div class="ex-label">${x(item.label)}</div>
+      <div class="ex-inputs">
+        <div class="ex-field">
+          <label>kg</label>
+          <input type="number" id="kg-${idx}" min="0" step="0.5" value="${item.kg || ''}" placeholder="${item.kg || '—'}">
+          ${hint ? `<div class="ex-hint">${hint}</div>` : ''}
+        </div>
+        <div class="ex-field"><label>sets</label><input type="number" id="sets-${idx}" min="0" step="1" value="${item.sets || ''}" placeholder="${item.sets || '—'}"></div>
+        <div class="ex-field"><label>reps</label><input type="number" id="reps-${idx}" min="0" step="1" value="${item.reps || ''}" placeholder="${item.reps || '—'}"></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function _fillMovementHistory() {
+  await Promise.all(sessionItems.map(async (item, idx) => {
+    const slug = getMovementSlug(item.label);
+    if (!slug) return;
+    const hist = await api(`/api/movement_history/${slug}`);
+    if (hist && hist.weight_kg) {
+      const input = document.getElementById(`kg-${idx}`);
+      if (input) input.value = hist.weight_kg;
+    }
+  }));
+}
+
+async function openSessionSheet() {
   if (!todayWk || todayWk.status !== 'active') return;
-  const wk  = todayWk;
-  const sw  = wk.suggested_weight || wk.std_kg || 16;
+  const wk   = todayWk;
+  const sw   = wk.suggested_weight || wk.std_kg || 16;
   const fbb  = wk.full_body_block || [];
   const fw   = wk.focus_work || [];
   const arms = wk.arms || [];
+
+  function itemFor(label, key, defaultKg) {
+    const p = _parsePrescription(label);
+    return { label, key, kg: p.prescribedKg ?? defaultKg, ...p };
+  }
+
   sessionItems = [
-    { label: wk.main, key: 'main', kg: sw },
-    ...fbb.map((a, i)  => ({ label: a, key: `fbb_${i}`,  kg: 0 })),
-    ...fw.map((a, i)   => ({ label: a, key: `fw_${i}`,   kg: 0 })),
-    ...arms.map((a, i) => ({ label: a, key: `arm_${i}`,  kg: 0 })),
-    ...(wk.finisher ? [{ label: 'Finisher: ' + wk.finisher, key: 'finisher', kg: 0 }] : []),
+    itemFor(wk.main, 'main', sw),
+    ...fbb.map((a, i)  => itemFor(a, `fbb_${i}`,  0)),
+    ...fw.map((a, i)   => itemFor(a, `fw_${i}`,   0)),
+    ...arms.map((a, i) => itemFor(a, `arm_${i}`,  0)),
+    ...(wk.finisher ? [{ label: 'Finisher: ' + wk.finisher, key: 'finisher', kg: 0, sets: null, reps: null, prescribedKg: null }] : []),
   ];
 
   document.getElementById('sheet-title').textContent    = 'Log Session';
   document.getElementById('sheet-subtitle').textContent = wk.main || '';
-  document.getElementById('sheet-body').innerHTML = sessionItems.map((item, idx) => `
-    <div class="exercise-row">
-      <div class="ex-label">${x(item.label)}</div>
-      <div class="ex-inputs">
-        <div class="ex-field"><label>kg</label><input type="number" id="kg-${idx}" min="0" step="0.5" value="${item.kg || ''}" placeholder="${item.kg || '—'}"></div>
-        <div class="ex-field"><label>sets</label><input type="number" id="sets-${idx}" min="0" step="1" placeholder="—"></div>
-        <div class="ex-field"><label>reps</label><input type="number" id="reps-${idx}" min="0" step="1" placeholder="—"></div>
-      </div>
-    </div>`).join('');
+  _renderSessionBody();
 
   document.getElementById('session-overlay').classList.add('visible');
   document.getElementById('session-sheet').classList.add('open');
+
+  // Async: override pre-fills with last-logged weights from history
+  await _fillMovementHistory();
 }
 
 function closeSessionSheet() {
