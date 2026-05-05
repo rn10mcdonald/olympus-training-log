@@ -813,11 +813,16 @@ async function loadAll() {
 
 /** Returns today's date in YYYY-MM-DD using the client's local timezone. */
 function todayISO() {
-  return new Date().toLocaleDateString('en-CA'); // en-CA locale gives YYYY-MM-DD
+  return new Date().toLocaleDateString('en-CA'); // en-CA locale → YYYY-MM-DD in local time
+}
+
+/** Formats any Date object as YYYY-MM-DD in the client's local timezone. */
+function dateToISO(d) {
+  return d.toLocaleDateString('en-CA');
 }
 
 function checkTodayLogged() {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayISO();   // local date, not UTC
   return allWorkouts.some(w => w.date === today && (w.type === 'recommended' || w.type === 'strength'));
 }
 
@@ -1102,7 +1107,7 @@ function renderStreakCard() {
     const type    = logged.get(i);  // from appState — for colour
     const dotDate = new Date(weekStart);
     dotDate.setDate(weekStart.getDate() + i);
-    const dateStr  = dotDate.toISOString().slice(0, 10);
+    const dateStr  = dateToISO(dotDate);   // local date, never UTC-shifted
     const isFilled = thisWeekDays.has(dateStr) || !!type;
     let cls = 'dot';
     if (isFilled) {
@@ -1148,7 +1153,7 @@ async function previewDayWorkout(dateStr) {
 
   previewEl.innerHTML = `<div style="border-top:1px solid var(--border);margin-top:12px;padding-top:10px;color:var(--light-gray);font-size:13px">Loading…</div>`;
 
-  const today   = new Date().toISOString().slice(0, 10);
+  const today   = todayISO();   // local date
   const isPast  = dateStr < today;
   const isToday = dateStr === today;
   const isFuture = dateStr > today;
@@ -1325,7 +1330,7 @@ async function submitSession() {
     return { label: item.label, kg, sets, reps };
   });
 
-  const res = await api('/api/workout/recommended', 'POST', { weights_lbs });
+  const res = await api('/api/workout/recommended', 'POST', { weights_lbs, client_date: todayISO() });
   btn.disabled = false; btn.textContent = 'Complete Session';
   if (!res) { showToast('Error logging session'); return; }
 
@@ -1335,10 +1340,11 @@ async function submitSession() {
     if (!slug) continue;                        // unknown movement — skip only this
     try {
       await api('/api/strength', 'POST', {
-        movement:  slug,
-        weight_kg: ex.kg,
-        sets:      ex.sets || 1,
-        reps:      ex.reps || 1,
+        movement:    slug,
+        weight_kg:   ex.kg,
+        sets:        ex.sets || 1,
+        reps:        ex.reps || 1,
+        client_date: todayISO(),
       });
     } catch (_) { /* one bad entry never blocks the rest */ }
   }
@@ -1372,7 +1378,7 @@ function closeCustomSheet() {
 async function submitCustomWorkout() {
   const text = document.getElementById('custom-text').value.trim();
   if (!text) return;
-  const res = await api('/api/workout/custom', 'POST', { text });
+  const res = await api('/api/workout/custom', 'POST', { text, client_date: todayISO() });
   if (!res) { showToast('Error logging'); return; }
   appState = res.state;
   streakInfo = await api('/api/streak');
@@ -1410,18 +1416,19 @@ async function submitCardio() {
   const miles = parseFloat(document.getElementById('cardio-miles').value || 0);
   if (!miles || miles <= 0) { showToast('Enter a valid distance'); return; }
 
+  const cd = todayISO();   // capture once — same for all three branches
   let endpoint, body;
   if (cardioType === 'run') {
     const pace = parseFloat(document.getElementById('cardio-pace')?.value || 0) || null;
     endpoint = '/api/run';
-    body = { miles, ...(pace ? { pace_min_per_mile: pace } : {}) };
+    body = { miles, ...(pace ? { pace_min_per_mile: pace } : {}), client_date: cd };
   } else if (cardioType === 'ruck') {
     const lbs = parseFloat(document.getElementById('cardio-lbs')?.value || 0) || 0;
     endpoint = '/api/ruck';
-    body = { miles, pounds: lbs };
+    body = { miles, pounds: lbs, client_date: cd };
   } else {
     endpoint = '/api/walk';
-    body = { miles };
+    body = { miles, client_date: cd };
   }
 
   const res = await api(endpoint, 'POST', body);
@@ -1487,8 +1494,9 @@ function renderLogContent() {
     return;
   }
 
-  const today = new Date().toISOString().slice(0,10);
-  const yest  = new Date(Date.now() - 86400000).toISOString().slice(0,10);
+  const today = todayISO();
+  const _y    = new Date(); _y.setDate(_y.getDate() - 1);
+  const yest  = dateToISO(_y);
   const groups = {};
   for (const w of filtered) {
     const grp = w.date === today ? 'Today' : w.date === yest ? 'Yesterday' : (w.date || 'Earlier');
