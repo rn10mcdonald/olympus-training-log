@@ -794,7 +794,7 @@ async function api(path, method = 'GET', body = null) {
 async function loadAll() {
   const [s, w, st, mv, wl] = await Promise.all([
     api('/api/state'),
-    api('/api/workout/today'),
+    api(`/api/workout/today?date=${todayISO()}`),
     api('/api/streak'),
     api('/api/movements'),
     api('/api/workouts'),
@@ -809,6 +809,11 @@ async function loadAll() {
   if (wl) allWorkouts = wl.workouts || [];
   recomputeThisWeekDays();
   todayLogged = checkTodayLogged();
+}
+
+/** Returns today's date in YYYY-MM-DD using the client's local timezone. */
+function todayISO() {
+  return new Date().toLocaleDateString('en-CA'); // en-CA locale gives YYYY-MM-DD
 }
 
 function checkTodayLogged() {
@@ -1056,7 +1061,7 @@ async function selectTrack(key) {
   const res = await api('/api/track/select', 'POST', { key });
   if (!res) return;
   appState = res.state;
-  todayWk  = await api('/api/workout/today');
+  todayWk  = await api(`/api/workout/today?date=${todayISO()}`);
   renderToday();
 }
 
@@ -1340,7 +1345,7 @@ async function submitSession() {
 
   appState = res.state;
   const [wkRes, stRes, wlRes] = await Promise.all([
-    api('/api/workout/today'),
+    api(`/api/workout/today?date=${todayISO()}`),
     api('/api/streak'),
     api('/api/workouts'),
   ]);
