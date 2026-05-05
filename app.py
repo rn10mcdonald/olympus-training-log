@@ -226,21 +226,37 @@ async def select_track(req: Request, u: dict = CurrentUser):
     return {"status": "ok", "msg": msg, "state": state}
 
 
+# ── Date helper ──────────────────────────────────────────────────────────────
+
+def _local_today(p: dict) -> str:
+    """Return the client's local date (YYYY-MM-DD) from the request body.
+    Falls back to UTC server date when client_date is absent or malformed.
+    This avoids wrong-day bugs when the server (UTC) is ahead of the user's
+    local timezone (e.g. PT evening vs UTC next-day)."""
+    cd = (p.get("client_date") or "").strip()
+    if cd:
+        try:
+            dt.date.fromisoformat(cd)   # validate format — raises ValueError if bad
+            return cd
+        except ValueError:
+            pass
+    return str(dt.date.today())
+
+
 # ── Workout logging ───────────────────────────────────────────────────────────
 
 @app.post("/api/workout/recommended")
 async def log_recommended(req: Request, u: dict = CurrentUser):
-    weights_lbs = None
     try:
         p = await req.json()
-        weights_lbs = p.get("weights_lbs")
     except Exception:
-        pass
+        p = {}
+    weights_lbs = p.get("weights_lbs")
     uid   = u["user_id"]
     state = _load_training(uid)
     msg   = core.log_rec(state, weights_lbs=weights_lbs)
     _save_training(uid, state)
-    today = str(dt.date.today())
+    today = _local_today(p)
     if state.get("workouts"):
         last = state["workouts"][-1]
         db.insert_workout(uid, today, "recommended", 0,
@@ -257,7 +273,7 @@ async def log_custom(req: Request, u: dict = CurrentUser):
     state = _load_training(uid)
     msg   = core.log_custom(state, text)
     _save_training(uid, state)
-    db.insert_workout(uid, str(dt.date.today()), "custom", 0, notes=text[:200])
+    db.insert_workout(uid, _local_today(payload), "custom", 0, notes=text[:200])
     return {"status": "ok", "msg": msg, "state": state}
 
 @app.post("/api/ruck")
@@ -274,7 +290,7 @@ async def log_ruck(req: Request, u: dict = CurrentUser):
     state = _load_training(uid)
     msg   = core.log_ruck(state, miles, pounds)
     _save_training(uid, state)
-    db.insert_workout(uid, str(dt.date.today()), "rucking", 0,
+    db.insert_workout(uid, _local_today(p), "rucking", 0,
                       distance_miles=miles, weight_lbs=pounds or None,
                       duration_min=float(p.get("duration_min") or 0) or None)
     return {"status": "ok", "msg": msg, "state": state}
@@ -292,7 +308,7 @@ async def log_walk(req: Request, u: dict = CurrentUser):
     state = _load_training(uid)
     msg   = core.log_walk(state, miles)
     _save_training(uid, state)
-    db.insert_workout(uid, str(dt.date.today()), "walking", 0,
+    db.insert_workout(uid, _local_today(p), "walking", 0,
                       distance_miles=miles,
                       duration_min=float(p.get("duration_min") or 0) or None)
     return {"status": "ok", "msg": msg, "state": state}
@@ -316,7 +332,7 @@ async def log_run(req: Request, u: dict = CurrentUser):
     state = _load_training(uid)
     msg   = core.log_run(state, miles, pace)
     _save_training(uid, state)
-    db.insert_workout(uid, str(dt.date.today()), "running", 0,
+    db.insert_workout(uid, _local_today(p), "running", 0,
                       distance_miles=miles,
                       duration_min=float(p.get("duration_min") or 0) or None)
     return {"status": "ok", "msg": msg, "state": state}
@@ -333,7 +349,7 @@ async def log_strength(req: Request, u: dict = CurrentUser):
     if sets_n < 1 or reps_n < 1:
         raise HTTPException(400, "sets and reps must be at least 1")
     uid   = u["user_id"]
-    today = str(dt.date.today())
+    today = _local_today(p)
     db.insert_workout(uid, today, "strength", 0,
                       movement=movement, weight_kg=weight_kg,
                       sets=sets_n, reps=reps_n)
@@ -353,7 +369,7 @@ async def log_session(req: Request, u: dict = CurrentUser):
     state        = _load_training(uid)
     msg          = core.log_custom(state, notes or session_type)
     _save_training(uid, state)
-    db.insert_workout(uid, str(dt.date.today()), session_type, 0,
+    db.insert_workout(uid, _local_today(p), session_type, 0,
                       notes=notes[:200] if notes else None)
     return {"status": "ok", "msg": msg, "state": state}
 
