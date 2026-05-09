@@ -1845,76 +1845,25 @@ function renderPrograms() {
     return;
   }
 
-  const startISO = appState.program_start_iso;
+  const startISO   = appState.program_start_iso;
   const { programIdx, waveWeek } = _progInfoFromStart(startISO);
-  const progNum   = programIdx + 1;
-  const NAMES     = ['Foundation','Development','Performance'];
-  const WK_RANGES = ['Weeks 1–4','Weeks 5–8','Weeks 9–12'];
+  const progNum    = programIdx + 1;
+  const NAMES      = ['Foundation','Development','Performance'];
+  const WK_RANGES  = ['Weeks 1–4','Weeks 5–8','Weeks 9–12'];
+  const SLOGANS    = ['Learn the patterns.','Harder variations.','Athletic and powerful.'];
 
-  // Block start (Monday of current 4-week program)
-  const cycleStart = new Date(startISO + 'T00:00:00');
-  const blockStart = new Date(cycleStart);
+  // Current block start date (for header card)
+  const cycleStart  = new Date(startISO + 'T00:00:00');
+  const blockStart  = new Date(cycleStart);
   blockStart.setDate(blockStart.getDate() + programIdx * 28);
-
-  // Calendar start = 1 week before the block
-  const calStart = new Date(blockStart);
-  calStart.setDate(calStart.getDate() - 7);
 
   const todayStr = todayISO();
 
-  // Build workouts lookup map  {dateISO → [{duration_min,...}]}
+  // Workouts lookup map: {dateISO → [{duration_min,...}]}
   const wkMap = {};
   for (const w of allWorkouts) {
     (wkMap[w.date] = wkMap[w.date] || []).push(w);
   }
-
-  // ── Calendar grid ─────────────────────────────────────────────────────────
-  const DOW_HEADERS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-  let calHTML = `<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:4px">
-    ${DOW_HEADERS.map(h => `<div style="text-align:center;font-size:10px;font-weight:700;letter-spacing:.05em;color:var(--warm-gray);padding:3px 0;text-transform:uppercase">${h}</div>`).join('')}
-  </div>
-  <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:8px">`;
-
-  for (let week = 0; week < 5; week++) {
-    for (let dow = 0; dow < 7; dow++) {
-      const d = new Date(calStart);
-      d.setDate(d.getDate() + week * 7 + dow);
-      const dISO    = d.toLocaleDateString('en-CA');
-      const isToday = dISO === todayStr;
-      const isFuture= dISO > todayStr;
-      const isOut   = week === 0;   // pre-block week
-
-      const sessType = _DOW_TO_SESSION_JS[dow];
-      const info     = _SESSION_INFO[sessType] || { short:'?', color:'#999' };
-
-      const dayEntries = wkMap[dISO] || [];
-      const isLogged   = dayEntries.some(w => ['recommended','strength','mobility','cardio','run','ruck','walk'].includes(w.type));
-      const durMin     = dayEntries.find(w => w.duration_min)?.duration_min;
-
-      const classes = [
-        'cal-cell',
-        isToday  ? 'today'   : '',
-        isFuture ? 'future'  : '',
-        isOut    ? 'outside' : '',
-        isLogged ? 'logged'  : '',
-      ].filter(Boolean).join(' ');
-
-      const sessLabel = sessType === 'rest'
-        ? `<span class="cal-sess-lbl" style="color:var(--light-gray)">Rest</span>`
-        : `<span class="cal-sess-lbl" style="color:${info.color}">${info.short}</span>`;
-
-      const loggedLbl = isLogged
-        ? `<span class="cal-logged-lbl">${durMin ? durMin+'m' : '✓'}</span>`
-        : '';
-
-      calHTML += `<div class="${classes}" onclick="programsDayTap('${dISO}')">
-        <span class="cal-day-num">${d.getDate()}</span>
-        ${sessLabel}
-        ${loggedLbl}
-      </div>`;
-    }
-  }
-  calHTML += '</div>';
 
   // ── Legend ────────────────────────────────────────────────────────────────
   const legendItems = [
@@ -1924,35 +1873,128 @@ function renderPrograms() {
     { color:'#B85450', label:'C·Hard' },
     { color:'#7B5EA7', label:'D·DKB' },
   ];
-  const legendHTML = `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+  const legendHTML = `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
     ${legendItems.map(li => `<div style="display:flex;align-items:center;gap:3px;font-size:10px;color:var(--warm-gray)"><span style="width:8px;height:8px;border-radius:2px;background:${li.color};display:inline-block"></span>${li.label}</div>`).join('')}
   </div>`;
+
+  // ── Day-of-week header row (reused for each grid) ─────────────────────────
+  const DOW_HEADERS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const dowHeaderRow = `<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:3px">
+    ${DOW_HEADERS.map(h => `<div style="text-align:center;font-size:10px;font-weight:700;letter-spacing:.05em;color:var(--warm-gray);padding:2px 0;text-transform:uppercase">${h}</div>`).join('')}
+  </div>`;
+
+  // ── Build 3 program blocks ────────────────────────────────────────────────
+  let gridsHTML = '';
+
+  for (let pi = 0; pi < 3; pi++) {
+    const isCurrent    = pi === programIdx;
+    const isFutureProg = pi > programIdx;
+
+    const piBlockStart = new Date(cycleStart);
+    piBlockStart.setDate(piBlockStart.getDate() + pi * 28);
+
+    // Section header
+    const headerColor  = isCurrent ? 'var(--charcoal)' : 'var(--warm-gray)';
+    const currentBadge = isCurrent
+      ? `<span style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;background:var(--terracotta);color:#fff;padding:2px 8px;border-radius:100px">CURRENT</span>`
+      : '';
+
+    gridsHTML += `
+    <div style="margin-bottom:6px">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:1px">
+        <div style="font-size:15px;font-weight:700;color:${headerColor}">Program ${pi+1} · ${NAMES[pi]}</div>
+        ${currentBadge}
+      </div>
+      <div style="font-size:12px;color:var(--warm-gray);margin-bottom:10px">${WK_RANGES[pi]} &nbsp;·&nbsp; ${SLOGANS[pi]}</div>
+    </div>
+    ${dowHeaderRow}
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:8px">`;
+
+    for (let week = 0; week < 4; week++) {
+      for (let dow = 0; dow < 7; dow++) {
+        const d    = new Date(piBlockStart);
+        d.setDate(d.getDate() + week * 7 + dow);
+        const dISO    = d.toLocaleDateString('en-CA');
+        const isToday = dISO === todayStr;
+
+        const sessType = _DOW_TO_SESSION_JS[dow];
+        const info     = _SESSION_INFO[sessType] || { short:'?', color:'#999' };
+
+        const dayEntries = wkMap[dISO] || [];
+        const isLogged   = dayEntries.some(w => ['recommended','strength','mobility','cardio','run','ruck','walk'].includes(w.type));
+        const durMin     = dayEntries.find(w => w.duration_min)?.duration_min;
+
+        // Opacity: future program = 0.35 | current-prog future days = 0.7 | else 1
+        const opacity = isFutureProg ? '0.35' : (dISO > todayStr ? '0.7' : '1');
+
+        // Session label color: future programs get warm-gray (no color)
+        let sessLabel;
+        if (sessType === 'rest') {
+          sessLabel = `<span class="cal-sess-lbl" style="color:var(--light-gray)">Rest</span>`;
+        } else if (isFutureProg) {
+          sessLabel = `<span class="cal-sess-lbl" style="color:var(--warm-gray)">${info.short}</span>`;
+        } else {
+          sessLabel = `<span class="cal-sess-lbl" style="color:${info.color}">${info.short}</span>`;
+        }
+
+        const loggedLbl = isLogged
+          ? `<span class="cal-logged-lbl">${durMin ? Math.round(durMin)+'m' : '✓'}</span>`
+          : '';
+
+        const todayId  = isToday ? 'id="cal-today-cell"' : '';
+        const border   = isToday ? 'border:2px solid var(--terracotta)' : 'border:1.5px solid var(--border)';
+        const bgColor  = isLogged ? '#F2FBF3' : '#fff';
+
+        gridsHTML += `<div ${todayId} class="cal-cell${isLogged ? ' logged' : ''}"
+          style="opacity:${opacity};${border};background:${bgColor}"
+          onclick="programsDayTap('${dISO}',${pi})">
+          <span class="cal-day-num">${d.getDate()}</span>
+          ${sessLabel}
+          ${loggedLbl}
+        </div>`;
+      }
+    }
+
+    gridsHTML += `</div>
+    <div id="programs-day-detail-${pi}"></div>`;
+
+    // Divider between program blocks
+    if (pi < 2) {
+      gridsHTML += `<div style="border-top:1px solid var(--border);margin:18px 0 16px"></div>`;
+    }
+  }
 
   el.innerHTML = `
 <div class="card" style="margin-bottom:12px">
   <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--warm-gray);margin-bottom:4px">Current Program</div>
   <div style="font-size:22px;font-family:'DM Serif Display',serif;color:var(--charcoal);margin-bottom:2px">Program ${progNum} · ${NAMES[programIdx]}</div>
   <div style="font-size:13px;color:var(--warm-gray)">${WK_RANGES[programIdx]} &nbsp;·&nbsp; Wave week ${waveWeek} of 4</div>
-  <div style="font-size:12px;color:var(--light-gray);margin-top:6px">Started ${new Date(blockStart.getTime()).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</div>
+  <div style="font-size:12px;color:var(--light-gray);margin-top:6px">Started ${blockStart.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</div>
 </div>
 
 <div class="card">
-  <div style="font-size:13px;font-weight:600;color:var(--charcoal);margin-bottom:10px">5-Week Overview
-    <span style="font-size:11px;font-weight:400;color:var(--light-gray);margin-left:6px">tap a day for details</span>
+  <div style="font-size:13px;font-weight:600;color:var(--charcoal);margin-bottom:10px">12-Week Journey
+    <span style="font-size:11px;font-weight:400;color:var(--light-gray);margin-left:6px">tap any day for details</span>
   </div>
   ${legendHTML}
-  ${calHTML}
-  <div id="programs-day-detail"></div>
-</div>
-
-<div class="card">
-  <div class="card-title">About This Program</div>
-  <div style="font-size:13px;color:var(--warm-gray);line-height:1.65">${_aboutProgram(programIdx)}</div>
+  ${gridsHTML}
 </div>`;
+
+  // Auto-scroll to current week after paint
+  requestAnimationFrame(() => {
+    const cell = document.getElementById('cal-today-cell');
+    if (cell) cell.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
 }
 
-async function programsDayTap(dateStr) {
-  const el = document.getElementById('programs-day-detail');
+async function programsDayTap(dateStr, progIdx) {
+  // Clear all three detail containers except the one we're about to use
+  for (let i = 0; i < 3; i++) {
+    const d = document.getElementById(`programs-day-detail-${i}`);
+    if (d && i !== progIdx) d.innerHTML = '';
+  }
+
+  const el = document.getElementById(`programs-day-detail-${progIdx}`);
   if (!el) return;
 
   // Toggle off if same cell tapped twice
@@ -1974,7 +2016,7 @@ async function programsDayTap(dateStr) {
   const dateLabel = d.toLocaleDateString('en-US', { weekday:'long', month:'short', day:'numeric' });
   const dow       = d.getDay() === 0 ? 6 : d.getDay() - 1; // 0=Mon
 
-  const closeBtn = `<button onclick="_programsSelectedDate=null;document.getElementById('programs-day-detail').innerHTML=''"
+  const closeBtn = `<button onclick="_programsSelectedDate=null;document.getElementById('programs-day-detail-${progIdx}').innerHTML=''"
     style="float:right;background:none;border:none;font-size:20px;color:var(--light-gray);cursor:pointer;line-height:1;padding:0 2px">×</button>`;
 
   let html = `<div style="border-top:1px solid var(--border);margin-top:14px;padding-top:12px">${closeBtn}
@@ -2011,18 +2053,17 @@ async function programsDayTap(dateStr) {
     }
 
     // Logged indicator
-    const wkMap = {};
-    for (const w of allWorkouts) { (wkMap[w.date] = wkMap[w.date] || []).push(w); }
-    const logged = (wkMap[dateStr] || []).filter(w => ['recommended','strength','mobility','cardio','run','ruck','walk'].includes(w.type));
+    const wkMapLocal = {};
+    for (const w of allWorkouts) { (wkMapLocal[w.date] = wkMapLocal[w.date] || []).push(w); }
+    const logged = (wkMapLocal[dateStr] || []).filter(w => ['recommended','strength','mobility','cardio','run','ruck','walk'].includes(w.type));
     if (logged.length) {
       const durMin = logged.find(w => w.duration_min)?.duration_min;
-      html += `<div style="font-size:12px;color:#7A9E7E;font-weight:600;margin-top:8px">✓ Logged${durMin ? ` · ${durMin} min` : ''}</div>`;
+      html += `<div style="font-size:12px;color:#7A9E7E;font-weight:600;margin-top:8px">✓ Logged${durMin ? ` · ${Math.round(durMin)} min` : ''}</div>`;
     }
   }
 
   html += '</div>';
   el.innerHTML = html;
-  // Scroll day detail into view
   el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
