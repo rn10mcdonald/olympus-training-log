@@ -288,7 +288,7 @@ async def log_ruck(req: Request, u: dict = CurrentUser):
         raise HTTPException(400, "miles must be positive")
     uid   = u["user_id"]
     state = _load_training(uid)
-    msg   = core.log_ruck(state, miles, pounds)
+    msg   = core.log_ruck(state, miles, pounds, today_str=_local_today(p))
     _save_training(uid, state)
     db.insert_workout(uid, _local_today(p), "rucking", 0,
                       distance_miles=miles, weight_lbs=pounds or None,
@@ -306,7 +306,7 @@ async def log_walk(req: Request, u: dict = CurrentUser):
         raise HTTPException(400, "miles must be positive")
     uid   = u["user_id"]
     state = _load_training(uid)
-    msg   = core.log_walk(state, miles)
+    msg   = core.log_walk(state, miles, today_str=_local_today(p))
     _save_training(uid, state)
     db.insert_workout(uid, _local_today(p), "walking", 0,
                       distance_miles=miles,
@@ -330,7 +330,7 @@ async def log_run(req: Request, u: dict = CurrentUser):
             pace = None
     uid   = u["user_id"]
     state = _load_training(uid)
-    msg   = core.log_run(state, miles, pace)
+    msg   = core.log_run(state, miles, pace, today_str=_local_today(p))
     _save_training(uid, state)
     db.insert_workout(uid, _local_today(p), "running", 0,
                       distance_miles=miles,
