@@ -1882,9 +1882,10 @@ def log_custom(state: dict, text: str) -> str:
     return f"Custom workout logged: {text[:80]}"
 
 
-def log_ruck(state: dict, miles: float, pounds: float) -> str:
+def log_ruck(state: dict, miles: float, pounds: float,
+             today_str: str | None = None) -> str:
     state["ruck_log"].append({
-        "date":           str(dt.date.today()),
+        "date":           today_str or str(dt.date.today()),
         "distance_miles": miles,
         "weight_lbs":     pounds,
     })
@@ -1894,8 +1895,9 @@ def log_ruck(state: dict, miles: float, pounds: float) -> str:
     return f"Ruck logged: {miles:.1f} mi @ {pounds:.0f} lbs"
 
 
-def log_run(state: dict, miles: float, pace: float | None = None) -> str:
-    entry: dict = {"date": str(dt.date.today()), "distance_miles": miles}
+def log_run(state: dict, miles: float, pace: float | None = None,
+            today_str: str | None = None) -> str:
+    entry: dict = {"date": today_str or str(dt.date.today()), "distance_miles": miles}
     if pace is not None:
         entry["pace_min_per_mile"] = pace
     state.setdefault("run_log", []).append(entry)
@@ -1905,9 +1907,10 @@ def log_run(state: dict, miles: float, pace: float | None = None) -> str:
     return f"Run logged: {miles:.1f} mi"
 
 
-def log_walk(state: dict, miles: float) -> str:
+def log_walk(state: dict, miles: float,
+             today_str: str | None = None) -> str:
     state.setdefault("walk_log", []).append({
-        "date":           str(dt.date.today()),
+        "date":           today_str or str(dt.date.today()),
         "distance_miles": miles,
     })
     state["total_walk_miles"] = state.get("total_walk_miles", 0.0) + miles
