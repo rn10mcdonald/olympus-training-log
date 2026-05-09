@@ -990,7 +990,7 @@ function _renderRestDisplay() {
 function getMovementSlug(labelText) {
   if (!labelText) return null;
   for (const [name, slug] of Object.entries(movementSlugMap)) {
-    if (labelText.startsWith(name)) return slug;
+    if (labelText.includes(name)) return slug;
   }
   return null;
 }
