@@ -735,6 +735,12 @@ let sessionItems     = [];
 let todayLogged      = false;
 let activeDayPreview = null;
 
+// ── Workout Timer & Rest Timer state ─────────────────────────────────────────
+let _wtInterval    = null;   // display tick (setInterval handle)
+let _wtKaInterval  = null;   // keep-alive ping (setInterval handle)
+let _restInterval  = null;   // rest countdown (setInterval handle)
+let _restRemaining = 0;      // rest seconds remaining
+
 // ── Boot ──────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
   if ('serviceWorker' in navigator)
@@ -839,6 +845,118 @@ function recomputeThisWeekDays() {
       .filter(w => { const d = new Date(w.date + 'T00:00:00'); return d >= _m && d <= _s; })
       .map(w => w.date)
   );
+}
+
+// ── Workout Timer helpers ─────────────────────────────────────────────────────
+function _wtState()   { return JSON.parse(localStorage.getItem('fb_wt') || '{}'); }
+function _wtSave(obj) { localStorage.setItem('fb_wt', JSON.stringify(obj)); }
+
+function _wtElapsed() {
+  const s = _wtState();
+  if (!s.running || !s.startTime) return s.elapsed || 0;
+  return Math.floor((Date.now() - s.startTime) / 1000);
+}
+
+function _wtFmt(sec) {
+  return `${Math.floor(sec/60).toString().padStart(2,'0')}:${(sec%60).toString().padStart(2,'0')}`;
+}
+
+function _wtTick() {
+  const el = document.getElementById('wt-display');
+  if (!el) { clearInterval(_wtInterval); _wtInterval = null; return; }
+  el.textContent = _wtFmt(_wtElapsed());
+}
+
+function _wtResume() {
+  clearInterval(_wtInterval);   _wtInterval   = null;
+  clearInterval(_wtKaInterval); _wtKaInterval = null;
+  const s = _wtState();
+  if (!s.running || !s.startTime) return;
+  _wtInterval   = setInterval(_wtTick, 1000);
+  _wtKaInterval = setInterval(() => fetch('/api/version').catch(() => {}), 4 * 60 * 1000);
+}
+
+function _updateTimersCard() {
+  const s       = _wtState();
+  const running = !!(s.running && s.startTime);
+  const elapsed = running ? _wtElapsed() : (s.elapsed || 0);
+  const complete = s.complete && !running;
+
+  const wtDisplay = document.getElementById('wt-display');
+  if (wtDisplay) {
+    if (complete) {
+      const mins = Math.round(elapsed / 60);
+      wtDisplay.innerHTML = `<span style="font-family:'DM Sans',sans-serif;font-size:16px;color:#7A9E7E;font-weight:600">Workout complete — ${mins} min ✓</span>`;
+    } else {
+      wtDisplay.textContent = _wtFmt(elapsed);
+    }
+  }
+
+  const wtBtn = document.getElementById('wt-btn');
+  if (wtBtn) {
+    if (running) {
+      wtBtn.textContent      = 'End Workout';
+      wtBtn.style.background = 'var(--warm-gray)';
+      wtBtn.setAttribute('onclick', 'endWorkoutTimer()');
+    } else {
+      wtBtn.textContent      = complete ? 'Start New Workout' : 'Start Workout';
+      wtBtn.style.background = 'var(--terracotta)';
+      wtBtn.setAttribute('onclick', 'startWorkoutTimer()');
+    }
+  }
+}
+
+function startWorkoutTimer() {
+  _wtSave({ running: true, startTime: Date.now(), elapsed: 0, complete: false });
+  _wtResume();
+  _updateTimersCard();
+}
+
+function endWorkoutTimer() {
+  const elapsed = _wtElapsed();
+  clearInterval(_wtInterval);   _wtInterval   = null;
+  clearInterval(_wtKaInterval); _wtKaInterval = null;
+  _wtSave({ running: false, startTime: null, elapsed, complete: true });
+  _updateTimersCard();
+}
+
+// ── Rest Timer helpers ────────────────────────────────────────────────────────
+function expandRestTimer() {
+  const col = document.getElementById('rest-collapsed');
+  const exp = document.getElementById('rest-expanded');
+  if (col) col.style.display = 'none';
+  if (exp) exp.style.display = '';
+}
+
+function cancelRestTimer() {
+  clearInterval(_restInterval); _restInterval = null;
+  _restRemaining = 0;
+  const col = document.getElementById('rest-collapsed');
+  const exp = document.getElementById('rest-expanded');
+  if (col) col.style.display = '';
+  if (exp) exp.style.display = 'none';
+}
+
+function startRestTimer(seconds) {
+  clearInterval(_restInterval);
+  _restRemaining = seconds;
+  _renderRestDisplay();
+  _restInterval = setInterval(() => {
+    _restRemaining = Math.max(0, _restRemaining - 1);
+    _renderRestDisplay();
+    if (_restRemaining <= 0) {
+      clearInterval(_restInterval); _restInterval = null;
+      if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+      const rd = document.getElementById('rest-display');
+      if (rd) rd.innerHTML = `<span style="font-family:'DM Sans',sans-serif;font-size:16px;color:var(--terracotta);font-weight:600">Rest complete — go!</span>`;
+      setTimeout(cancelRestTimer, 3000);
+    }
+  }, 1000);
+}
+
+function _renderRestDisplay() {
+  const rd = document.getElementById('rest-display');
+  if (rd) rd.textContent = _wtFmt(_restRemaining);
 }
 
 function getMovementSlug(labelText) {
@@ -957,9 +1075,11 @@ function renderToday() {
   } else {
     html += renderTrackSelector('Choose Your Training Day');
   }
+  html += renderTimersCard();
   html += renderStreakCard();
   html += renderQuickCardio();
   content.innerHTML = html;
+  _wtResume();   // restart display ticker if workout timer was already running
 }
 
 function badgeClass(trackKey) {
@@ -1073,6 +1193,50 @@ async function selectTrack(key) {
   appState = res.state;
   todayWk  = await api(`/api/workout/today?date=${todayISO()}`);
   renderToday();
+}
+
+function renderTimersCard() {
+  const s       = _wtState();
+  const running = !!(s.running && s.startTime);
+  const elapsed = running ? _wtElapsed() : (s.elapsed || 0);
+  const complete = s.complete && !running;
+
+  let wtHTML;
+  if (complete) {
+    const mins = Math.round(elapsed / 60);
+    wtHTML = `<span style="font-family:'DM Sans',sans-serif;font-size:16px;color:#7A9E7E;font-weight:600">Workout complete — ${mins} min ✓</span>`;
+  } else {
+    wtHTML = _wtFmt(elapsed);
+  }
+
+  const btnStyle = running
+    ? 'background:var(--warm-gray);color:#fff'
+    : 'background:var(--terracotta);color:#fff';
+  const btnText  = running ? 'End Workout' : (complete ? 'Start New Workout' : 'Start Workout');
+  const btnClick = running ? 'endWorkoutTimer()' : 'startWorkoutTimer()';
+
+  return `
+<div class="card" id="timers-card">
+  <div style="font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--warm-gray);margin-bottom:14px;text-transform:uppercase">TIMERS</div>
+  <div id="wt-display" style="font-family:'JetBrains Mono',monospace;font-size:48px;font-weight:400;color:var(--charcoal);line-height:1;margin-bottom:14px;text-align:center">${wtHTML}</div>
+  <div style="margin-bottom:16px">
+    <button id="wt-btn" class="btn btn-full" style="${btnStyle}" onclick="${btnClick}">${btnText}</button>
+  </div>
+  <div id="rest-timer-section">
+    <div id="rest-collapsed">
+      <a href="#" class="btn-text" onclick="event.preventDefault();expandRestTimer()" style="font-size:13px;color:var(--warm-gray)">Rest timer</a>
+    </div>
+    <div id="rest-expanded" style="display:none">
+      <div id="rest-display" style="font-family:'JetBrains Mono',monospace;font-size:36px;color:var(--terracotta);text-align:center;margin-bottom:10px;line-height:1">--:--</div>
+      <div style="display:flex;gap:6px;justify-content:center;align-items:center">
+        <button class="pill-btn" onclick="startRestTimer(60)">60s</button>
+        <button class="pill-btn" onclick="startRestTimer(90)">90s</button>
+        <button class="pill-btn" onclick="startRestTimer(120)">2 min</button>
+        <button onclick="cancelRestTimer()" style="background:none;border:none;font-size:12px;color:var(--light-gray);cursor:pointer;padding:4px 8px;font-family:'DM Sans',sans-serif">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>`;
 }
 
 function renderStreakCard() {
@@ -1330,6 +1494,9 @@ async function submitSession() {
   const btn = document.getElementById('complete-btn');
   btn.disabled = true; btn.textContent = 'Logging…';
 
+  // Capture timer elapsed NOW — before any await, timer still running
+  const durationSecs = _wtElapsed();
+
   // ── Snapshot form values NOW, before any await (sheet is still open) ──────
   const weights_lbs  = {};
   const exerciseSnap = sessionItems.map((item, idx) => {
@@ -1340,9 +1507,21 @@ async function submitSession() {
     return { label: item.label, kg, sets, reps };
   });
 
-  const res = await api('/api/workout/recommended', 'POST', { weights_lbs, client_date: todayISO() });
+  const res = await api('/api/workout/recommended', 'POST', {
+    weights_lbs,
+    client_date: todayISO(),
+    ...(durationSecs > 0 ? { duration_seconds: durationSecs } : {}),
+  });
   btn.disabled = false; btn.textContent = 'Complete Session';
   if (!res) { showToast('Error logging session'); return; }
+
+  // Auto-stop workout timer on successful session submit
+  if (_wtState().running) {
+    const elapsed = _wtElapsed();
+    clearInterval(_wtInterval);   _wtInterval   = null;
+    clearInterval(_wtKaInterval); _wtKaInterval = null;
+    _wtSave({ running: false, startTime: null, elapsed, complete: true });
+  }
 
   // ── Per-exercise strength rows — serial loop, try/catch per entry ─────────
   for (const ex of exerciseSnap) {
@@ -1528,7 +1707,7 @@ function renderLogContent() {
           <div class="entry-left">
             <div class="entry-type ${tc}">${typeLabel(w)}</div>
             <div class="entry-detail">${x(entryDetail(w))}</div>
-            ${w.duration_min ? `<div class="entry-meta">${w.duration_min} min</div>` : ''}
+            ${w.duration_min ? `<div class="entry-meta">${fmtDuration(w.duration_min)}</div>` : ''}
           </div>
           <button class="delete-btn" onclick="deleteWorkout(event,${w.id})">✕</button>
         </div>`;
@@ -1683,6 +1862,15 @@ function filterLibrary(q) {
 }
 
 // ── Utilities ─────────────────────────────────────────────────────────────────
+function fmtDuration(min) {
+  if (!min) return '';
+  const rounded = Math.round(parseFloat(min));
+  if (rounded < 60) return `${rounded} min`;
+  const h = Math.floor(rounded / 60);
+  const m = rounded % 60;
+  return m > 0 ? `${h} hr ${m} min` : `${h} hr`;
+}
+
 function x(s) {
   if (!s) return '';
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
