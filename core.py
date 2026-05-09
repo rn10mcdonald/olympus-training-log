@@ -1945,9 +1945,9 @@ def get_streak_info(state: dict) -> dict:
     curr_key  = _week_key(today)
     this_week = len(week_days.get(curr_key, set()))
 
-    # Count consecutive completed weeks going back from last week
+    # Count consecutive fully-completed past weeks (current week excluded)
     streak_weeks = 0
-    check = today - dt.timedelta(weeks=1)
+    check = today - dt.timedelta(weeks=1)   # start from last week
     while True:
         k = _week_key(check)
         if len(week_days.get(k, set())) >= WK_TARGET:
@@ -1955,8 +1955,8 @@ def get_streak_info(state: dict) -> dict:
             check -= dt.timedelta(weeks=1)
         else:
             break
-    if this_week >= WK_TARGET:
-        streak_weeks += 1
+    # Current week contributes to this_week / activities_remaining only —
+    # it is NOT added to streak_weeks until it becomes a past week.
 
     last_week_date = today - dt.timedelta(weeks=1)
     last_week_hit  = len(week_days.get(_week_key(last_week_date), set())) >= WK_TARGET
