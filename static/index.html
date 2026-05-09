@@ -1381,7 +1381,11 @@ async function submitCustomWorkout() {
   const res = await api('/api/workout/custom', 'POST', { text, client_date: todayISO() });
   if (!res) { showToast('Error logging'); return; }
   appState = res.state;
-  streakInfo = await api('/api/streak');
+  const [stRes, wlRes] = await Promise.all([api('/api/streak'), api('/api/workouts')]);
+  if (stRes) streakInfo  = stRes;
+  if (wlRes) allWorkouts = wlRes.workouts || [];
+  recomputeThisWeekDays();
+  todayLogged = checkTodayLogged();
   document.getElementById('custom-text').value = '';
   closeCustomSheet();
   renderToday();
@@ -1438,6 +1442,7 @@ async function submitCardio() {
   if (stRes) streakInfo  = stRes;
   if (wlRes) allWorkouts = wlRes.workouts || [];
   recomputeThisWeekDays();
+  todayLogged = checkTodayLogged();
   closeCardioSheet();
   renderToday();
   showToast(`${cardioType.charAt(0).toUpperCase() + cardioType.slice(1)} logged ✓`);
