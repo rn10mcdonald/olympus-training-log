@@ -982,8 +982,13 @@ function badgeLabel(wk) {
   return wk.track_name || 'Session';
 }
 
+function parseMainWeight(mainStr) {
+  const match = mainStr ? mainStr.match(/@\s*(\d+)\s*kg/i) : null;
+  return match ? parseInt(match[1]) : null;
+}
+
 function renderSessionCard(wk) {
-  const sw  = wk.suggested_weight || wk.std_kg || 16;
+  const sw  = parseMainWeight(wk.main) || wk.suggested_weight || wk.std_kg || 16;
   const fbb = wk.full_body_block || [];
   const fw  = wk.focus_work || [];
   const arms = wk.arms || [];
