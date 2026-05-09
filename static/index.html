@@ -221,6 +221,19 @@ main {
   transition:all .15s;
 }
 .pill-btn.active,.pill-btn:hover { background:var(--terracotta); border-color:var(--terracotta); color:#fff; }
+.rest-pill {
+  background:#fff;
+  border:1.5px solid var(--terracotta);
+  border-radius:100px;
+  padding:8px 16px;
+  font-size:14px;
+  font-weight:500;
+  color:var(--terracotta);
+  font-family:'DM Sans',sans-serif;
+  cursor:pointer;
+  transition:all .15s;
+}
+.rest-pill:hover,.rest-pill:active { background:var(--terracotta-bg); }
 
 /* ── Session card ────────────────────────────────────────────────────────── */
 .week-label { font-size:13px; color:var(--warm-gray); margin-bottom:4px; }
@@ -740,6 +753,7 @@ let _wtInterval    = null;   // display tick (setInterval handle)
 let _wtKaInterval  = null;   // keep-alive ping (setInterval handle)
 let _restInterval  = null;   // rest countdown (setInterval handle)
 let _restRemaining = 0;      // rest seconds remaining
+let _restActive    = false;  // true while countdown is ticking
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
@@ -904,6 +918,10 @@ function _updateTimersCard() {
       wtBtn.setAttribute('onclick', 'startWorkoutTimer()');
     }
   }
+
+  // Rest pills: visible only when workout timer is running and no countdown active
+  const restPills = document.getElementById('rest-pills-section');
+  if (restPills) restPills.style.display = (running && !_restActive) ? '' : 'none';
 }
 
 function startWorkoutTimer() {
@@ -916,30 +934,34 @@ function endWorkoutTimer() {
   const elapsed = _wtElapsed();
   clearInterval(_wtInterval);   _wtInterval   = null;
   clearInterval(_wtKaInterval); _wtKaInterval = null;
+  // Also cancel any active rest countdown
+  clearInterval(_restInterval); _restInterval = null;
+  _restActive = false; _restRemaining = 0;
   _wtSave({ running: false, startTime: null, elapsed, complete: true });
   _updateTimersCard();
+  const restCountdown = document.getElementById('rest-countdown-section');
+  if (restCountdown) restCountdown.style.display = 'none';
 }
 
 // ── Rest Timer helpers ────────────────────────────────────────────────────────
-function expandRestTimer() {
-  const col = document.getElementById('rest-collapsed');
-  const exp = document.getElementById('rest-expanded');
-  if (col) col.style.display = 'none';
-  if (exp) exp.style.display = '';
-}
-
 function cancelRestTimer() {
   clearInterval(_restInterval); _restInterval = null;
   _restRemaining = 0;
-  const col = document.getElementById('rest-collapsed');
-  const exp = document.getElementById('rest-expanded');
-  if (col) col.style.display = '';
-  if (exp) exp.style.display = 'none';
+  _restActive = false;
+  const pills     = document.getElementById('rest-pills-section');
+  const countdown = document.getElementById('rest-countdown-section');
+  if (countdown) countdown.style.display = 'none';
+  if (pills && _wtState().running) pills.style.display = '';
 }
 
 function startRestTimer(seconds) {
   clearInterval(_restInterval);
   _restRemaining = seconds;
+  _restActive = true;
+  const pills     = document.getElementById('rest-pills-section');
+  const countdown = document.getElementById('rest-countdown-section');
+  if (pills)     pills.style.display = 'none';
+  if (countdown) countdown.style.display = '';
   _renderRestDisplay();
   _restInterval = setInterval(() => {
     _restRemaining = Math.max(0, _restRemaining - 1);
@@ -948,8 +970,14 @@ function startRestTimer(seconds) {
       clearInterval(_restInterval); _restInterval = null;
       if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
       const rd = document.getElementById('rest-display');
-      if (rd) rd.innerHTML = `<span style="font-family:'DM Sans',sans-serif;font-size:16px;color:var(--terracotta);font-weight:600">Rest complete — go!</span>`;
-      setTimeout(cancelRestTimer, 3000);
+      if (rd) rd.innerHTML = `<span style="font-family:'DM Sans',sans-serif;font-size:22px;font-weight:700;color:var(--terracotta)">Go!</span>`;
+      setTimeout(() => {
+        _restActive = false;
+        const p = document.getElementById('rest-pills-section');
+        const c = document.getElementById('rest-countdown-section');
+        if (c) c.style.display = 'none';
+        if (p && _wtState().running) p.style.display = '';
+      }, 2000);
     }
   }, 1000);
 }
@@ -1219,21 +1247,21 @@ function renderTimersCard() {
 <div class="card" id="timers-card">
   <div style="font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--warm-gray);margin-bottom:14px;text-transform:uppercase">TIMERS</div>
   <div id="wt-display" style="font-family:'JetBrains Mono',monospace;font-size:48px;font-weight:400;color:var(--charcoal);line-height:1;margin-bottom:14px;text-align:center">${wtHTML}</div>
-  <div style="margin-bottom:16px">
+  <div style="margin-bottom:12px">
     <button id="wt-btn" class="btn btn-full" style="${btnStyle}" onclick="${btnClick}">${btnText}</button>
   </div>
-  <div id="rest-timer-section">
-    <div id="rest-collapsed">
-      <a href="#" class="btn-text" onclick="event.preventDefault();expandRestTimer()" style="font-size:13px;color:var(--warm-gray)">Rest timer</a>
+  <div id="rest-pills-section" style="${running && !_restActive ? '' : 'display:none'}">
+    <div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap">
+      <button class="rest-pill" onclick="startRestTimer(30)">30s</button>
+      <button class="rest-pill" onclick="startRestTimer(60)">60s</button>
+      <button class="rest-pill" onclick="startRestTimer(90)">90s</button>
+      <button class="rest-pill" onclick="startRestTimer(120)">2 min</button>
     </div>
-    <div id="rest-expanded" style="display:none">
-      <div id="rest-display" style="font-family:'JetBrains Mono',monospace;font-size:36px;color:var(--terracotta);text-align:center;margin-bottom:10px;line-height:1">--:--</div>
-      <div style="display:flex;gap:6px;justify-content:center;align-items:center">
-        <button class="pill-btn" onclick="startRestTimer(60)">60s</button>
-        <button class="pill-btn" onclick="startRestTimer(90)">90s</button>
-        <button class="pill-btn" onclick="startRestTimer(120)">2 min</button>
-        <button onclick="cancelRestTimer()" style="background:none;border:none;font-size:12px;color:var(--light-gray);cursor:pointer;padding:4px 8px;font-family:'DM Sans',sans-serif">Cancel</button>
-      </div>
+  </div>
+  <div id="rest-countdown-section" style="display:none">
+    <div id="rest-display" style="font-family:'JetBrains Mono',monospace;font-size:36px;color:var(--terracotta);text-align:center;margin-bottom:6px;line-height:1">00:00</div>
+    <div style="text-align:center">
+      <button onclick="cancelRestTimer()" style="background:none;border:none;font-size:13px;color:var(--light-gray);cursor:pointer;padding:4px 10px;font-family:'DM Sans',sans-serif">× cancel</button>
     </div>
   </div>
 </div>`;
@@ -1416,6 +1444,7 @@ function _parsePrescription(text) {
 }
 
 function _renderSessionBody() {
+  const elapsedMin = _wtElapsed() > 0 ? Math.round(_wtElapsed() / 60) : '';
   document.getElementById('sheet-body').innerHTML = sessionItems.map((item, idx) => {
     const hint = (item.sets && item.reps)
       ? `Prescribed: ${item.sets}×${item.reps}${item.prescribedKg ? ` @ ${item.prescribedKg} kg` : ''}`
@@ -1433,7 +1462,18 @@ function _renderSessionBody() {
         <div class="ex-field"><label>reps</label><input type="number" id="reps-${idx}" min="0" step="1" value="${item.reps || ''}" placeholder="${item.reps || '—'}"></div>
       </div>
     </div>`;
-  }).join('');
+  }).join('') + `
+  <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:16px">
+    <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--warm-gray);margin-bottom:8px">WORKOUT DURATION</div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <input type="number" id="session-duration-min" min="0" step="1" value="${elapsedMin}"
+        placeholder="—" inputmode="numeric"
+        style="width:80px;text-align:center;font-size:22px;font-family:'JetBrains Mono',monospace;
+               padding:8px 12px;border:1.5px solid var(--border);border-radius:10px;
+               background:#fff;color:var(--charcoal)">
+      <span style="font-size:15px;color:var(--warm-gray)">min</span>
+    </div>
+  </div>`;
 }
 
 async function _fillMovementHistory() {
@@ -1494,8 +1534,9 @@ async function submitSession() {
   const btn = document.getElementById('complete-btn');
   btn.disabled = true; btn.textContent = 'Logging…';
 
-  // Capture timer elapsed NOW — before any await, timer still running
-  const durationSecs = _wtElapsed();
+  // Read duration from the editable form field (pre-filled from timer, user-correctable)
+  const _durMin  = parseInt(document.getElementById('session-duration-min')?.value) || 0;
+  const durationSecs = _durMin > 0 ? _durMin * 60 : 0;
 
   // ── Snapshot form values NOW, before any await (sheet is still open) ──────
   const weights_lbs  = {};
