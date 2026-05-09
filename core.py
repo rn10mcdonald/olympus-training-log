@@ -300,28 +300,21 @@ PROGRAM_1 = {
     },
 
     "strength_d": {
-        "name":  "Strength D — Saturday KB + Mobility",
-        "focus": "Heavy compounds + mobility work + KB flow",
+        "name":  "Strength D — Saturday Heavy Lift + Skill",
+        "focus": "Heavy KB deadlift, technique skill, injury prevention, mobility",
         "note":  "Optional. Do it if you have energy. Skip guilt-free if not.",
         "weeks": {
             1: {
-                "label": "Week 1 — Double KB introduction + hip mobility.",
-                "main":  "Double KB Deadlift 5×5 @ 16 kg/bell  (lat tension before pull)",
+                "label": "Week 1 — Heavy pull introduction + overhead skill.",
+                "main":  "Double KB Deadlift 5×3 @ 16 kg/bell  (lat tension before pull — own the lockout)",
                 "full_body": [
-                    "Single-KB Clean + Press 3×5/side @ 12 kg  [PUSH]",
-                    "Double KB Front Squat 3×6 @ 12 kg/bell  [LOWER]",
-                    "Push-Up 3×10  [PUSH]",
-                    "Dead Bug 3×10/side  [CORE]",
+                    "Dowel Rod Overhead Squat 3×8  (broom or dowel — ankles, hips, shoulders all open)",
                 ],
                 "focus": [
-                    "Two-Hand KB Hip Thrust 3×12 @ 16 kg  (glute)",
-                    "Single-Leg Glute Bridge 3×12/leg @ BW  (unilateral)",
-                    "Banded Hip Abduction 3×15/side",
+                    "Band Pull-Apart 3×20  (horizontal pull — rear delt + mid-trap)",
+                    "Wall Slide 3×10  (arms slide up wall — scapular upward rotation)",
                 ],
-                "arms": [
-                    "KB Hammer Curl 3×12 @ 8 kg",
-                    "KB Overhead Tricep Extension 3×12 @ 8 kg",
-                ],
+                "arms": [],
                 "mobility_block": [
                     "90/90 Hip Switch 2×10",
                     "World's Greatest Stretch 2×5/side",
@@ -335,23 +328,16 @@ PROGRAM_1 = {
                 ),
             },
             2: {
-                "label": "Week 2 — Heavier deadlift + thoracic mobility.",
-                "main":  "Double KB Deadlift 5×5 @ 20 kg/bell  (↑ load)",
+                "label": "Week 2 — Heavier pull + overhead depth.",
+                "main":  "Double KB Deadlift 5×3 @ 20 kg/bell  (↑ load — brace hard before the pull)",
                 "full_body": [
-                    "Single-KB Clean + Press 3×6/side @ 12 kg  [PUSH]",
-                    "Double KB Front Squat 4×6 @ 12 kg/bell  [LOWER — add a set]",
-                    "Push-Up 3×12  [PUSH]",
-                    "Hollow Rock 3×15  [CORE]",
+                    "Dowel Rod Overhead Squat 3×8  (try to sit deeper — heels down)",
                 ],
                 "focus": [
-                    "Two-Hand KB Hip Thrust 4×10 @ 20 kg  (heavier)",
-                    "Lateral Lunge 3×8/side @ 12 kg",
-                    "Banded Clamshell 3×20/side",
+                    "Band Pull-Apart 3×20  (slow + controlled — feel the squeeze)",
+                    "Wall Slide 3×10  (press lightly into wall throughout)",
                 ],
-                "arms": [
-                    "KB Hammer Curl 3×12 @ 8 kg",
-                    "KB Overhead Tricep Extension 3×12 @ 8 kg",
-                ],
+                "arms": [],
                 "mobility_block": [
                     "Seated Thoracic Extension over foam roller 2×60 s",
                     "Thread the Needle 2×10/side",
@@ -364,23 +350,16 @@ PROGRAM_1 = {
                 ),
             },
             3: {
-                "label": "Week 3 — Near-max deadlift + deep mobility.",
-                "main":  "Double KB Deadlift 4×4 @ 24 kg/bell  (heavy — RPE 8-9)",
+                "label": "Week 3 — Near-max pull + skill refinement.",
+                "main":  "Double KB Deadlift 4×3 @ 24 kg/bell  (heavy — RPE 8-9, no grinding)",
                 "full_body": [
-                    "Single-KB Floor Press 3×8/side @ 16 kg  [PUSH — different push variant]",
-                    "Double KB Front Squat 4×5 @ 16 kg/bell  [LOWER — heavier]",
-                    "Push-Up 3×15  [PUSH]",
-                    "Hanging Leg Raise 3×8  [CORE]",
+                    "Dowel Rod Overhead Squat 3×8  (add a pause at the bottom — 2 s)",
                 ],
                 "focus": [
-                    "Two-Hand KB Hip Thrust 4×8 @ 24 kg  (heaviest of the week)",
-                    "Nordic Hamstring Curl 3×5 eccentric  (5-s descent)",
-                    "Banded Hip Abduction 3×20/side",
+                    "Band Pull-Apart 3×20  (increase band tension if available)",
+                    "Wall Slide 3×10  (eyes forward — avoid chin poke)",
                 ],
-                "arms": [
-                    "KB Hammer Curl 3×10 @ 12 kg  (up one bell)",
-                    "KB Overhead Tricep Extension 3×10 @ 12 kg",
-                ],
+                "arms": [],
                 "mobility_block": [
                     "Couch Stretch 2×2 min/side  (deep hip flexor)",
                     "Pigeon Pose 2×2 min/side",
@@ -393,22 +372,16 @@ PROGRAM_1 = {
                 ),
             },
             4: {
-                "label": "Week 4 — Light everything + full mobility session.",
-                "main":  "Double KB Deadlift 3×5 @ 12 kg/bell  (deload — perfect tension)",
+                "label": "Week 4 — Deload pull + movement quality.",
+                "main":  "Double KB Deadlift 3×3 @ 12 kg/bell  (deload — perfect tension, no ego)",
                 "full_body": [
-                    "Single-KB Clean + Press 2×5/side @ 8 kg  [PUSH — easy]",
-                    "Double KB Front Squat 2×8 @ 12 kg/bell  [LOWER]",
-                    "Push-Up 2×8  [PUSH]",
-                    "Dead Bug 2×10/side  [CORE]",
+                    "Dowel Rod Overhead Squat 3×8  (easy weight — perfect reps only)",
                 ],
                 "focus": [
-                    "Two-Hand KB Hip Thrust 2×12 @ 12 kg  (light)",
-                    "Hip Flexor Stretch 2×90 s/side",
+                    "Band Pull-Apart 2×20  (light — feel the pattern, not the effort)",
+                    "Wall Slide 2×10  (slow and deliberate)",
                 ],
-                "arms": [
-                    "KB Hammer Curl 2×10 @ 8 kg",
-                    "KB Overhead Tricep Extension 2×10 @ 8 kg",
-                ],
+                "arms": [],
                 "mobility_block": [
                     "Full body flow 20 min:",
                     "  Cat-Cow × 10 → World's Greatest Stretch × 5/side",
@@ -768,27 +741,20 @@ PROGRAM_2 = {
     },
 
     "strength_d": {
-        "name":  "Strength D — Saturday KB + Mobility (Development)",
-        "focus": "Double KB squats, yoga mobility, arm definition",
+        "name":  "Strength D — Saturday Heavy Lift + Skill (Development)",
+        "focus": "Heavy KB deadlift, overhead skill, joint prevention, yoga mobility",
         "weeks": {
             1: {
-                "label": "Week 5 — Double KB squats + hip opening.",
-                "main":  "Double KB Front Squat 5×6 @ 14 kg/bell",
+                "label": "Week 5 — Heavy pull entry + Z Press skill.",
+                "main":  "Double KB Deadlift 4×3 @ 20 kg/bell  (lat tension, brace before pull)",
                 "full_body": [
-                    "Single-KB Z Press 3×5/side @ 12 kg  [PUSH]",
-                    "Double KB Deadlift 3×5 @ 16 kg/bell  [HINGE]",
-                    "Push-Up 3×12  [PUSH]",
-                    "Hollow Rock 3×15  [CORE]",
+                    "Single-KB Z Press 3×5/side @ 12 kg  (seated floor press — no leg drive, strict overhead)",
                 ],
                 "focus": [
-                    "Single-Leg Hip Thrust 3×10/leg @ 12 kg",
-                    "Nordic Curl 3×5 eccentric",
-                    "Banded Hip Abduction 3×20/side",
+                    "Copenhagen Plank 3×20 s/side  (adductor + lateral stability)",
+                    "Single-Leg Balance 3×30 s/side  (eyes open — then try eyes closed)",
                 ],
-                "arms": [
-                    "KB Zottman Curl 3×10 @ 8 kg",
-                    "KB Overhead Tricep Extension 3×12 @ 8 kg",
-                ],
+                "arms": [],
                 "mobility_block": [
                     "Yoga Sun Salutation A × 5 rounds  (flowing, connect breath to movement)",
                     "Warrior I + II + III flow 2×/side",
@@ -801,23 +767,16 @@ PROGRAM_2 = {
                 ),
             },
             2: {
-                "label": "Week 6 — Heavier squats + thoracic yoga.",
-                "main":  "Double KB Front Squat 5×6 @ 16 kg/bell  (↑ load)",
+                "label": "Week 6 — Heavier pull + Z Press volume.",
+                "main":  "Double KB Deadlift 5×3 @ 20 kg/bell  (↑ volume — same load, more sets)",
                 "full_body": [
-                    "Single-KB Z Press 3×6/side @ 12 kg  [PUSH]",
-                    "Double KB Deadlift 4×5 @ 20 kg/bell  [HINGE]",
-                    "Push-Up 3×15  [PUSH]",
-                    "Ab Wheel Rollout 3×8  [CORE]",
+                    "Single-KB Z Press 3×6/side @ 12 kg  (↑ reps — maintain upright torso)",
                 ],
                 "focus": [
-                    "Single-Leg Hip Thrust 4×10/leg @ 12 kg",
-                    "Lateral Lunge 3×8/side @ 12 kg",
-                    "Banded Clamshell 3×20/side",
+                    "Copenhagen Plank 3×25 s/side  (progress time)",
+                    "Single-Leg Balance 3×30 s/side  (add arm reach for challenge)",
                 ],
-                "arms": [
-                    "KB Zottman Curl 3×12 @ 8 kg",
-                    "KB Overhead Tricep Extension 3×12 @ 8 kg",
-                ],
+                "arms": [],
                 "mobility_block": [
                     "Yoga Sun Salutation B × 4 rounds",
                     "Pigeon Pose Flow 2×2 min/side",
@@ -827,23 +786,16 @@ PROGRAM_2 = {
                 "finisher": "KB Flow / Juggling 10 min @ 14–16 kg",
             },
             3: {
-                "label": "Week 7 — Heavy squats + deep mobility.",
-                "main":  "Double KB Front Squat 4×5 @ 20 kg/bell  (heavy — RPE 8)",
+                "label": "Week 7 — Heavy pull + Z Press load.",
+                "main":  "Double KB Deadlift 4×3 @ 24 kg/bell  (heavy — RPE 8-9, perfect form)",
                 "full_body": [
-                    "Single-KB Z Press 3×5/side @ 16 kg  [PUSH — heavier]",
-                    "Double KB Deadlift 4×4 @ 24 kg/bell  [HINGE — heavy]",
-                    "Push-Up 4×12  [PUSH]",
-                    "Hanging Leg Raise 3×10  [CORE]",
+                    "Single-KB Z Press 3×5/side @ 14 kg  (↑ load — slow lower, 3-s eccentric)",
                 ],
                 "focus": [
-                    "Single-Leg Hip Thrust 4×8/leg @ 16 kg  (heavier)",
-                    "Nordic Curl 3×5 eccentric  (hamstring)",
-                    "Lateral Lunge 3×10/side @ 12 kg",
+                    "Copenhagen Plank 3×30 s/side  (peak hold — don't let hips sag)",
+                    "Single-Leg Balance 3×30 s/side  (eyes closed — full proprioceptive challenge)",
                 ],
-                "arms": [
-                    "KB Zottman Curl 3×8 @ 12 kg  (up one bell)",
-                    "KB Overhead Tricep Extension 3×10 @ 12 kg",
-                ],
+                "arms": [],
                 "mobility_block": [
                     "Yoga Warrior Flow: W1 → W2 → Reverse Warrior → Triangle 3×/side",
                     "Half Pigeon 2×2 min/side",
@@ -853,22 +805,16 @@ PROGRAM_2 = {
                 "finisher": "KB Flow / Juggling 10 min @ 16 kg  (peak power play)",
             },
             4: {
-                "label": "Week 8 — Light squats + restorative yoga.",
-                "main":  "Double KB Front Squat 3×8 @ 12 kg/bell  (light — form)",
+                "label": "Week 8 — Deload pull + movement quality.",
+                "main":  "Double KB Deadlift 3×3 @ 16 kg/bell  (deload — own every rep)",
                 "full_body": [
-                    "Single-KB Z Press 2×5/side @ 8 kg  [PUSH]",
-                    "Double KB Deadlift 2×5 @ 12 kg/bell  [HINGE]",
-                    "Push-Up 2×8  [PUSH]",
-                    "Dead Bug 2×10/side  [CORE]",
+                    "Single-KB Z Press 2×5/side @ 10 kg  (light — feel the press pattern)",
                 ],
                 "focus": [
-                    "Single-Leg Hip Thrust 2×10/leg @ 8 kg",
-                    "Hip Flexor Stretch 2×2 min/side",
+                    "Copenhagen Plank 2×20 s/side  (deload — quality not time)",
+                    "Single-Leg Balance 2×30 s/side  (slow and controlled)",
                 ],
-                "arms": [
-                    "KB Zottman Curl 2×10 @ 8 kg",
-                    "KB Overhead Tricep Extension 2×10 @ 8 kg",
-                ],
+                "arms": [],
                 "mobility_block": [
                     "Restorative yoga 20 min:",
                     "  Supported Child's Pose 3 min",
@@ -1243,27 +1189,20 @@ PROGRAM_3 = {
     },
 
     "strength_d": {
-        "name":  "Strength D — Saturday KB + Mobility (Performance)",
-        "focus": "Heavy KB complex, athletic mobility, performance",
+        "name":  "Strength D — Saturday Heavy Lift + Skill (Performance)",
+        "focus": "Heavy KB deadlift, bottoms-up skill, athletic prevention, deep mobility",
         "weeks": {
             1: {
-                "label": "Week 9 — Athletic KB complex + performance mobility.",
-                "main":  "KB Complex × 5 rounds: 5 DL + 5 Clean + 5 Press + 5 Front Squat/side @ 14 kg",
+                "label": "Week 9 — Heavy pull + bottoms-up skill intro.",
+                "main":  "Double KB Deadlift 4×3 @ 24 kg/bell  (max tension — screw feet into floor)",
                 "full_body": [
-                    "KB Bottoms-Up Press 3×5/side @ 8 kg  [PUSH]",
-                    "Cossack Squat 3×6/side @ 8 kg  [LOWER]",
-                    "Push-Up 3×12  [PUSH]",
-                    "Ab Wheel Rollout 3×8  [CORE]",
+                    "Bottoms-Up Press 3×5/side @ 8 kg  (wrist alignment + shoulder stability — go slow)",
                 ],
                 "focus": [
-                    "Elevated SL Hip Thrust 3×10/leg @ 12 kg",
-                    "Lateral Lunge to Balance 3×8/side @ 8 kg",
-                    "Nordic Curl 3×5 eccentric",
+                    "Y-Balance Reach 3×5/side  (anterior + posteromedial + posterolateral — single-leg stability)",
+                    "Copenhagen Plank 3×30 s/side  (adductor + lateral core)",
                 ],
-                "arms": [
-                    "KB Curl 3×12 @ 8 kg",
-                    "KB Skull Crusher 3×10 @ 8 kg",
-                ],
+                "arms": [],
                 "mobility_block": [
                     "Athletic mobility circuit 20 min:",
                     "  Yoga Warrior Flow × 3/side",
@@ -1276,23 +1215,16 @@ PROGRAM_3 = {
                 "finisher": "KB Flow / Juggling 10 min @ 14–16 kg  (your Saturday play)",
             },
             2: {
-                "label": "Week 10 — Heavier complex + yoga strength.",
-                "main":  "KB Complex × 5 rounds: 5 DL + 5 Clean + 5 Single-KB Z Press + 5 Front Squat/side @ 16 kg",
+                "label": "Week 10 — Heavier pull + bottoms-up volume.",
+                "main":  "Double KB Deadlift 5×3 @ 24 kg/bell  (↑ volume — same load, add a set)",
                 "full_body": [
-                    "KB Bottoms-Up Press 3×6/side @ 8 kg  [PUSH]",
-                    "Cossack Squat 3×8/side @ 8 kg  [LOWER]",
-                    "Push-Up 3×15  [PUSH]",
-                    "Hollow Rock 3×20  [CORE]",
+                    "Bottoms-Up Press 3×6/side @ 8 kg  (↑ reps — keep the bell perfectly vertical)",
                 ],
                 "focus": [
-                    "Elevated SL Hip Thrust 4×8/leg @ 16 kg",
-                    "Single-KB Curtsy Lunge 3×10/side @ 14 kg",
-                    "Nordic Curl 3×5 eccentric",
+                    "Y-Balance Reach 3×5/side  (reach further — challenge your limits)",
+                    "Copenhagen Plank 3×35 s/side  (progress hold time)",
                 ],
-                "arms": [
-                    "KB Curl 3×12 @ 8 kg",
-                    "KB Skull Crusher 3×12 @ 8 kg",
-                ],
+                "arms": [],
                 "mobility_block": [
                     "Yoga strength flow 20 min:",
                     "  Sun Salutation B × 4",
@@ -1304,23 +1236,16 @@ PROGRAM_3 = {
                 "finisher": "KB Flow / Juggling 10 min @ 14–20 kg",
             },
             3: {
-                "label": "Week 11 — Peak complex + deep restore.",
-                "main":  "KB Complex × 6 rounds: 5 DL + 5 Clean + 5 Single-KB Z Press + 5 Front Squat/side @ 16 kg",
+                "label": "Week 11 — Peak pull + bottoms-up load.",
+                "main":  "Double KB Deadlift 4×3 @ 28 kg/bell  (peak load — RPE 9, no grinding)",
                 "full_body": [
-                    "KB Bottoms-Up Press 4×5/side @ 12 kg  [PUSH — heavy]",
-                    "Cossack Squat 3×6/side @ 12 kg  [LOWER — loaded]",
-                    "Push-Up 4×15  [PUSH]",
-                    "Ab Wheel Rollout 4×10  [CORE]",
+                    "Bottoms-Up Press 3×5/side @ 10 kg  (↑ load — slow and deliberate)",
                 ],
                 "focus": [
-                    "Elevated SL Hip Thrust 4×8/leg @ 20 kg  (peak load)",
-                    "Nordic Curl 4×5 eccentric",
-                    "Lateral Lunge to Balance 3×8/side @ 12 kg",
+                    "Y-Balance Reach 3×5/side  (max reach — note your distances)",
+                    "Copenhagen Plank 3×40 s/side  (peak hold — everything tight)",
                 ],
-                "arms": [
-                    "KB Curl 3×10 @ 12 kg  (up one bell)",
-                    "KB Skull Crusher 3×10 @ 12 kg",
-                ],
+                "arms": [],
                 "mobility_block": [
                     "Deep restore 20 min:",
                     "  Yin Yoga Butterfly 3 min",
@@ -1332,22 +1257,16 @@ PROGRAM_3 = {
                 "finisher": "KB Flow / Juggling 10 min  (peak play — 12 weeks strong)",
             },
             4: {
-                "label": "Week 12 — Light complex + full restoration.",
-                "main":  "KB Complex × 3 rounds light: 5 DL + 5 Clean + 5 Press + 5 Squat/side @ 10 kg",
+                "label": "Week 12 — Deload pull + restoration.",
+                "main":  "Double KB Deadlift 3×3 @ 20 kg/bell  (deload — feel strong, not tired)",
                 "full_body": [
-                    "KB Bottoms-Up Press 2×5/side @ 8 kg  [PUSH]",
-                    "Cossack Squat 2×8/side @ BW  [LOWER]",
-                    "Push-Up 2×8  [PUSH]",
-                    "Dead Bug 2×10/side  [CORE]",
+                    "Bottoms-Up Press 2×5/side @ 8 kg  (light — own the movement pattern)",
                 ],
                 "focus": [
-                    "Elevated SL Hip Thrust 2×10/leg @ 8 kg  (light)",
-                    "Hip Mobility Flow 5 min",
+                    "Y-Balance Reach 2×5/side  (light — notice how far you've come)",
+                    "Copenhagen Plank 2×30 s/side  (deload — solid and easy)",
                 ],
-                "arms": [
-                    "KB Curl 2×10 @ 8 kg",
-                    "KB Skull Crusher 2×10 @ 8 kg",
-                ],
+                "arms": [],
                 "mobility_block": [
                     "Full restoration 20 min:",
                     "  Everything you've learned in 12 weeks",
@@ -1441,10 +1360,7 @@ ARMS_ROTATION = {
             "KB Curl 3×12 @ 8 kg  (supinated — pure bicep)",
             "KB Floor Tricep Extension 3×10 @ 8 kg  (skull crusher from floor — safe)",
         ],
-        "strength_d": [
-            "KB Hammer Curl 3×12 @ 8 kg",
-            "KB Overhead Tricep Extension 3×12 @ 8 kg",
-        ],
+        "strength_d": [],
     },
     "program_2": {
         "strength_a": [
@@ -1459,10 +1375,7 @@ ARMS_ROTATION = {
             "KB Concentration Curl 3×10/side @ 8 kg  (elbow on inner thigh — peak contraction)",
             "KB Tricep Kickback 3×12/side @ 8 kg",
         ],
-        "strength_d": [
-            "KB Zottman Curl 3×12 @ 8 kg",
-            "KB Skull Crusher 3×12 @ 8 kg",
-        ],
+        "strength_d": [],
     },
     "program_3": {
         "strength_a": [
@@ -1477,10 +1390,7 @@ ARMS_ROTATION = {
             "KB Concentration Curl 3×10/side @ 10 kg  (↑ load)",
             "KB Overhead Tricep Extension 3×10 @ 12 kg  (↑ load)",
         ],
-        "strength_d": [
-            "KB Curl 3×12 @ 10 kg",
-            "KB Skull Crusher 3×12 @ 10 kg",
-        ],
+        "strength_d": [],
     },
 }
 
