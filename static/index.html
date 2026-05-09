@@ -101,6 +101,31 @@ main {
 .tab-content { display:none; padding:16px 16px calc(var(--tab-h) + 20px); }
 .tab-content.active { display:block; }
 
+/* ── Programs tab ───────────────────────────────────────────────────────── */
+.cal-cell {
+  cursor:pointer;
+  border-radius:8px;
+  padding:5px 2px;
+  text-align:center;
+  background:#fff;
+  border:1.5px solid var(--border);
+  transition:all .15s;
+  min-height:52px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:2px;
+}
+.cal-cell:active { background:var(--cream); }
+.cal-cell.today  { border:2px solid var(--terracotta); }
+.cal-cell.logged { background:#F2FBF3; }
+.cal-cell.future { opacity:.6; }
+.cal-cell.outside { opacity:.4; }
+.cal-day-num   { font-size:10px; color:var(--warm-gray); line-height:1; }
+.cal-sess-lbl  { font-size:9px; font-weight:700; line-height:1.2; }
+.cal-logged-lbl{ font-size:9px; color:#7A9E7E; font-weight:700; line-height:1; }
+
 /* ── Bottom nav ──────────────────────────────────────────────────────────── */
 .bottom-nav {
   height:var(--tab-h);
@@ -221,6 +246,19 @@ main {
   transition:all .15s;
 }
 .pill-btn.active,.pill-btn:hover { background:var(--terracotta); border-color:var(--terracotta); color:#fff; }
+.rest-pill {
+  background:#fff;
+  border:1.5px solid var(--terracotta);
+  border-radius:100px;
+  padding:8px 16px;
+  font-size:14px;
+  font-weight:500;
+  color:var(--terracotta);
+  font-family:'DM Sans',sans-serif;
+  cursor:pointer;
+  transition:all .15s;
+}
+.rest-pill:hover,.rest-pill:active { background:var(--terracotta-bg); }
 
 /* ── Session card ────────────────────────────────────────────────────────── */
 .week-label { font-size:13px; color:var(--warm-gray); margin-bottom:4px; }
@@ -647,6 +685,10 @@ main {
       <div id="progress-loading" class="loading-state"><div class="spinner"></div></div>
       <div id="progress-content" class="hidden"></div>
     </section>
+    <section id="tab-programs" class="tab-content">
+      <div id="programs-loading" class="loading-state"><div class="spinner"></div></div>
+      <div id="programs-content" class="hidden"></div>
+    </section>
     <section id="tab-library" class="tab-content">
       <div class="search-wrap">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -668,6 +710,10 @@ main {
     <button class="nav-btn" onclick="switchTab('progress',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
       Progress
+    </button>
+    <button class="nav-btn" onclick="switchTab('programs',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="14" x2="8" y2="14"/><line x1="12" y1="14" x2="12" y2="14"/><line x1="16" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="8" y2="18"/><line x1="12" y1="18" x2="12" y2="18"/></svg>
+      Programs
     </button>
     <button class="nav-btn" onclick="switchTab('library',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
@@ -740,6 +786,7 @@ let _wtInterval    = null;   // display tick (setInterval handle)
 let _wtKaInterval  = null;   // keep-alive ping (setInterval handle)
 let _restInterval  = null;   // rest countdown (setInterval handle)
 let _restRemaining = 0;      // rest seconds remaining
+let _restActive    = false;  // true while countdown is ticking
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
@@ -904,6 +951,10 @@ function _updateTimersCard() {
       wtBtn.setAttribute('onclick', 'startWorkoutTimer()');
     }
   }
+
+  // Rest pills: visible only when workout timer is running and no countdown active
+  const restPills = document.getElementById('rest-pills-section');
+  if (restPills) restPills.style.display = (running && !_restActive) ? '' : 'none';
 }
 
 function startWorkoutTimer() {
@@ -916,30 +967,34 @@ function endWorkoutTimer() {
   const elapsed = _wtElapsed();
   clearInterval(_wtInterval);   _wtInterval   = null;
   clearInterval(_wtKaInterval); _wtKaInterval = null;
+  // Also cancel any active rest countdown
+  clearInterval(_restInterval); _restInterval = null;
+  _restActive = false; _restRemaining = 0;
   _wtSave({ running: false, startTime: null, elapsed, complete: true });
   _updateTimersCard();
+  const restCountdown = document.getElementById('rest-countdown-section');
+  if (restCountdown) restCountdown.style.display = 'none';
 }
 
 // ── Rest Timer helpers ────────────────────────────────────────────────────────
-function expandRestTimer() {
-  const col = document.getElementById('rest-collapsed');
-  const exp = document.getElementById('rest-expanded');
-  if (col) col.style.display = 'none';
-  if (exp) exp.style.display = '';
-}
-
 function cancelRestTimer() {
   clearInterval(_restInterval); _restInterval = null;
   _restRemaining = 0;
-  const col = document.getElementById('rest-collapsed');
-  const exp = document.getElementById('rest-expanded');
-  if (col) col.style.display = '';
-  if (exp) exp.style.display = 'none';
+  _restActive = false;
+  const pills     = document.getElementById('rest-pills-section');
+  const countdown = document.getElementById('rest-countdown-section');
+  if (countdown) countdown.style.display = 'none';
+  if (pills && _wtState().running) pills.style.display = '';
 }
 
 function startRestTimer(seconds) {
   clearInterval(_restInterval);
   _restRemaining = seconds;
+  _restActive = true;
+  const pills     = document.getElementById('rest-pills-section');
+  const countdown = document.getElementById('rest-countdown-section');
+  if (pills)     pills.style.display = 'none';
+  if (countdown) countdown.style.display = '';
   _renderRestDisplay();
   _restInterval = setInterval(() => {
     _restRemaining = Math.max(0, _restRemaining - 1);
@@ -948,8 +1003,14 @@ function startRestTimer(seconds) {
       clearInterval(_restInterval); _restInterval = null;
       if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
       const rd = document.getElementById('rest-display');
-      if (rd) rd.innerHTML = `<span style="font-family:'DM Sans',sans-serif;font-size:16px;color:var(--terracotta);font-weight:600">Rest complete — go!</span>`;
-      setTimeout(cancelRestTimer, 3000);
+      if (rd) rd.innerHTML = `<span style="font-family:'DM Sans',sans-serif;font-size:22px;font-weight:700;color:var(--terracotta)">Go!</span>`;
+      setTimeout(() => {
+        _restActive = false;
+        const p = document.getElementById('rest-pills-section');
+        const c = document.getElementById('rest-countdown-section');
+        if (c) c.style.display = 'none';
+        if (p && _wtState().running) p.style.display = '';
+      }, 2000);
     }
   }, 1000);
 }
@@ -962,7 +1023,7 @@ function _renderRestDisplay() {
 function getMovementSlug(labelText) {
   if (!labelText) return null;
   for (const [name, slug] of Object.entries(movementSlugMap)) {
-    if (labelText.startsWith(name)) return slug;
+    if (labelText.includes(name)) return slug;
   }
   return null;
 }
@@ -1051,6 +1112,7 @@ function switchTab(tab, btn) {
   btn.classList.add('active');
   if (tab === 'log')      renderLog();
   if (tab === 'progress') renderProgress();
+  if (tab === 'programs') renderPrograms();
   if (tab === 'library' && !document.getElementById('library-content').innerHTML) renderLibrary();
 }
 
@@ -1219,21 +1281,21 @@ function renderTimersCard() {
 <div class="card" id="timers-card">
   <div style="font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--warm-gray);margin-bottom:14px;text-transform:uppercase">TIMERS</div>
   <div id="wt-display" style="font-family:'JetBrains Mono',monospace;font-size:48px;font-weight:400;color:var(--charcoal);line-height:1;margin-bottom:14px;text-align:center">${wtHTML}</div>
-  <div style="margin-bottom:16px">
+  <div style="margin-bottom:12px">
     <button id="wt-btn" class="btn btn-full" style="${btnStyle}" onclick="${btnClick}">${btnText}</button>
   </div>
-  <div id="rest-timer-section">
-    <div id="rest-collapsed">
-      <a href="#" class="btn-text" onclick="event.preventDefault();expandRestTimer()" style="font-size:13px;color:var(--warm-gray)">Rest timer</a>
+  <div id="rest-pills-section" style="${running && !_restActive ? '' : 'display:none'}">
+    <div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap">
+      <button class="rest-pill" onclick="startRestTimer(30)">30s</button>
+      <button class="rest-pill" onclick="startRestTimer(60)">60s</button>
+      <button class="rest-pill" onclick="startRestTimer(90)">90s</button>
+      <button class="rest-pill" onclick="startRestTimer(120)">2 min</button>
     </div>
-    <div id="rest-expanded" style="display:none">
-      <div id="rest-display" style="font-family:'JetBrains Mono',monospace;font-size:36px;color:var(--terracotta);text-align:center;margin-bottom:10px;line-height:1">--:--</div>
-      <div style="display:flex;gap:6px;justify-content:center;align-items:center">
-        <button class="pill-btn" onclick="startRestTimer(60)">60s</button>
-        <button class="pill-btn" onclick="startRestTimer(90)">90s</button>
-        <button class="pill-btn" onclick="startRestTimer(120)">2 min</button>
-        <button onclick="cancelRestTimer()" style="background:none;border:none;font-size:12px;color:var(--light-gray);cursor:pointer;padding:4px 8px;font-family:'DM Sans',sans-serif">Cancel</button>
-      </div>
+  </div>
+  <div id="rest-countdown-section" style="display:none">
+    <div id="rest-display" style="font-family:'JetBrains Mono',monospace;font-size:36px;color:var(--terracotta);text-align:center;margin-bottom:6px;line-height:1">00:00</div>
+    <div style="text-align:center">
+      <button onclick="cancelRestTimer()" style="background:none;border:none;font-size:13px;color:var(--light-gray);cursor:pointer;padding:4px 10px;font-family:'DM Sans',sans-serif">× cancel</button>
     </div>
   </div>
 </div>`;
@@ -1416,6 +1478,7 @@ function _parsePrescription(text) {
 }
 
 function _renderSessionBody() {
+  const elapsedMin = _wtElapsed() > 0 ? Math.round(_wtElapsed() / 60) : '';
   document.getElementById('sheet-body').innerHTML = sessionItems.map((item, idx) => {
     const hint = (item.sets && item.reps)
       ? `Prescribed: ${item.sets}×${item.reps}${item.prescribedKg ? ` @ ${item.prescribedKg} kg` : ''}`
@@ -1433,7 +1496,18 @@ function _renderSessionBody() {
         <div class="ex-field"><label>reps</label><input type="number" id="reps-${idx}" min="0" step="1" value="${item.reps || ''}" placeholder="${item.reps || '—'}"></div>
       </div>
     </div>`;
-  }).join('');
+  }).join('') + `
+  <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:16px">
+    <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--warm-gray);margin-bottom:8px">WORKOUT DURATION</div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <input type="number" id="session-duration-min" min="0" step="1" value="${elapsedMin}"
+        placeholder="—" inputmode="numeric"
+        style="width:80px;text-align:center;font-size:22px;font-family:'JetBrains Mono',monospace;
+               padding:8px 12px;border:1.5px solid var(--border);border-radius:10px;
+               background:#fff;color:var(--charcoal)">
+      <span style="font-size:15px;color:var(--warm-gray)">min</span>
+    </div>
+  </div>`;
 }
 
 async function _fillMovementHistory() {
@@ -1494,8 +1568,9 @@ async function submitSession() {
   const btn = document.getElementById('complete-btn');
   btn.disabled = true; btn.textContent = 'Logging…';
 
-  // Capture timer elapsed NOW — before any await, timer still running
-  const durationSecs = _wtElapsed();
+  // Read duration from the editable form field (pre-filled from timer, user-correctable)
+  const _durMin  = parseInt(document.getElementById('session-duration-min')?.value) || 0;
+  const durationSecs = _durMin > 0 ? _durMin * 60 : 0;
 
   // ── Snapshot form values NOW, before any await (sheet is still open) ──────
   const weights_lbs  = {};
@@ -1724,6 +1799,231 @@ async function deleteWorkout(evt, id) {
   allWorkouts = res.workouts || [];
   renderLogContent();
   showToast('Deleted');
+}
+
+// ── PROGRAMS TAB ─────────────────────────────────────────────────────────────
+const _DOW_TO_SESSION_JS = ['strength_a','mobility_a','strength_b','mobility_b','strength_c','strength_d','rest'];
+
+const _SESSION_INFO = {
+  strength_a: { short:'Day A', color:'#C07A3A', badgeCls:'badge-a' },
+  strength_b: { short:'Day B', color:'#4A7C9E', badgeCls:'badge-b' },
+  strength_c: { short:'Day C', color:'#B85450', badgeCls:'badge-c' },
+  strength_d: { short:'Day D', color:'#7B5EA7', badgeCls:'badge-d', optional:true },
+  mobility_a: { short:'Mob A', color:'#7A9E7E', badgeCls:'badge-mob' },
+  mobility_b: { short:'Mob B', color:'#7A9E7E', badgeCls:'badge-mob' },
+  rest:       { short:'Rest',  color:'var(--light-gray)', badgeCls:'' },
+};
+
+let _programsSelectedDate = null;
+
+function _progInfoFromStart(startISO) {
+  const start = new Date(startISO + 'T00:00:00');
+  const today = new Date(todayISO() + 'T00:00:00');
+  const weeksElapsed = Math.max(0, Math.floor((today - start) / (7 * 86400 * 1000)));
+  const weekInCycle  = weeksElapsed % 12;
+  const programIdx   = Math.floor(weekInCycle / 4);   // 0–2
+  const waveWeek     = (weekInCycle % 4) + 1;         // 1–4
+  return { programIdx, waveWeek, weeksElapsed, weekInCycle };
+}
+
+function _aboutProgram(idx) {
+  return [
+    '<strong>Foundation</strong> (Weeks 1–4) — Your entry into First Bell. Four weekly sessions: Glute & Legs, Pull & Core, Hardstyle, and an optional Saturday heavy pull. Loads start light so movement patterns come first. Every rep is practice. Every session builds the habit.',
+    '<strong>Development</strong> (Weeks 5–8) — Load and volume increase meaningfully. You\'ve earned the heavier bells. Mobility sessions deepen. Saturday introduces Z Press skill and joint-health work. You\'re not just getting stronger — you\'re getting more resilient.',
+    '<strong>Performance</strong> (Weeks 9–12) — Peak phase. Your heaviest deadlifts, most technical moves, hardest conditioning. Saturday is bottoms-up press and full athletic prevention work. Week 12 is a deload — honour it. Then Program 1 starts again, but you are not the same person.',
+  ][idx] || '';
+}
+
+function renderPrograms() {
+  const loading = document.getElementById('programs-loading');
+  const el      = document.getElementById('programs-content');
+  loading.style.display = 'none';
+  el.classList.remove('hidden');
+
+  if (!appState?.program_start_iso) {
+    el.innerHTML = `<div class="card"><p class="text-muted" style="text-align:center;padding:20px">Program data not available.</p></div>`;
+    return;
+  }
+
+  const startISO = appState.program_start_iso;
+  const { programIdx, waveWeek } = _progInfoFromStart(startISO);
+  const progNum   = programIdx + 1;
+  const NAMES     = ['Foundation','Development','Performance'];
+  const WK_RANGES = ['Weeks 1–4','Weeks 5–8','Weeks 9–12'];
+
+  // Block start (Monday of current 4-week program)
+  const cycleStart = new Date(startISO + 'T00:00:00');
+  const blockStart = new Date(cycleStart);
+  blockStart.setDate(blockStart.getDate() + programIdx * 28);
+
+  // Calendar start = 1 week before the block
+  const calStart = new Date(blockStart);
+  calStart.setDate(calStart.getDate() - 7);
+
+  const todayStr = todayISO();
+
+  // Build workouts lookup map  {dateISO → [{duration_min,...}]}
+  const wkMap = {};
+  for (const w of allWorkouts) {
+    (wkMap[w.date] = wkMap[w.date] || []).push(w);
+  }
+
+  // ── Calendar grid ─────────────────────────────────────────────────────────
+  const DOW_HEADERS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  let calHTML = `<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:4px">
+    ${DOW_HEADERS.map(h => `<div style="text-align:center;font-size:10px;font-weight:700;letter-spacing:.05em;color:var(--warm-gray);padding:3px 0;text-transform:uppercase">${h}</div>`).join('')}
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:8px">`;
+
+  for (let week = 0; week < 5; week++) {
+    for (let dow = 0; dow < 7; dow++) {
+      const d = new Date(calStart);
+      d.setDate(d.getDate() + week * 7 + dow);
+      const dISO    = d.toLocaleDateString('en-CA');
+      const isToday = dISO === todayStr;
+      const isFuture= dISO > todayStr;
+      const isOut   = week === 0;   // pre-block week
+
+      const sessType = _DOW_TO_SESSION_JS[dow];
+      const info     = _SESSION_INFO[sessType] || { short:'?', color:'#999' };
+
+      const dayEntries = wkMap[dISO] || [];
+      const isLogged   = dayEntries.some(w => ['recommended','strength','mobility','cardio','run','ruck','walk'].includes(w.type));
+      const durMin     = dayEntries.find(w => w.duration_min)?.duration_min;
+
+      const classes = [
+        'cal-cell',
+        isToday  ? 'today'   : '',
+        isFuture ? 'future'  : '',
+        isOut    ? 'outside' : '',
+        isLogged ? 'logged'  : '',
+      ].filter(Boolean).join(' ');
+
+      const sessLabel = sessType === 'rest'
+        ? `<span class="cal-sess-lbl" style="color:var(--light-gray)">Rest</span>`
+        : `<span class="cal-sess-lbl" style="color:${info.color}">${info.short}</span>`;
+
+      const loggedLbl = isLogged
+        ? `<span class="cal-logged-lbl">${durMin ? durMin+'m' : '✓'}</span>`
+        : '';
+
+      calHTML += `<div class="${classes}" onclick="programsDayTap('${dISO}')">
+        <span class="cal-day-num">${d.getDate()}</span>
+        ${sessLabel}
+        ${loggedLbl}
+      </div>`;
+    }
+  }
+  calHTML += '</div>';
+
+  // ── Legend ────────────────────────────────────────────────────────────────
+  const legendItems = [
+    { color:'#C07A3A', label:'A·Glute' },
+    { color:'#7A9E7E', label:'Mob' },
+    { color:'#4A7C9E', label:'B·Pull' },
+    { color:'#B85450', label:'C·Hard' },
+    { color:'#7B5EA7', label:'D·DKB' },
+  ];
+  const legendHTML = `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+    ${legendItems.map(li => `<div style="display:flex;align-items:center;gap:3px;font-size:10px;color:var(--warm-gray)"><span style="width:8px;height:8px;border-radius:2px;background:${li.color};display:inline-block"></span>${li.label}</div>`).join('')}
+  </div>`;
+
+  el.innerHTML = `
+<div class="card" style="margin-bottom:12px">
+  <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--warm-gray);margin-bottom:4px">Current Program</div>
+  <div style="font-size:22px;font-family:'DM Serif Display',serif;color:var(--charcoal);margin-bottom:2px">Program ${progNum} · ${NAMES[programIdx]}</div>
+  <div style="font-size:13px;color:var(--warm-gray)">${WK_RANGES[programIdx]} &nbsp;·&nbsp; Wave week ${waveWeek} of 4</div>
+  <div style="font-size:12px;color:var(--light-gray);margin-top:6px">Started ${new Date(blockStart.getTime()).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</div>
+</div>
+
+<div class="card">
+  <div style="font-size:13px;font-weight:600;color:var(--charcoal);margin-bottom:10px">5-Week Overview
+    <span style="font-size:11px;font-weight:400;color:var(--light-gray);margin-left:6px">tap a day for details</span>
+  </div>
+  ${legendHTML}
+  ${calHTML}
+  <div id="programs-day-detail"></div>
+</div>
+
+<div class="card">
+  <div class="card-title">About This Program</div>
+  <div style="font-size:13px;color:var(--warm-gray);line-height:1.65">${_aboutProgram(programIdx)}</div>
+</div>`;
+}
+
+async function programsDayTap(dateStr) {
+  const el = document.getElementById('programs-day-detail');
+  if (!el) return;
+
+  // Toggle off if same cell tapped twice
+  if (_programsSelectedDate === dateStr) {
+    _programsSelectedDate = null;
+    el.innerHTML = '';
+    return;
+  }
+  _programsSelectedDate = dateStr;
+
+  el.innerHTML = `<div style="border-top:1px solid var(--border);margin-top:14px;padding-top:12px;text-align:center"><div class="spinner" style="width:20px;height:20px;margin:auto"></div></div>`;
+
+  const wk = await api(`/api/workout/today?date=${dateStr}`);
+  if (_programsSelectedDate !== dateStr) return; // superseded
+
+  const todayStr  = todayISO();
+  const isFuture  = dateStr > todayStr;
+  const d         = new Date(dateStr + 'T00:00:00');
+  const dateLabel = d.toLocaleDateString('en-US', { weekday:'long', month:'short', day:'numeric' });
+  const dow       = d.getDay() === 0 ? 6 : d.getDay() - 1; // 0=Mon
+
+  const closeBtn = `<button onclick="_programsSelectedDate=null;document.getElementById('programs-day-detail').innerHTML=''"
+    style="float:right;background:none;border:none;font-size:20px;color:var(--light-gray);cursor:pointer;line-height:1;padding:0 2px">×</button>`;
+
+  let html = `<div style="border-top:1px solid var(--border);margin-top:14px;padding-top:12px">${closeBtn}
+    <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--warm-gray);margin-bottom:8px">${x(dateLabel)}</div>`;
+
+  if (!wk || wk.status === 'rest') {
+    html += `<div style="color:var(--warm-gray);font-style:italic;font-size:14px">Rest day. Recovery is training.</div>`;
+  } else if (wk.status === 'active') {
+    const isSat = (dow === 5);
+    html += `<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+      <span class="day-badge ${badgeClass(wk.track_key)}">${badgeLabel(wk)}</span>
+      ${isSat ? `<span style="font-size:11px;font-weight:600;background:#e8d5a3;color:#8B6914;padding:2px 8px;border-radius:10px">Optional</span>` : ''}
+    </div>`;
+
+    const textColor = isFuture ? 'var(--warm-gray)' : 'var(--charcoal)';
+    const italic    = isFuture ? 'font-style:italic' : '';
+
+    html += `<div style="font-size:14px;font-weight:600;color:${textColor};${italic};margin-bottom:6px">${x(wk.main)}</div>`;
+
+    const fbb = wk.full_body_block || [];
+    if (fbb.length) {
+      html += fbb.map(a => `<div style="font-size:12px;color:${textColor};${italic};margin-bottom:3px">• ${x(a)}</div>`).join('');
+    }
+    const fw = wk.focus_work || [];
+    if (fw.length) {
+      html += fw.map(a => `<div style="font-size:12px;color:${textColor};${italic};margin-bottom:3px">• ${x(a)}</div>`).join('');
+    }
+    const mob = wk.mobility_block || [];
+    if (mob.length) {
+      html += `<div style="font-size:12px;color:${textColor};${italic};margin-bottom:3px;margin-top:4px"><em>Mobility:</em> ${x(mob[0])}</div>`;
+    }
+    if (wk.finisher) {
+      html += `<div style="font-size:12px;color:${textColor};${italic};margin-bottom:3px"><em>Finisher:</em> ${x(wk.finisher.split('\n')[0])}</div>`;
+    }
+
+    // Logged indicator
+    const wkMap = {};
+    for (const w of allWorkouts) { (wkMap[w.date] = wkMap[w.date] || []).push(w); }
+    const logged = (wkMap[dateStr] || []).filter(w => ['recommended','strength','mobility','cardio','run','ruck','walk'].includes(w.type));
+    if (logged.length) {
+      const durMin = logged.find(w => w.duration_min)?.duration_min;
+      html += `<div style="font-size:12px;color:#7A9E7E;font-weight:600;margin-top:8px">✓ Logged${durMin ? ` · ${durMin} min` : ''}</div>`;
+    }
+  }
+
+  html += '</div>';
+  el.innerHTML = html;
+  // Scroll day detail into view
+  el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 // ── PROGRESS TAB ──────────────────────────────────────────────────────────────
