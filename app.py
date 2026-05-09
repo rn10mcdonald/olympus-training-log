@@ -43,6 +43,11 @@ def _load_training(user_id: int) -> dict:
         monday = today - dt.timedelta(days=today.weekday())
         raw["program_start_iso"] = str(monday)
 
+    # Backfill program_track for existing users — they keep fighter track silently
+    if raw.get("program_track") is None and raw.get("program_start_iso"):
+        raw["program_track"] = "fighter"
+        db.save_legacy(user_id, raw)
+
     mc = raw.setdefault("microcycle", {})
     mc.setdefault("id",                 0)
     mc.setdefault("sessions_completed", 0)
@@ -226,7 +231,27 @@ async def select_track(req: Request, u: dict = CurrentUser):
     return {"status": "ok", "msg": msg, "state": state}
 
 
+@app.post("/api/track/select-program")
+async def select_program_track(req: Request, u: dict = CurrentUser):
+    p     = await req.json()
+    track = p.get("program_track", "fighter")
+    if track not in ("fighter", "kyle"):
+        raise HTTPException(400, "Unknown program track")
+    uid   = u["user_id"]
+    state = _load_training(uid)
+    state["program_track"]     = track
+    state["program_start_iso"] = _this_monday()
+    _save_training(uid, state)
+    return {"status": "ok", "program_track": track, "state": state}
+
+
 # ── Date helper ──────────────────────────────────────────────────────────────
+
+def _this_monday() -> str:
+    today  = dt.date.today()
+    monday = today - dt.timedelta(days=today.weekday())
+    return str(monday)
+
 
 def _local_today(p: dict) -> str:
     """Return the client's local date (YYYY-MM-DD) from the request body.

@@ -800,6 +800,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   setGreeting();
   if (!TOKEN) { showAuth(); return; }
   await loadAll();
+  if (!appState?.program_track) { showTrackSelector(); return; }
   renderToday();
   renderLibrary();
 
@@ -1036,6 +1037,44 @@ async function loadWorkouts() {
 // ── Auth ──────────────────────────────────────────────────────────────────────
 function showAuth() { document.getElementById('auth-screen').classList.add('visible'); }
 function hideAuth() { document.getElementById('auth-screen').classList.remove('visible'); }
+
+// ── Program track selector ─────────────────────────────────────────────────
+let _tsSelected = null;
+
+function showTrackSelector() {
+  document.getElementById('track-selector-overlay').style.display = 'flex';
+}
+function hideTrackSelector() {
+  document.getElementById('track-selector-overlay').style.display = 'none';
+}
+
+function tsSelect(track) {
+  _tsSelected = track;
+  const TRACKS = ['fighter', 'kyle'];
+  TRACKS.forEach(t => {
+    const card = document.getElementById(`ts-card-${t}`);
+    if (card) {
+      card.style.background = (t === track) ? '#FDF5F1' : '#fff';
+      card.style.border     = (t === track) ? '2px solid #C4622D' : '1.5px solid #E0DAD4';
+    }
+  });
+  const btn = document.getElementById('ts-start-btn');
+  if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+}
+
+async function submitTrackSelection() {
+  if (!_tsSelected) return;
+  const res = await api('/api/track/select-program', 'POST', {
+    program_track: _tsSelected,
+    client_date:   todayISO(),
+  });
+  if (!res) return;
+  appState = res.state;
+  hideTrackSelector();
+  await loadAll();
+  renderToday();
+  renderLibrary();
+}
 
 function switchAuthTab(mode) {
   authMode = mode;
@@ -1848,9 +1887,15 @@ function renderPrograms() {
   const startISO   = appState.program_start_iso;
   const { programIdx, waveWeek } = _progInfoFromStart(startISO);
   const progNum    = programIdx + 1;
-  const NAMES      = ['Foundation','Development','Performance'];
+  const isKyle     = (appState.program_track === 'kyle');
+  const TRACK_LABEL = isKyle ? 'Asymmetry & Rebuild' : 'First Bell Fighter';
+  const NAMES      = isKyle
+    ? ['Reset & Reactivate','Development','Performance']
+    : ['Foundation','Development','Performance'];
   const WK_RANGES  = ['Weeks 1–4','Weeks 5–8','Weeks 9–12'];
-  const SLOGANS    = ['Learn the patterns.','Harder variations.','Athletic and powerful.'];
+  const SLOGANS    = isKyle
+    ? ['Exit KB Strong. Close the gap.','Trust the left side more.','Bilateral symmetry restored.']
+    : ['Learn the patterns.','Harder variations.','Athletic and powerful.'];
 
   // Current block start date (for header card)
   const cycleStart  = new Date(startISO + 'T00:00:00');
@@ -1967,6 +2012,7 @@ function renderPrograms() {
   el.innerHTML = `
 <div class="card" style="margin-bottom:12px">
   <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--warm-gray);margin-bottom:4px">Current Program</div>
+  <div style="font-size:14px;font-weight:600;color:var(--terracotta);margin-bottom:2px">${x(TRACK_LABEL)}</div>
   <div style="font-size:22px;font-family:'DM Serif Display',serif;color:var(--charcoal);margin-bottom:2px">Program ${progNum} · ${NAMES[programIdx]}</div>
   <div style="font-size:13px;color:var(--warm-gray)">${WK_RANGES[programIdx]} &nbsp;·&nbsp; Wave week ${waveWeek} of 4</div>
   <div style="font-size:12px;color:var(--light-gray);margin-top:6px">Started ${blockStart.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</div>
@@ -2226,5 +2272,47 @@ function showToast(msg) {
   _toastTimer = setTimeout(() => t.classList.remove('show'), 2400);
 }
 </script>
+
+<!-- Track selector overlay — shown for brand-new users with no program_track -->
+<div id="track-selector-overlay" style="
+  display:none;position:fixed;inset:0;z-index:900;
+  background:#FAF7F2;overflow-y:auto;
+  flex-direction:column;align-items:center;padding:40px 20px 60px;
+  font-family:'DM Sans',sans-serif;">
+  <div style="max-width:420px;width:100%">
+    <div style="text-align:center;margin-bottom:32px">
+      <div style="font-size:32px;margin-bottom:10px">🔔</div>
+      <div style="font-family:'DM Serif Display',serif;font-size:28px;color:#2C2C2C;margin-bottom:6px">First Bell</div>
+      <div style="font-size:14px;color:#7A736B">Choose your program to get started.</div>
+    </div>
+
+    <div id="ts-card-fighter" onclick="tsSelect('fighter')" style="
+      background:#fff;border:1.5px solid #E0DAD4;border-radius:16px;
+      padding:20px;margin-bottom:12px;cursor:pointer;transition:all .15s">
+      <div style="font-family:'DM Serif Display',serif;font-size:20px;color:#2C2C2C;margin-bottom:6px">🔔 First Bell Fighter</div>
+      <div style="font-size:14px;color:#7A736B;line-height:1.55">
+        Full body kettlebell — hardstyle training, glute &amp; aesthetic focus.<br>
+        Semi-advanced. 3 strength + 2 mobility per week. 12-week program.
+      </div>
+    </div>
+
+    <div id="ts-card-kyle" onclick="tsSelect('kyle')" style="
+      background:#fff;border:1.5px solid #E0DAD4;border-radius:16px;
+      padding:20px;margin-bottom:28px;cursor:pointer;transition:all .15s">
+      <div style="font-family:'DM Serif Display',serif;font-size:20px;color:#2C2C2C;margin-bottom:6px">🔧 Asymmetry &amp; Rebuild</div>
+      <div style="font-size:14px;color:#7A736B;line-height:1.55">
+        Unilateral pressing, thoracic outlet rehab, serratus reactivation.<br>
+        Advanced KB. Closes bilateral pressing gap. 12-week program.
+      </div>
+    </div>
+
+    <button id="ts-start-btn" onclick="submitTrackSelection()" disabled style="
+      width:100%;padding:15px;background:#C4622D;color:#fff;border:none;
+      border-radius:12px;font-size:16px;font-weight:600;font-family:'DM Sans',sans-serif;
+      cursor:pointer;opacity:0.45;transition:opacity .15s">
+      Start My Program
+    </button>
+  </div>
+</div>
 </body>
 </html>

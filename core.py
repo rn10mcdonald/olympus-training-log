@@ -1340,7 +1340,1494 @@ PROGRAM_3 = {
 }
 
 
-PROGRAMS = [PROGRAM_1, PROGRAM_2, PROGRAM_3]
+
+# ── Kyle Rehab Track ─────────────────────────────────────────────────────────
+KYLE_PROGRAM_1 = {
+    "name":        "Program 1 — Reset & Reactivate",
+    "subtitle":    "Exit KB Strong. Establish the baseline. Begin closing the gap.",
+    "weeks":       4,
+    "description": (
+        "You've just run 10×5 / 10×4 / 10×5 bilateral pressing for weeks. "
+        "Your left serratus and lower trap are underrecruited. "
+        "Week 1 is about resetting the pattern — not about load. "
+        "The double swing feels right because your body knows hip hinge. "
+        "We start there and build everything else around it. "
+        "No bilateral overhead pressing this entire program."
+    ),
+
+    # ── PRE-SESSION ACTIVATION (every strength session) ──────────────────────
+    "pre_session": [
+        "Serratus Wall Slide 2×10  (face wall, forearms on wall, slide up WITHOUT shrugging — "
+        "if upper trap fires you're doing it wrong. This is your most important exercise.)",
+        "Bear Plank Reach 2×10/side  (quadruped, protract LEFT scapula at end range — "
+        "hold 2 s, feel the serratus fire under your armpit)",
+        "Diaphragmatic Breath 10 slow breaths  (hand on belly, hand on chest — "
+        "only belly hand moves. This decompresses your thoracic outlet.)",
+    ],
+
+    # ── STRENGTH A — Lower Body + Unilateral Press ────────────────────────────
+    "strength_a": {
+        "name":    "Strength A — Lower Body + Unilateral Press",
+        "anchor":  "Two-Hand KB Swing + Half-Kneeling Single-Arm Press",
+        "note":    "Track LEFT and RIGHT press weight independently every session.",
+        "weeks": {
+
+            1: {
+                "label": "Week 1 — Establish baseline. What can left actually do?",
+                "main":  "Two-Hand KB Swing 5×10 @ 24 kg  (your wheelhouse — crisp and powerful)",
+                "full_body": [
+                    "Half-Kneeling Single-Arm Press 4×5/side @ RIGHT: 24 kg / LEFT: 20 kg  "
+                    "[PRESS — half-kneeling removes leg drive, isolates shoulder. "
+                    "Log both weights. This is your gap baseline.]",
+                    "Double KB Deadlift 4×5 @ 32 kg/bell  [HINGE — heavy, hip dominant, "
+                    "no shoulder loading. This is where you're strong.]",
+                    "Hollow Rock 3×15  [CORE — no spinal compression]",
+                ],
+                "focus": [
+                    "Single-Leg RDL 3×8/side @ 24 kg  (unilateral hinge — expose any "
+                    "left/right imbalance below the waist too)",
+                    "Y-T-W Raise 3×10 each position @ light band or 4 kg  "
+                    "(prone — lower trap reactivation. Looks easy. Burns.)",
+                    "Face Pull with External Rotation 3×15  (band — rear delt + "
+                    "rotator cuff health. Every session.)",
+                ],
+                "corrective": [
+                    "KB Arm Bar LEFT side only 2×60 s @ 16 kg  "
+                    "(sub-scap release — feel the tissue release, not the weight)",
+                    "Serratus Wall Slide 2×10  (second set — end of session reinforcement)",
+                ],
+                "finisher": (
+                    "Two-Hand KB Swing 50 reps @ 24 kg — for time\n"
+                    "Note your time. This is your conditioning baseline."
+                ),
+            },
+
+            2: {
+                "label": "Week 2 — Add volume. Left side catching up?",
+                "main":  "Two-Hand KB Swing 6×10 @ 24 kg  (add a set — 60 total)",
+                "full_body": [
+                    "Half-Kneeling Single-Arm Press 5×5/side @ RIGHT: 24 kg / LEFT: 20 kg  "
+                    "[PRESS — add a set. Is left feeling stronger? Note it.]",
+                    "Double KB Deadlift 5×5 @ 32 kg/bell  [HINGE — add a set]",
+                    "Hollow Rock 3×20  [CORE — more reps]",
+                ],
+                "focus": [
+                    "Single-Leg RDL 4×8/side @ 24 kg  (add a set)",
+                    "Y-T-W Raise 3×12 each @ light band  (more reps)",
+                    "Face Pull with External Rotation 3×20  (more reps)",
+                ],
+                "corrective": [
+                    "KB Arm Bar LEFT 2×60 s @ 16 kg",
+                    "KB Arm Bar with Thoracic Rotation 2×8/side @ 12 kg  "
+                    "(from arm bar position, rotate thoracic toward ceiling — "
+                    "this hits the scar tissue bundle directly)",
+                ],
+                "finisher": (
+                    "Two-Hand KB Swing 75 reps @ 24 kg — for time\n"
+                    "Compare to week 1. You should be faster."
+                ),
+            },
+
+            3: {
+                "label": "Week 3 — Push the press. Can left handle 24 kg for some sets?",
+                "main":  "Two-Hand KB Swing 5×10 @ 32 kg  (↑ bell — RPE 8)",
+                "full_body": [
+                    "Half-Kneeling Single-Arm Press 4×5/side @ RIGHT: 24 kg / "
+                    "LEFT: attempt 24 kg for sets 1-2, drop to 20 kg if form breaks  "
+                    "[PRESS — this is the week we test the ceiling. "
+                    "No visual disturbance = proceed. Any disturbance = stop that set.]",
+                    "Double KB Deadlift 4×4 @ 40 kg/bell  [HINGE — near max, crisp]",
+                    "Hanging Leg Raise 3×10  [CORE — add load to core]",
+                ],
+                "focus": [
+                    "Single-Leg RDL 3×6/side @ 32 kg  (↑ load — heavier)",
+                    "Y-T-W Raise 3×10 @ 6 kg  (↑ load — still light but harder)",
+                    "Face Pull with External Rotation 4×15  (add a set)",
+                ],
+                "corrective": [
+                    "KB Arm Bar with Rotation LEFT 3×8 @ 12 kg  (add a set)",
+                    "Scalene Stretch LEFT 3×60 s  "
+                    "(lateral neck flexion right, depress LEFT shoulder simultaneously — "
+                    "direct stretch of the tissue compressing your brachial plexus)",
+                ],
+                "finisher": (
+                    "Two-Hand KB Swing 100 reps @ 24 kg — for time\n"
+                    "This is a real benchmark. Sub 5 min is strong."
+                ),
+            },
+
+            4: {
+                "label": "Week 4 — Deload. Let the left side absorb.",
+                "main":  "Two-Hand KB Swing 4×8 @ 20 kg  (light — hip snap focus)",
+                "full_body": [
+                    "Half-Kneeling Single-Arm Press 3×5/side @ RIGHT: 20 kg / LEFT: 16 kg  "
+                    "[PRESS — deload. Feel the left side move without strain.]",
+                    "Double KB Deadlift 3×5 @ 24 kg/bell  [HINGE — light]",
+                    "Dead Bug 3×10/side  [CORE — breathing focus]",
+                ],
+                "focus": [
+                    "Single-Leg RDL 2×8/side @ 20 kg  (light)",
+                    "Y-T-W Raise 2×10 @ band  (easy — feel the lower trap)",
+                    "Face Pull 2×15  (light)",
+                ],
+                "corrective": [
+                    "KB Arm Bar LEFT 3×90 s @ 12 kg  (longer hold — tissue release)",
+                    "Scalene Stretch LEFT 3×90 s  (longer hold)",
+                    "Thoracic Rotation Drill 2×10/side  (seated, hands behind head)",
+                ],
+                "finisher": (
+                    "Two-Hand KB Swing flow 10 min @ 20 kg\n"
+                    "No timer pressure. Just move. Feel the hip hinge."
+                ),
+            },
+        },
+    },
+
+    # ── STRENGTH B — Pull + Corrective Upper ──────────────────────────────────
+    "strength_b": {
+        "name":   "Strength B — Pull + Corrective Upper",
+        "anchor": "Single-Arm KB Row (track left/right independently)",
+        "note":   "Pull days are where your left side can actually load safely. "
+                  "Pulling is scapular retraction — the opposite of what's compressed.",
+        "weeks": {
+
+            1: {
+                "label": "Week 1 — Establish pull baseline. Left vs right.",
+                "main":  "Single-Arm KB Row 4×8/side @ RIGHT: 32 kg / LEFT: 32 kg  "
+                         "(pulling is safe — load it. Note if left fatigues faster.)",
+                "full_body": [
+                    "Z Press Single-Arm 4×5/side @ RIGHT: 24 kg / LEFT: 20 kg  "
+                    "[PRESS — seated floor, no back support. "
+                    "Even harder than half-kneeling for core demand. "
+                    "LEFT shoulder controls the load completely — no compensation possible.]",
+                    "KB Goblet Squat 4×8 @ 32 kg  [LOWER — no shoulder loading]",
+                    "Ab Wheel Rollout 3×6  [CORE — from knees]",
+                ],
+                "focus": [
+                    "Chest-Supported Row 3×12 @ 24 kg  (bilateral is fine for rows — "
+                    "retraction not compression)",
+                    "Band Pull-Apart 3×25  (rear delt — every pull day)",
+                    "Dead Hang 3×30 s  (traction for your thoracic outlet — "
+                    "passive hang decompresses the whole structure)",
+                ],
+                "corrective": [
+                    "Sleeper Stretch LEFT 3×60 s  "
+                    "(internal rotation release — swimmers need this. "
+                    "Lie on left side, arm at 90°, gently rotate forearm toward floor)",
+                    "90/90 Shoulder Rotation LEFT 2×10  "
+                    "(controlled articular rotation — full range, no pain)",
+                ],
+                "finisher": (
+                    "KB Snatch 5×5/side @ 24 kg  (rest 60 s between sets)\n"
+                    "Hip power to overhead — but single arm so left side works independently.\n"
+                    "Note if left overhead feels different from right."
+                ),
+            },
+
+            2: {
+                "label": "Week 2 — More pull volume. Left row keeping up?",
+                "main":  "Single-Arm KB Row 5×8/side @ 32 kg  (add a set)",
+                "full_body": [
+                    "Z Press Single-Arm 5×5/side @ RIGHT: 24 kg / LEFT: 20 kg  "
+                    "[PRESS — add a set]",
+                    "KB Goblet Squat 5×8 @ 32 kg  [LOWER — add a set]",
+                    "Ab Wheel Rollout 3×8  [CORE — more reps]",
+                ],
+                "focus": [
+                    "Chest-Supported Row 4×12 @ 24 kg  (add a set)",
+                    "Band Pull-Apart 3×30  (more reps)",
+                    "Dead Hang 4×30 s  (add a set)",
+                ],
+                "corrective": [
+                    "Sleeper Stretch LEFT 3×75 s  (longer)",
+                    "90/90 Shoulder Rotation LEFT 3×10  (add a set)",
+                    "Thoracic Extension over foam roller 2×60 s  "
+                    "(mid-back — open the thoracic cage)",
+                ],
+                "finisher": (
+                    "KB Snatch 6×5/side @ 24 kg\n"
+                    "Add a round. Rest 60 s. Note if left overhead fatigue changes."
+                ),
+            },
+
+            3: {
+                "label": "Week 3 — Heavy rows. You're strong here.",
+                "main":  "Single-Arm KB Row 4×6/side @ 40 kg  (↑ load — heavy)",
+                "full_body": [
+                    "Z Press Single-Arm 4×5/side @ RIGHT: 24 kg / LEFT: attempt 22-24 kg  "
+                    "[PRESS — test left ceiling again on pull day too]",
+                    "KB Goblet Squat 4×6 @ 40 kg  [LOWER — heavy]",
+                    "Hanging Leg Raise 3×12  [CORE]",
+                ],
+                "focus": [
+                    "Chest-Supported Row 4×10 @ 32 kg  (↑ load)",
+                    "Band Pull-Apart 4×25  (add a set)",
+                    "Dead Hang 4×40 s  (longer hang)",
+                ],
+                "corrective": [
+                    "Sleeper Stretch LEFT 3×90 s",
+                    "90/90 Shoulder Rotation LEFT 3×12",
+                    "Scalene Stretch LEFT 2×60 s  (after the row work — tissue is warm)",
+                ],
+                "finisher": (
+                    "KB Snatch 8×5/side @ 24 kg\n"
+                    "8 rounds. 40 reps per arm. This is conditioning."
+                ),
+            },
+
+            4: {
+                "label": "Week 4 — Deload. Long hangs. Let it absorb.",
+                "main":  "Single-Arm KB Row 3×8/side @ 24 kg  (light — feel the scapula move)",
+                "full_body": [
+                    "Z Press Single-Arm 2×5/side @ RIGHT: 20 kg / LEFT: 16 kg  [PRESS — easy]",
+                    "KB Goblet Squat 3×8 @ 24 kg  [LOWER]",
+                    "Dead Bug 3×10/side  [CORE]",
+                ],
+                "focus": [
+                    "Chest-Supported Row 2×12 @ 20 kg  (light)",
+                    "Band Pull-Apart 2×20",
+                    "Dead Hang 3×45 s  (longest hang yet — decompress everything)",
+                ],
+                "corrective": [
+                    "Sleeper Stretch LEFT 3×90 s",
+                    "KB Arm Bar LEFT 2×90 s @ 12 kg",
+                    "Full shoulder mobility flow 5 min  "
+                    "(arm circles, cross-body, doorframe stretch — feel good)",
+                ],
+                "finisher": (
+                    "KB Snatch flow 8 min @ 20 kg\n"
+                    "No counting. Switch hands when you want. Moving meditation."
+                ),
+            },
+        },
+    },
+
+    # ── STRENGTH C — Hardstyle Power ──────────────────────────────────────────
+    "strength_c": {
+        "name":   "Strength C — Hardstyle Power",
+        "anchor": "Two-Hand KB Swing (your strongest movement — honor it)",
+        "note":   "This is your conditioning day. Ultra-short race pace energy. "
+                  "Complete work, complete rest. Swimming background shows here.",
+        "weeks": {
+
+            1: {
+                "label": "Week 1 — Reestablish hardstyle baseline.",
+                "main":  "Two-Hand KB Swing EMOM 20 min: 10 reps/min @ 32 kg",
+                "full_body": [
+                    "Single-Arm KB Clean + Press 3×5/side @ RIGHT: 24 kg / LEFT: 20 kg  "
+                    "[PUSH — clean keeps the press honest. "
+                    "Left cleans to rack, presses from there. No bilateral.]",
+                    "Double KB Deadlift 3×5 @ 32 kg/bell  [HINGE]",
+                    "Push-Up 3×15  [PUSH — bodyweight, no shoulder asymmetry issue]",
+                    "Hollow Rock 3×20  [CORE]",
+                ],
+                "focus": [
+                    "KB High Pull 3×8/side @ 24 kg  (explosive — hip to shoulder height)",
+                    "Single-Leg Hip Thrust 3×10/side @ 24 kg  (hip power maintenance)",
+                ],
+                "corrective": [
+                    "Serratus wall slide 2×10  (mid-session — reinforcement)",
+                ],
+                "finisher": (
+                    "100 Two-Hand KB Swings for time @ 32 kg\n"
+                    "Your benchmark. Sub 4 min is strong at 32 kg."
+                ),
+            },
+
+            2: {
+                "label": "Week 2 — More swing volume. Engine growing.",
+                "main":  "Two-Hand KB Swing EMOM 25 min: 10 reps/min @ 32 kg  (add 5 min)",
+                "full_body": [
+                    "Single-Arm KB Clean + Press 4×5/side @ RIGHT: 24 kg / LEFT: 20 kg  "
+                    "[PUSH — add a set]",
+                    "Double KB Deadlift 4×5 @ 32 kg/bell  [HINGE]",
+                    "Push-Up 4×15  [PUSH — add a set]",
+                    "Ab Wheel Rollout 3×8  [CORE]",
+                ],
+                "focus": [
+                    "KB High Pull 4×8/side @ 24 kg  (add a set)",
+                    "Single-Leg Hip Thrust 4×10/side @ 24 kg",
+                ],
+                "corrective": [
+                    "Serratus wall slide 2×10",
+                ],
+                "finisher": (
+                    "Swing Tabata: 20 s on / 10 s off × 8 rounds @ 32 kg\n"
+                    "4 min. Maximum power. Note total swing count."
+                ),
+            },
+
+            3: {
+                "label": "Week 3 — Peak power. This is what you came for.",
+                "main":  "Two-Hand KB Swing EMOM 20 min: 12 reps/min @ 32 kg  (↑ reps/min)",
+                "full_body": [
+                    "Single-Arm KB Clean + Press 4×5/side @ RIGHT: 28-32 kg / LEFT: 24 kg  "
+                    "[PUSH — left gets to 24 kg this week. This is the milestone.]",
+                    "Double KB Deadlift 4×4 @ 40 kg/bell  [HINGE — heavy]",
+                    "Push-Up 4×20  [PUSH — endurance]",
+                    "Hanging Leg Raise 4×10  [CORE]",
+                ],
+                "focus": [
+                    "KB Snatch 5×5/side @ 24 kg  (power endurance)",
+                    "Single-Leg Hip Thrust 4×8/side @ 32 kg  (heavy)",
+                ],
+                "corrective": [
+                    "Serratus wall slide 3×10  (more sets — peak week needs more activation)",
+                ],
+                "finisher": (
+                    "200 Two-Hand KB Swings @ 24 kg — every time you put it down: "
+                    "5 push-ups penalty\n"
+                    "Note time and breaks. This is your peak week benchmark."
+                ),
+            },
+
+            4: {
+                "label": "Week 4 — Deload. Light swings. Feel the power pattern.",
+                "main":  "Two-Hand KB Swing 5×10 @ 20 kg  (light — perfect hip snap)",
+                "full_body": [
+                    "Single-Arm KB Clean + Press 2×5/side @ RIGHT: 20 kg / LEFT: 16 kg  "
+                    "[PUSH — easy]",
+                    "Double KB Deadlift 3×5 @ 24 kg/bell  [HINGE — light]",
+                    "Push-Up 2×10  [PUSH]",
+                    "Dead Bug 3×10/side  [CORE]",
+                ],
+                "focus": [
+                    "KB High Pull 2×8/side @ 20 kg  (light)",
+                    "Hip Flexor Stretch 2×90 s/side",
+                ],
+                "corrective": [
+                    "Serratus wall slide 2×10",
+                    "Diaphragmatic breathing 5 min  (deload week — extra breath work)",
+                ],
+                "finisher": (
+                    "KB flow 10 min @ 20 kg — swings, cleans, halos\n"
+                    "No structure. Just move. This is your reward."
+                ),
+            },
+        },
+    },
+
+    # ── STRENGTH D — Saturday Optional ───────────────────────────────────────
+    "strength_d": {
+        "name":  "Strength D — Saturday Optional",
+        "anchor": "Heavy Double KB Deadlift + Skill + Mobility Play",
+        "note":   "Optional. No arms. No overhead. Just heavy lower, one skill, mobility, play.",
+        "weeks": {
+
+            1: {
+                "label": "Week 1 — Heavy pull + thoracic skill + play",
+                "main":  "Double KB Deadlift 5×3 @ 40 kg/bell  (heavy and crisp — 3 reps means perfect every time)",
+                "skill": "Dowel Rod Overhead Squat 3×8  (technique — dowel only, no load. "
+                         "This will expose thoracic mobility immediately.)",
+                "prevention": [
+                    "Band Pull-Apart 3×25",
+                    "Serratus Wall Slide 3×10  (third session this week — reinforcing)",
+                    "Y-T-W Raise 2×10 each",
+                ],
+                "mobility_block": [
+                    "Thoracic rotation + rib grab 2×10/side",
+                    "Thread the needle 2×10/side",
+                    "Scalene stretch LEFT 3×90 s",
+                    "90/90 hip switch 2×10",
+                    "Pigeon pose 2×2 min/side",
+                ],
+                "finisher": "KB flow / juggling 10 min @ 24 kg  (your play time)",
+            },
+
+            2: {
+                "label": "Week 2 — Heavier pull + Z press skill",
+                "main":  "Double KB Deadlift 5×3 @ 40 kg/bell",
+                "skill": "Z Press Single-Arm 3×5/side @ 20 kg LEFT / 24 kg RIGHT  "
+                         "(Saturday skill work — lighter than strength days, focus on positioning)",
+                "prevention": [
+                    "Band Pull-Apart 3×25",
+                    "Serratus Wall Slide 3×10",
+                    "Dead Hang 3×45 s",
+                ],
+                "mobility_block": [
+                    "Yoga sun salutation A × 4  (thoracic opener)",
+                    "Warrior I + II flow 2×/side",
+                    "Lizard pose 2×90 s/side",
+                    "Scalene stretch LEFT 3×90 s",
+                    "Legs-up-the-wall 5 min  (parasympathetic reset + thoracic outlet decompression)",
+                ],
+                "finisher": "KB flow / juggling 10 min @ 24-32 kg",
+            },
+
+            3: {
+                "label": "Week 3 — Near-max pull + bottoms-up skill",
+                "main":  "Double KB Deadlift 4×3 @ 40 kg/bell  (near-max — RPE 9)",
+                "skill": "Bottoms-Up Press Single-Arm 3×5/side @ 12 kg  "
+                         "(LEFT side especially — forces perfect shoulder recruitment. "
+                         "Serratus must fire to stabilize. This is corrective masquerading as skill.)",
+                "prevention": [
+                    "Serratus Wall Slide 3×10",
+                    "Y-T-W 3×10 each",
+                    "Scalene stretch LEFT 3×90 s",
+                ],
+                "mobility_block": [
+                    "Yin dragon pose 2×2 min/side",
+                    "Yin sleeping swan 2×2 min/side",
+                    "Supine spinal twist 2×2 min/side",
+                    "Thoracic extension over foam roller 2×60 s",
+                    "Savasana 5 min  (yes, actually)",
+                ],
+                "finisher": "KB flow / juggling 10 min @ any weight that feels good",
+            },
+
+            4: {
+                "label": "Week 4 — Light deload + full mobility",
+                "main":  "Double KB Deadlift 3×3 @ 24 kg/bell  (light — deload)",
+                "skill": "Dowel Overhead Squat 3×8  (back to basics — notice if it feels different than week 1)",
+                "prevention": [
+                    "Serratus Wall Slide 2×10",
+                    "Band Pull-Apart 2×20",
+                ],
+                "mobility_block": [
+                    "Full restoration flow 20 min — everything you've learned",
+                    "Extra time on: scalene stretch LEFT, sleeper stretch LEFT, dead hang",
+                    "Savasana 5 min",
+                ],
+                "finisher": "KB flow / juggling 10 min @ light bells  (playful, no pressure)",
+            },
+        },
+    },
+
+    # ── MOBILITY DAYS — Kyle Program 1 ────────────────────────────────────────
+    "mobility": {
+        "name":  "Mobility — Kyle Program 1",
+        "focus": "Thoracic outlet decompression, serratus reactivation, "
+                 "brachial plexus nerve gliding, diaphragmatic breathing, "
+                 "sub-scapularis release. This is your most important training.",
+        "note":  "Run first if running today. Mobility immediately after. "
+                 "The tissue is warm and receptive post-run.",
+        "sessions": {
+
+            "A": {  # Tuesday
+                "label": "Mobility A — Thoracic + Serratus + Nerve",
+                "opening": [
+                    "Diaphragmatic Breathing 5 min  "
+                    "(lying down, knees bent. Hand on belly, hand on chest. "
+                    "ONLY belly rises. 4 s inhale through nose, 6 s exhale through pursed lips. "
+                    "This is therapeutic — you are mechanically decompressing your thoracic outlet "
+                    "with every exhale. Do not rush this. Do not skip this.)",
+                ],
+                "main": "Serratus Wall Slide 3×12  (slow — 3 s up, 3 s down. "
+                        "Feel LEFT serratus fire under your armpit. "
+                        "If you feel upper trap: reset and go slower.)",
+                "sequence": [
+                    "Bear Plank Reach 3×10/side  (protract LEFT scapula at end range — hold 2 s)",
+                    "KB Arm Bar with Thoracic Rotation LEFT 3×8 @ 12 kg  "
+                    "(from arm bar, rotate thoracic toward ceiling — "
+                    "this mobilizes the scar tissue bundle directly)",
+                    "Scalene Stretch LEFT 3×90 s  "
+                    "(right lateral neck flexion + LEFT shoulder depression simultaneously. "
+                    "You should feel a pull from left ear to left collarbone. "
+                    "This is the tissue compressing your brachial plexus.)",
+                    "Sleeper Stretch LEFT 3×90 s  "
+                    "(swimmer's tightest tissue. Lie on left side, arm at 90°, "
+                    "gently press forearm toward floor. Feel internal rotation releasing.)",
+                    "Thoracic Rotation + Rib Grab 3×10/side  "
+                    "(seated, hands behind head — isolate thoracic, not lumbar)",
+                    "Thread the Needle 3×10/side  (thoracic rotation in quadruped)",
+                ],
+                "nerve_gliding": [
+                    "Brachial Plexus Nerve Glide LEFT 3×10  "
+                    "(arm out to side, tilt head right, flex wrist back — "
+                    "you should feel a stretch/tingle down the arm. "
+                    "This is nerve mobilization — gentle, not aggressive. "
+                    "If tingling becomes sharp: stop.)",
+                    "Median Nerve Glide LEFT 3×10  "
+                    "(arm out, palm up, extend wrist, tilt head right — "
+                    "different nerve path, same principle)",
+                ],
+                "finisher": (
+                    "Legs-Up-the-Wall 8 min  "
+                    "(the single best thoracic outlet decompression position. "
+                    "Gravity pulls the shoulder girdle away from the thoracic outlet. "
+                    "Arms out to sides, palms up. Breathe diaphragmatically. "
+                    "This is medicine.)"
+                ),
+            },
+
+            "B": {  # Thursday
+                "label": "Mobility B — Sub-Scap Release + Breathing + Reset",
+                "opening": [
+                    "Diaphragmatic Breathing 5 min  "
+                    "(same protocol as Tuesday. This is non-negotiable. "
+                    "You've been running 5 days this week — your breathing pattern "
+                    "is probably chest-dominant by Thursday. Reset it.)",
+                ],
+                "main": "90/90 Shoulder Rotation LEFT 3×10  "
+                        "(controlled articular rotation — full range, no pain. "
+                        "Take the joint through its complete available range.)",
+                "sequence": [
+                    "Serratus Wall Slide 3×10  "
+                    "(third time this week — the neural pattern is forming)",
+                    "Sub-Scap Self-Release LEFT 3×60 s  "
+                    "(lacrosse ball or firm ball under LEFT armpit — "
+                    "same area Rena works with massage. Roll slowly. "
+                    "When you find the knot: stay on it and breathe. "
+                    "You'll likely feel tingling down the arm — that's the brachial plexus. "
+                    "Stay until it reduces.)",
+                    "Doorframe Pec Stretch 3×60 s  "
+                    "(pec minor tightness compresses the thoracic outlet from the front. "
+                    "Arm at 90°, lean into doorframe — feel the pec minor, not the pec major)",
+                    "Thoracic Extension over Foam Roller 3×60 s  "
+                    "(different vertebral levels — don't just sit at one spot. "
+                    "Mid thoracic is most important for you.)",
+                    "Cat-Cow 2×10  (5 s per rep — spinal wave)",
+                    "Child's Pose with Lateral Reach LEFT 2×90 s  "
+                    "(reach left arm overhead — lateral thoracic stretch)",
+                ],
+                "breathing_protocol": [
+                    "4-7-8 Breathing 4 rounds  "
+                    "(inhale 4 s, hold 7 s, exhale 8 s — "
+                    "activates parasympathetic nervous system. "
+                    "Reduces the chronic sympathetic tone that keeps your scalenes tight.)",
+                    "Box Breathing 5 min: 5-5-5-5  "
+                    "(your system needs this after 5 running days. "
+                    "This is HRV training. This is recovery.)",
+                ],
+                "finisher": (
+                    "Legs-Up-the-Wall 8 min  (same as Tuesday — double dose this week)\n"
+                    "Arms overhead in Y position — maximum thoracic outlet decompression.\n"
+                    "Feel your breathing slow. Feel your trap release.\n"
+                    "This is the most therapeutic thing you can do for your condition "
+                    "outside of what Rena does with her hands."
+                ),
+            },
+        },
+    },
+}
+
+
+# ============================================================================
+#  KYLE PROGRAM 2 — DEVELOPMENT  (Weeks 5–8)
+#  The gap is closing. Add complexity. Trust the left side more.
+# ============================================================================
+
+KYLE_PROGRAM_2 = {
+    "name":    "Program 2 — Development",
+    "subtitle": "The gap is closing. Add complexity. Trust the left side.",
+    "weeks":   4,
+    "description": (
+        "By week 5 your left serratus is waking up. "
+        "The half-kneeling press transfers to Z press. "
+        "The Z press transfers to standing single-arm press. "
+        "We add complexity without adding bilateral overhead. "
+        "The double swing stays heavy. The left side is catching up."
+    ),
+
+    "strength_a": {
+        "name":   "Strength A — Lower + Unilateral Press Development",
+        "anchor": "Double KB Swing + Z Press Single-Arm",
+        "weeks": {
+            1: {
+                "label": "Week 5 — Z press replaces half-kneeling. Harder.",
+                "main":  "Double KB Swing 6×8 @ 32 kg/bell  (double bell — bilateral hip power)",
+                "full_body": [
+                    "Z Press Single-Arm 4×5/side @ RIGHT: 24 kg / LEFT: 22-24 kg  "
+                    "[PRESS — seated floor, legs straight. Harder than half-kneeling. "
+                    "Left should be close to right by now.]",
+                    "Double KB Deadlift 5×5 @ 40 kg/bell  [HINGE — heavy]",
+                    "Ab Wheel Rollout 3×8  [CORE]",
+                ],
+                "focus": [
+                    "Bulgarian Split Squat 3×8/leg @ 32 kg  (unilateral — expose any imbalance)",
+                    "Y-T-W Raise 3×12 @ 6 kg  (progressive loading)",
+                    "Face Pull with External Rotation 3×20",
+                ],
+                "corrective": [
+                    "KB Arm Bar with Rotation LEFT 3×8 @ 16 kg  (↑ load)",
+                    "Scalene Stretch LEFT 3×90 s",
+                ],
+                "finisher": (
+                    "Double KB Swing 50 reps @ 32 kg/bell — for time\n"
+                    "Double bells change everything. Note time."
+                ),
+            },
+            2: {
+                "label": "Week 6 — More Z press volume. Left closing the gap.",
+                "main":  "Double KB Swing 8×8 @ 32 kg/bell  (add sets)",
+                "full_body": [
+                    "Z Press Single-Arm 5×5/side @ RIGHT: 24 kg / LEFT: 24 kg  "
+                    "[PRESS — left matches right this week. This is the milestone.]",
+                    "Double KB Deadlift 5×4 @ 40 kg/bell  [HINGE]",
+                    "Ab Wheel Rollout 3×10  [CORE]",
+                ],
+                "focus": [
+                    "Bulgarian Split Squat 4×8/leg @ 32 kg",
+                    "Y-T-W 3×12 @ 8 kg  (↑ load)",
+                    "Face Pull 4×20",
+                ],
+                "corrective": [
+                    "KB Arm Bar with Rotation LEFT 3×10 @ 16 kg",
+                    "Scalene Stretch LEFT 3×90 s",
+                ],
+                "finisher": (
+                    "Double KB Swing Tabata: 20 s on / 10 s off × 8 @ 28 kg/bell\n"
+                    "Lighter for tabata — speed and power, not grind."
+                ),
+            },
+            3: {
+                "label": "Week 7 — Heavy everything. Left side now pulling its weight.",
+                "main":  "Double KB Swing 10×5 EMOM @ 32 kg/bell  (5 perfect reps every minute)",
+                "full_body": [
+                    "Z Press Single-Arm 4×4/side @ RIGHT: 28 kg / LEFT: 24-28 kg  "
+                    "[PRESS — test 28 kg left. If form holds for 3+ reps: log it.]",
+                    "Double KB Deadlift 4×3 @ 40 kg/bell  [HINGE — near max]",
+                    "Hanging Leg Raise 4×12  [CORE]",
+                ],
+                "focus": [
+                    "Single-Leg RDL 3×6/side @ 32 kg  (heavy unilateral)",
+                    "Y-T-W 4×10 @ 8 kg",
+                    "Face Pull 4×20",
+                ],
+                "corrective": [
+                    "Bottoms-Up Press LEFT 3×5 @ 12 kg  "
+                    "(forced serratus recruitment — can't cheat this)",
+                    "Scalene Stretch LEFT 3×90 s",
+                ],
+                "finisher": (
+                    "200 KB Swings — mix of double and single @ 24-32 kg\n"
+                    "Your choice of split. Note total time."
+                ),
+            },
+            4: {
+                "label": "Week 8 — Deload. Reflect on the gap.",
+                "main":  "Double KB Swing 4×8 @ 24 kg/bell  (light)",
+                "full_body": [
+                    "Z Press Single-Arm 3×5/side @ RIGHT: 20 kg / LEFT: 20 kg  [PRESS — equal and easy]",
+                    "Double KB Deadlift 3×5 @ 32 kg/bell  [HINGE — moderate]",
+                    "Dead Bug 3×10/side  [CORE]",
+                ],
+                "focus": [
+                    "Single-Leg RDL 2×8/side @ 24 kg",
+                    "Y-T-W 2×10 @ band",
+                    "Face Pull 2×15",
+                ],
+                "corrective": [
+                    "KB Arm Bar LEFT 3×90 s @ 12 kg",
+                    "Full shoulder mobility flow 5 min",
+                ],
+                "finisher": "KB flow 10 min @ 20 kg  (deload — just move)",
+            },
+        },
+    },
+
+    "strength_b": {
+        "name":   "Strength B — Pull + Advanced Corrective",
+        "anchor": "Single-Arm KB Row + Renegade Row",
+        "weeks": {
+            1: {
+                "label": "Week 5 — Renegade rows added. Anti-rotation challenge.",
+                "main":  "Single-Arm KB Row 5×8/side @ 32-40 kg  (heavy)",
+                "full_body": [
+                    "Single-Arm KB Clean + Z Press 4×4/side @ RIGHT: 24 kg / LEFT: 24 kg  "
+                    "[PRESS — clean feeds the press. One fluid movement.]",
+                    "Renegade Row 3×6/side @ 24 kg  [PULL — anti-rotation. "
+                    "Left shoulder stabilizes differently here. Note any asymmetry.]",
+                    "KB Goblet Squat 4×8 @ 40 kg  [LOWER — heavy]",
+                    "Ab Wheel 3×10  [CORE]",
+                ],
+                "focus": [
+                    "Overhead Carry Single-Arm LEFT 4×20 m @ 20 kg  "
+                    "(loaded protraction — serratus under load. Start left side.)",
+                    "Dead Hang 4×45 s",
+                    "Band Pull-Apart 3×25",
+                ],
+                "corrective": [
+                    "Sleeper Stretch LEFT 3×90 s",
+                    "Sub-Scap Self-Release LEFT 2×60 s",
+                ],
+                "finisher": (
+                    "KB Snatch complex 5×5/side @ 24 kg:\n"
+                    "5 snatches + 5 high pulls/side — rest 60 s"
+                ),
+            },
+            2: {
+                "label": "Week 6 — More overhead carry. Left shoulder rebuilding.",
+                "main":  "Single-Arm KB Row 5×6/side @ 40 kg  (↑ load)",
+                "full_body": [
+                    "Single-Arm KB Clean + Z Press 5×4/side @ RIGHT: 24 kg / LEFT: 24 kg  [PRESS]",
+                    "Renegade Row 4×6/side @ 24 kg  [PULL]",
+                    "KB Goblet Squat 5×8 @ 40 kg  [LOWER]",
+                    "Ab Wheel 3×12  [CORE]",
+                ],
+                "focus": [
+                    "Overhead Carry LEFT then RIGHT 4×20 m @ 20 kg  (both sides now)",
+                    "Dead Hang 4×45 s",
+                    "Band Pull-Apart 4×25",
+                ],
+                "corrective": [
+                    "Sleeper Stretch LEFT 3×90 s",
+                    "90/90 Shoulder Rotation LEFT 3×12",
+                ],
+                "finisher": "KB Snatch EMOM 10 min: 6/side @ 24 kg",
+            },
+            3: {
+                "label": "Week 7 — Heavy week. Overhead carry goes heavier.",
+                "main":  "Single-Arm KB Row 4×5/side @ 40 kg  (heavy — RPE 8-9)",
+                "full_body": [
+                    "Single-Arm KB Clean + Z Press 4×4/side @ RIGHT: 28 kg / LEFT: 24-28 kg  [PRESS]",
+                    "Renegade Row 4×5/side @ 32 kg  [PULL — heavy renegade]",
+                    "KB Goblet Squat 4×6 @ 40 kg  [LOWER]",
+                    "Hanging Leg Raise 4×12  [CORE]",
+                ],
+                "focus": [
+                    "Overhead Carry LEFT 5×20 m @ 24 kg  (↑ load — serratus under serious load)",
+                    "Dead Hang 4×60 s  (longest hang yet)",
+                    "Band Pull-Apart 4×30",
+                ],
+                "corrective": [
+                    "Bottoms-Up Press LEFT 3×5 @ 16 kg  (↑ load from P1)",
+                    "Scalene Stretch LEFT 3×90 s",
+                ],
+                "finisher": (
+                    "Carry Medley × 4 rounds:\n"
+                    "  Overhead LEFT 20 m → Rack 20 m → Farmer 20 m @ 24 kg\n"
+                    "  Rest 90 s between rounds"
+                ),
+            },
+            4: {
+                "label": "Week 8 — Deload. Long hangs. Everything light.",
+                "main":  "Single-Arm KB Row 3×8/side @ 24 kg  (light)",
+                "full_body": [
+                    "Z Press Single-Arm 2×5/side @ 16 kg  [PRESS — easy]",
+                    "Renegade Row 2×5/side @ 20 kg  [PULL]",
+                    "KB Goblet Squat 2×10 @ 24 kg  [LOWER]",
+                    "Dead Bug 3×10/side  [CORE]",
+                ],
+                "focus": [
+                    "Overhead Carry 2×20 m/side @ 16 kg  (light)",
+                    "Dead Hang 3×60 s",
+                    "Band Pull-Apart 2×20",
+                ],
+                "corrective": [
+                    "Full corrective flow 10 min — everything that's helped most",
+                ],
+                "finisher": "KB flow 10 min @ 16-20 kg",
+            },
+        },
+    },
+
+    "strength_c": {
+        "name":   "Strength C — Hardstyle Power Development",
+        "anchor": "Double KB Swing + KB Snatch Complex",
+        "weeks": {
+            1: {
+                "label": "Week 5 — Double KB power. Snatch complexity added.",
+                "main":  "Double KB Swing EMOM 20 min: 8 reps/min @ 32 kg/bell",
+                "full_body": [
+                    "Single-Arm KB Clean + Press 4×5/side @ RIGHT: 28 kg / LEFT: 24 kg  [PUSH]",
+                    "Double KB Front Squat 3×5 @ 24 kg/bell  "
+                    "[LOWER — note how left rack feels vs week 1. Better?]",
+                    "Push-Up 4×20  [PUSH]",
+                    "Hollow Rock 4×20  [CORE]",
+                ],
+                "focus": [
+                    "KB Snatch 5×5/side @ 24 kg  (single arm overhead is fine — "
+                    "it's the bilateral compression that's the issue, not overhead per se)",
+                    "Single-Leg Hip Thrust 3×10/side @ 32 kg",
+                ],
+                "corrective": [
+                    "Serratus Wall Slide 2×10",
+                ],
+                "finisher": (
+                    "Ultra-short race pace conditioning — your swimming background:\n"
+                    "10 × (10 Double KB Swings @ 32 kg + 30 s complete rest)\n"
+                    "Maximum power every set. Complete recovery between. "
+                    "This is how you trained. Honor it."
+                ),
+            },
+            2: {
+                "label": "Week 6 — More double KB volume. Power endurance.",
+                "main":  "Double KB Swing EMOM 25 min: 8 reps/min @ 32 kg/bell",
+                "full_body": [
+                    "Single-Arm KB Clean + Press 5×5/side @ RIGHT: 28 kg / LEFT: 24 kg  [PUSH]",
+                    "Double KB Front Squat 4×5 @ 28 kg/bell  [LOWER — ↑ load]",
+                    "Push-Up 4×20  [PUSH]",
+                    "Ab Wheel 3×10  [CORE]",
+                ],
+                "focus": [
+                    "KB Snatch 6×5/side @ 24 kg",
+                    "Single-Leg Hip Thrust 4×8/side @ 32 kg",
+                ],
+                "corrective": ["Serratus Wall Slide 2×10"],
+                "finisher": (
+                    "10 × (10 Double KB Swings @ 32 kg + 30 s rest)\n"
+                    "Same protocol. Are you faster or more powerful than week 5?"
+                ),
+            },
+            3: {
+                "label": "Week 7 — Peak power. Everything heavy.",
+                "main":  "Double KB Swing 12×5 EMOM @ 40 kg/bell  (heaviest double swing)",
+                "full_body": [
+                    "Single-Arm KB Clean + Press 4×4/side @ RIGHT: 32 kg / LEFT: 28 kg  [PUSH — heavy]",
+                    "Double KB Front Squat 4×4 @ 32 kg/bell  [LOWER — heavy]",
+                    "Push-Up 4×20  [PUSH]",
+                    "Hanging Leg Raise 4×12  [CORE]",
+                ],
+                "focus": [
+                    "KB Snatch 5×5/side @ 28 kg  (heavy snatch)",
+                    "Single-Leg Hip Thrust 4×6/side @ 40 kg  (near max)",
+                ],
+                "corrective": ["Serratus Wall Slide 3×10"],
+                "finisher": (
+                    "The swim set:\n"
+                    "10 × (5 Double KB Swings @ 40 kg + 30 s rest)\n"
+                    "Maximum power. Sub-maximal reps. Complete rest. "
+                    "This is ultra-short race pace. This is yours."
+                ),
+            },
+            4: {
+                "label": "Week 8 — Deload. Feel how far you've come.",
+                "main":  "Two-Hand KB Swing 5×10 @ 24 kg  (light — just feel it)",
+                "full_body": [
+                    "Single-Arm KB Clean + Press 2×5/side @ 20 kg  [PUSH — easy]",
+                    "KB Goblet Squat 2×10 @ 24 kg  [LOWER]",
+                    "Push-Up 2×10  [PUSH]",
+                    "Dead Bug 3×10/side  [CORE]",
+                ],
+                "focus": [
+                    "Hip Flexor Stretch 2×90 s/side",
+                    "KB Arm Bar LEFT 2×90 s",
+                ],
+                "corrective": ["Diaphragmatic breathing 5 min"],
+                "finisher": "KB flow 10 min @ 20 kg",
+            },
+        },
+    },
+
+    "strength_d": {
+        "name":  "Strength D — Saturday Optional (Program 2)",
+        "weeks": {
+            1: {
+                "label": "Week 5 — Heavy deadlift + Z press skill",
+                "main":  "Double KB Deadlift 5×3 @ 40 kg/bell",
+                "skill": "Z Press Single-Arm 3×5/side @ 20 kg LEFT / 24 kg RIGHT",
+                "prevention": [
+                    "Copenhagen Plank 3×20 s/side",
+                    "Single-Leg Balance 3×30 s/side  (eyes closed if easy)",
+                    "Serratus Wall Slide 3×10",
+                ],
+                "mobility_block": [
+                    "Yoga warrior flow × 3/side",
+                    "Half pigeon 2×2 min/side",
+                    "Scalene stretch LEFT 3×90 s",
+                    "Legs-up-the-wall 8 min",
+                ],
+                "finisher": "KB flow / juggling 10 min",
+            },
+            2: {
+                "label": "Week 6 — Heavy deadlift + overhead carry skill",
+                "main":  "Double KB Deadlift 5×3 @ 40 kg/bell",
+                "skill": "Single-Arm Overhead Carry LEFT 4×30 m @ 20 kg  "
+                         "(skill work — left shoulder stability under load)",
+                "prevention": [
+                    "Copenhagen Plank 3×25 s/side",
+                    "Y-Balance Reach 3×5/side",
+                    "Serratus Wall Slide 3×10",
+                ],
+                "mobility_block": [
+                    "Sun salutation B × 4",
+                    "Warrior III 3×30 s/side",
+                    "Scalene stretch LEFT 3×90 s",
+                    "Legs-up-the-wall 8 min — arms in Y",
+                ],
+                "finisher": "KB flow / juggling 10 min",
+            },
+            3: {
+                "label": "Week 7 — Near-max deadlift + bottoms-up skill",
+                "main":  "Double KB Deadlift 4×2 @ 40 kg/bell  (heaviest — 2 perfect reps)",
+                "skill": "Bottoms-Up Press LEFT 3×5 @ 16 kg  (serratus activation under load)",
+                "prevention": [
+                    "Copenhagen Plank 3×30 s/side",
+                    "Serratus Wall Slide 3×10",
+                    "Scalene stretch LEFT 3×90 s",
+                ],
+                "mobility_block": [
+                    "Yin butterfly 3 min",
+                    "Yin dragon pose 2×2 min/side",
+                    "Yin sleeping swan 2×2 min/side",
+                    "Savasana 5 min",
+                ],
+                "finisher": "KB flow / juggling 10 min",
+            },
+            4: {
+                "label": "Week 8 — Light + full restoration",
+                "main":  "Double KB Deadlift 3×3 @ 32 kg/bell  (light deload)",
+                "skill": "Dowel Overhead Squat 3×8  (return to basics — notice improvement)",
+                "prevention": ["Serratus Wall Slide 2×10", "Band Pull-Apart 2×20"],
+                "mobility_block": [
+                    "Full restoration — anything your body needs",
+                    "Extra: scalene LEFT, sleeper stretch LEFT, legs-up-the-wall",
+                ],
+                "finisher": "KB flow 10 min @ light bells",
+            },
+        },
+    },
+
+    "mobility": {
+        "name":  "Mobility — Kyle Program 2",
+        "focus": "Deeper tissue work, advanced breathing, yoga integration",
+        "sessions": {
+            "A": {
+                "label": "Mobility A — Advanced Thoracic + Nerve Gliding",
+                "opening": ["Diaphragmatic Breathing 5 min  (same protocol — never skip)"],
+                "main": "Serratus Wall Slide 3×12 + Bear Plank Reach 3×10/side",
+                "sequence": [
+                    "KB Arm Bar with Rotation LEFT 3×10 @ 16 kg  (↑ load and reps)",
+                    "Scalene Stretch LEFT 4×90 s  (add a set)",
+                    "Sleeper Stretch LEFT 4×90 s",
+                    "Pec Minor Release LEFT — lacrosse ball under coracoid process 2×60 s  "
+                    "(find the knot just inside the shoulder — stay and breathe)",
+                    "Thoracic Rotation 3×12/side",
+                    "Thread the Needle 3×12/side",
+                ],
+                "nerve_gliding": [
+                    "Brachial Plexus Nerve Glide LEFT 3×12  (↑ reps)",
+                    "Ulnar Nerve Glide LEFT 3×10  "
+                    "(arm out, elbow bent, tilt head — different nerve path. "
+                    "Given the ulnar surgery this is important.)",
+                    "Radial Nerve Glide LEFT 3×10  "
+                    "(arm down, wrist extended behind — third nerve path)",
+                ],
+                "finisher": "Legs-Up-the-Wall 10 min  (↑ duration — arms in Y, breathe)",
+            },
+            "B": {
+                "label": "Mobility B — Sub-Scap Deep Release + Advanced Breathing",
+                "opening": ["Diaphragmatic Breathing 5 min"],
+                "main": "Sub-Scap Self-Release LEFT 3×90 s  "
+                        "(longer holds — you know where the tissue is now)",
+                "sequence": [
+                    "90/90 Shoulder Rotation LEFT 3×12",
+                    "Doorframe Pec Stretch 3×90 s  (longer)",
+                    "Thoracic Extension over roller 3×60 s  (different levels)",
+                    "Yoga cat-cow 2×10  (5 s/rep)",
+                    "Downward dog hold 3×30 s  (shoulder stability + hamstring)",
+                    "Child's pose lateral reach LEFT 3×90 s",
+                ],
+                "breathing_protocol": [
+                    "Wim Hof round 1: 30 breaths → exhale hold → inhale hold  "
+                    "(sympathetic activation then reset — do not do more than 1 round "
+                    "given blood pressure. One round is therapeutic.)",
+                    "4-7-8 Breathing 4 rounds  (parasympathetic follow-up)",
+                    "Box Breathing 5 min: 5-5-5-5",
+                ],
+                "finisher": (
+                    "Legs-Up-the-Wall 10 min — arms in Y\n"
+                    "If Rena is available: have her work on the serratus/sub-scap bundle now.\n"
+                    "Then 5 min arm bar immediately after while tissue is released.\n"
+                    "This combination is more therapeutic than either alone."
+                ),
+            },
+        },
+    },
+}
+
+
+# ============================================================================
+#  KYLE PROGRAM 3 — PERFORMANCE  (Weeks 9–12)
+#  The gap is closed. Bilateral symmetry restored. Build from here.
+# ============================================================================
+
+KYLE_PROGRAM_3 = {
+    "name":    "Program 3 — Performance",
+    "subtitle": "The gap is closed. Bilateral symmetry restored. Build from here.",
+    "weeks":   4,
+    "description": (
+        "By week 9 your left side should be pressing at or near 24 kg. "
+        "The serratus is reactivated. The scar tissue has been mobilized. "
+        "Now we build. The corrective work doesn't stop — it becomes maintenance. "
+        "The strength work gets heavier. The conditioning gets harder. "
+        "You are rebuilding what D3 swimming built — just smarter this time."
+    ),
+
+    "strength_a": {
+        "name":   "Strength A — Lower + Full Pressing Strength",
+        "anchor": "Double KB Swing + Standing Single-Arm Press",
+        "weeks": {
+            1: {
+                "label": "Week 9 — Standing press. No more kneeling or floor.",
+                "main":  "Double KB Swing 8×8 @ 32 kg/bell",
+                "full_body": [
+                    "Standing Single-Arm KB Press 4×5/side @ RIGHT: 28 kg / LEFT: 24 kg  "
+                    "[PRESS — standing now. Full body tension. "
+                    "Left at 24 kg standing is significant progress from 20 kg half-kneeling.]",
+                    "Double KB Deadlift 5×4 @ 40 kg/bell  [HINGE]",
+                    "Ab Wheel Rollout 4×10  [CORE]",
+                ],
+                "focus": [
+                    "Cossack Squat 3×6/side @ 16 kg  (lateral athletic mobility)",
+                    "Y-T-W 3×12 @ 8 kg  (maintenance)",
+                    "Face Pull 3×20",
+                ],
+                "corrective": [
+                    "Serratus Wall Slide 2×10  (maintenance — always)",
+                    "KB Arm Bar LEFT 2×60 s @ 20 kg  (↑ load)",
+                    "Scalene Stretch LEFT 2×90 s",
+                ],
+                "finisher": (
+                    "Ultra-short race pace:\n"
+                    "12 × (8 Double KB Swings @ 32 kg + 30 s rest)\n"
+                    "96 total reps. Maximum power every set."
+                ),
+            },
+            2: {
+                "label": "Week 10 — More standing press volume.",
+                "main":  "Double KB Swing 10×8 @ 32 kg/bell",
+                "full_body": [
+                    "Standing Single-Arm KB Press 5×5/side @ RIGHT: 28 kg / LEFT: 24-28 kg  "
+                    "[PRESS — test 28 kg LEFT this week]",
+                    "Double KB Deadlift 5×4 @ 40 kg/bell  [HINGE]",
+                    "Ab Wheel Rollout 4×12  [CORE]",
+                ],
+                "focus": [
+                    "Cossack Squat 4×6/side @ 16 kg",
+                    "Y-T-W 3×12 @ 8 kg",
+                    "Overhead Carry LEFT 4×20 m @ 24 kg  (maintenance)",
+                ],
+                "corrective": [
+                    "Serratus Wall Slide 2×10",
+                    "Scalene Stretch LEFT 2×90 s",
+                ],
+                "finisher": (
+                    "12 × (8 Double KB Swings @ 36 kg + 30 s rest)\n"
+                    "↑ load from week 9"
+                ),
+            },
+            3: {
+                "label": "Week 11 — Peak strength. Left side strong.",
+                "main":  "Double KB Swing 12×6 EMOM @ 36 kg/bell",
+                "full_body": [
+                    "Standing Single-Arm KB Press 4×4/side @ RIGHT: 32 kg / LEFT: 28 kg  "
+                    "[PRESS — this is where you were with bilateral before injury. "
+                    "Unilateral LEFT at 28 kg = equivalent bilateral demand at 32+ kg. "
+                    "You are back.]",
+                    "Double KB Deadlift 4×3 @ 40 kg/bell  [HINGE — near max]",
+                    "Hanging Leg Raise 4×12  [CORE]",
+                ],
+                "focus": [
+                    "Cossack Squat 3×6/side @ 20 kg  (↑ load)",
+                    "Y-T-W 4×10 @ 10 kg",
+                    "Overhead Carry LEFT 4×30 m @ 28 kg",
+                ],
+                "corrective": [
+                    "Serratus Wall Slide 3×10  (peak week — extra activation)",
+                    "Scalene Stretch LEFT 3×90 s",
+                ],
+                "finisher": (
+                    "The benchmark:\n"
+                    "12 × (8 Double KB Swings @ 40 kg + 30 s rest)\n"
+                    "40 kg bells. 96 reps. This is elite."
+                ),
+            },
+            4: {
+                "label": "Week 12 — Final deload. You did it.",
+                "main":  "Two-Hand KB Swing 5×10 @ 24 kg  (light — feel the ease)",
+                "full_body": [
+                    "Standing Single-Arm KB Press 3×5/side @ 20 kg  [PRESS — easy]",
+                    "Double KB Deadlift 3×5 @ 32 kg/bell  [HINGE — moderate]",
+                    "Dead Bug 3×10/side  [CORE]",
+                ],
+                "focus": [
+                    "Hip Flexor Stretch 2×90 s/side",
+                    "Thoracic Rotation 2×10/side",
+                ],
+                "corrective": [
+                    "Serratus Wall Slide 2×10",
+                    "Full corrective flow 10 min — everything",
+                    "Scalene Stretch LEFT 2×90 s",
+                ],
+                "finisher": (
+                    "KB flow 10 min @ 20 kg\n"
+                    "12 weeks ago your left pressed 20 kg and fatigued quickly.\n"
+                    "Today you stand-pressed 28 kg for sets.\n"
+                    "The gap is closed. The pattern is restored.\n"
+                    "What comes next is up to you."
+                ),
+            },
+        },
+    },
+
+    "strength_b": {
+        "name":   "Strength B — Heavy Pull + Performance Upper",
+        "anchor": "Heavy Single-Arm Row + Overhead Carry",
+        "weeks": {
+            1: {
+                "label": "Week 9 — Heavy pulling. You're strong here.",
+                "main":  "Single-Arm KB Row 5×6/side @ 40 kg",
+                "full_body": [
+                    "Standing Single-Arm Press 4×4/side @ RIGHT: 28 kg / LEFT: 24 kg  [PRESS]",
+                    "Renegade Row 4×6/side @ 28 kg  [PULL — heavy renegade]",
+                    "KB Goblet Squat 4×6 @ 40 kg  [LOWER]",
+                    "Ab Wheel 4×12  [CORE]",
+                ],
+                "focus": [
+                    "Overhead Carry LEFT then RIGHT 5×20 m @ 28 kg",
+                    "Dead Hang 4×60 s",
+                    "Band Pull-Apart 4×30",
+                ],
+                "corrective": [
+                    "Bottoms-Up Press LEFT 3×5 @ 20 kg  (heaviest BU press)",
+                    "Scalene Stretch LEFT 2×90 s",
+                ],
+                "finisher": "KB Snatch EMOM 12 min: 6/side @ 28 kg",
+            },
+            2: {
+                "label": "Week 10 — Volume on pulls.",
+                "main":  "Single-Arm KB Row 6×6/side @ 40 kg  (add a set)",
+                "full_body": [
+                    "Standing Single-Arm Press 5×4/side @ RIGHT: 28 kg / LEFT: 24-28 kg  [PRESS]",
+                    "Renegade Row 4×5/side @ 32 kg  [PULL — heavier]",
+                    "KB Goblet Squat 4×5 @ 40 kg  [LOWER]",
+                    "Ab Wheel 4×12  [CORE]",
+                ],
+                "focus": [
+                    "Overhead Carry 5×30 m/side @ 28 kg  (longer)",
+                    "Dead Hang 4×60 s",
+                    "Serratus Wall Slide 3×10",
+                ],
+                "corrective": [
+                    "Sleeper Stretch LEFT 3×90 s",
+                    "90/90 Shoulder Rotation LEFT 3×12",
+                ],
+                "finisher": "KB Snatch EMOM 15 min: 6/side @ 28 kg",
+            },
+            3: {
+                "label": "Week 11 — Peak pulling strength.",
+                "main":  "Single-Arm KB Row 4×5/side @ 40 kg  (heavy — RPE 9)",
+                "full_body": [
+                    "Standing Single-Arm Press 4×4/side @ RIGHT: 32 kg / LEFT: 28 kg  [PRESS]",
+                    "Renegade Row 4×4/side @ 32 kg  [PULL — max renegade]",
+                    "KB Goblet Squat 4×4 @ 40 kg  [LOWER]",
+                    "Hanging Leg Raise 4×15  [CORE]",
+                ],
+                "focus": [
+                    "Overhead Carry LEFT 5×30 m @ 32 kg  (peak load — "
+                    "left shoulder overhead at 32 kg is remarkable after week 1)",
+                    "Dead Hang 5×60 s",
+                    "Band Pull-Apart 4×30",
+                ],
+                "corrective": [
+                    "Bottoms-Up Press LEFT 3×5 @ 20 kg",
+                    "Scalene Stretch LEFT 3×90 s",
+                ],
+                "finisher": (
+                    "Carry Gauntlet × 5:\n"
+                    "  Overhead LEFT 30 m → Rack RIGHT 30 m → Farmer both 30 m @ 28 kg\n"
+                    "  Rest 90 s. This is performance."
+                ),
+            },
+            4: {
+                "label": "Week 12 — Final deload. Long hangs. Celebrate.",
+                "main":  "Single-Arm KB Row 3×8/side @ 28 kg  (light)",
+                "full_body": [
+                    "Standing Single-Arm Press 2×5/side @ 20 kg  [PRESS — easy]",
+                    "Renegade Row 2×5/side @ 20 kg  [PULL]",
+                    "KB Goblet Squat 2×10 @ 28 kg  [LOWER]",
+                    "Dead Bug 3×10/side  [CORE]",
+                ],
+                "focus": [
+                    "Overhead Carry 2×20 m/side @ 20 kg  (light)",
+                    "Dead Hang 3×60 s",
+                    "Band Pull-Apart 2×20",
+                ],
+                "corrective": [
+                    "Full corrective flow — everything that helped",
+                    "Rena massage on serratus/sub-scap if available",
+                    "Arm bar after immediately",
+                ],
+                "finisher": "KB flow 10 min @ 16-20 kg  (12 weeks. You're done. Well done.)",
+            },
+        },
+    },
+
+    "strength_c": {
+        "name":   "Strength C — Peak Hardstyle Performance",
+        "anchor": "Double KB Swing + Complex Conditioning",
+        "weeks": {
+            1: {
+                "label": "Week 9 — Elite conditioning. Ultra-short race pace.",
+                "main":  "Double KB Swing EMOM 20 min: 10 reps/min @ 36 kg/bell",
+                "full_body": [
+                    "Standing Single-Arm Clean + Press 4×4/side @ RIGHT: 28 kg / LEFT: 24 kg  [PUSH]",
+                    "Double KB Front Squat 4×4 @ 32 kg/bell  [LOWER]",
+                    "Push-Up 5×20  [PUSH]",
+                    "Ab Wheel 4×12  [CORE]",
+                ],
+                "focus": [
+                    "KB Snatch 5×5/side @ 28 kg  (heavy snatch)",
+                    "Single-Leg Hip Thrust 4×8/side @ 40 kg",
+                ],
+                "corrective": ["Serratus Wall Slide 3×10"],
+                "finisher": (
+                    "The race set:\n"
+                    "15 × (6 Double KB Swings @ 36 kg + 30 s rest)\n"
+                    "90 total reps. Maximum power. Complete rest. Pure swimming logic."
+                ),
+            },
+            2: {
+                "label": "Week 10 — Peak volume.",
+                "main":  "Double KB Swing EMOM 25 min: 10 reps/min @ 36 kg/bell",
+                "full_body": [
+                    "Standing Single-Arm Clean + Press 5×4/side @ RIGHT: 32 kg / LEFT: 28 kg  [PUSH]",
+                    "Double KB Front Squat 5×4 @ 32 kg/bell  [LOWER]",
+                    "Push-Up 5×20  [PUSH]",
+                    "Hanging Leg Raise 4×12  [CORE]",
+                ],
+                "focus": [
+                    "KB Snatch 6×5/side @ 28 kg",
+                    "Single-Leg Hip Thrust 4×6/side @ 40 kg",
+                ],
+                "corrective": ["Serratus Wall Slide 3×10"],
+                "finisher": (
+                    "15 × (6 Double KB Swings @ 40 kg + 30 s rest)\n"
+                    "40 kg bells. This is where you were before. You're back."
+                ),
+            },
+            3: {
+                "label": "Week 11 — Peak everything.",
+                "main":  "Double KB Swing 15×5 EMOM @ 40 kg/bell  (near-max load)",
+                "full_body": [
+                    "Standing Single-Arm Clean + Press 4×3/side @ RIGHT: 32 kg / LEFT: 28-32 kg  "
+                    "[PUSH — left at 32 kg standing. This is where you were with doubles before.]",
+                    "Double KB Front Squat 4×3 @ 36 kg/bell  [LOWER — heavy]",
+                    "Push-Up 5×20  [PUSH]",
+                    "Ab Wheel 4×15  [CORE]",
+                ],
+                "focus": [
+                    "KB Snatch 5×4/side @ 32 kg  (heavy — RPE 8-9)",
+                    "Single-Leg Hip Thrust 4×5/side @ 40 kg",
+                ],
+                "corrective": ["Serratus Wall Slide 3×10"],
+                "finisher": (
+                    "The 12-week test:\n"
+                    "10 × (10 Double KB Swings @ 40 kg + 30 s rest)\n"
+                    "Then: 50 KB Snatches (25/side) @ 28 kg\n"
+                    "Then: 30 Push-Ups\n"
+                    "For time. This is your 12-week fitness test.\n"
+                    "12 weeks ago your left side was fading at 20 kg. Today you're here."
+                ),
+            },
+            4: {
+                "label": "Week 12 — Deload. Reflect.",
+                "main":  "Two-Hand KB Swing 5×10 @ 24 kg  (light)",
+                "full_body": [
+                    "Standing Single-Arm Press 2×5/side @ 20 kg  [PUSH — easy]",
+                    "KB Goblet Squat 2×10 @ 28 kg  [LOWER]",
+                    "Push-Up 2×10  [PUSH]",
+                    "Dead Bug 3×10/side  [CORE]",
+                ],
+                "focus": [
+                    "Hip Flexor Stretch 2×90 s/side",
+                    "Arm Bar LEFT 2×90 s",
+                ],
+                "corrective": ["Diaphragmatic breathing 5 min"],
+                "finisher": (
+                    "KB flow 10 min @ 20 kg\n"
+                    "You came in with a 4 kg bilateral press gap and chronic trap ache.\n"
+                    "The gap is closed. The serratus is awake.\n"
+                    "The double 70lb reds are waiting."
+                ),
+            },
+        },
+    },
+
+    "strength_d": {
+        "name":  "Strength D — Saturday Optional (Program 3)",
+        "weeks": {
+            1: {
+                "label": "Week 9 — Heavy deadlift + overhead squat skill",
+                "main":  "Double KB Deadlift 5×2 @ 40 kg/bell  (max load — 2 perfect reps)",
+                "skill": "KB Overhead Squat Single-Arm 3×5/side @ 16 kg  "
+                         "(progression from dowel — actual load now)",
+                "prevention": [
+                    "Y-Balance Reach 3×5/side",
+                    "Copenhagen Plank 3×30 s/side",
+                    "Serratus Wall Slide 3×10",
+                ],
+                "mobility_block": [
+                    "Athletic mobility circuit 20 min",
+                    "Warrior flow + Warrior III balance",
+                    "Scalene stretch LEFT 3×90 s",
+                    "Legs-up-the-wall 10 min — arms in Y",
+                ],
+                "finisher": "KB flow / juggling 10 min @ 24-32 kg",
+            },
+            2: {
+                "label": "Week 10 — Heavy deadlift + press skill",
+                "main":  "Double KB Deadlift 5×2 @ 40 kg/bell",
+                "skill": "Standing Single-Arm Press 3×5/side @ LEFT: 24 kg  "
+                         "(Saturday skill — left shoulder focus)",
+                "prevention": [
+                    "Copenhagen Plank 3×30 s/side",
+                    "Bottoms-Up Press LEFT 2×5 @ 16 kg",
+                    "Serratus Wall Slide 3×10",
+                ],
+                "mobility_block": [
+                    "Yoga strength flow 20 min",
+                    "Scalene stretch LEFT 3×90 s",
+                    "Legs-up-the-wall 10 min",
+                ],
+                "finisher": "KB flow / juggling 10 min",
+            },
+            3: {
+                "label": "Week 11 — Peak Saturday. Heavy and mobile.",
+                "main":  "Double KB Deadlift 4×2 @ 40 kg/bell  (near-max)",
+                "skill": "Single-Arm Overhead Squat LEFT 3×5 @ 20 kg  (heavy skill work)",
+                "prevention": [
+                    "Y-Balance Reach 3×5/side",
+                    "Serratus Wall Slide 3×10",
+                    "Scalene stretch LEFT 3×90 s",
+                ],
+                "mobility_block": [
+                    "Yin yoga 20 min — deepest session of the cycle",
+                    "Dragon pose 3 min/side",
+                    "Sleeping swan 3 min/side",
+                    "Savasana 5 min",
+                ],
+                "finisher": "KB flow / juggling 10 min — peak play",
+            },
+            4: {
+                "label": "Week 12 — Light + celebration mobility",
+                "main":  "Double KB Deadlift 3×3 @ 32 kg/bell  (light)",
+                "skill": "Dowel Overhead Squat 3×8  (back to basics — notice transformation)",
+                "prevention": ["Serratus Wall Slide 2×10", "Band Pull-Apart 2×20"],
+                "mobility_block": [
+                    "Move through whatever your body needs",
+                    "Honor the 12 weeks",
+                    "Savasana 5 min",
+                ],
+                "finisher": (
+                    "KB flow / juggling 10 min @ any weight\n"
+                    "12 weeks. Done.\n"
+                    "Now plan what comes next."
+                ),
+            },
+        },
+    },
+
+    "mobility": {
+        "name":  "Mobility — Kyle Program 3",
+        "focus": "Performance mobility, advanced breathing, maintenance corrective",
+        "sessions": {
+            "A": {
+                "label": "Mobility A — Performance Thoracic + Advanced Nerve Work",
+                "opening": ["Diaphragmatic Breathing 5 min  (12 weeks in — this should feel natural now)"],
+                "main": "Serratus Wall Slide 3×12 + Bear Plank Reach 3×10/side  (maintenance)",
+                "sequence": [
+                    "KB Arm Bar with Rotation LEFT 3×10 @ 20 kg  (heaviest arm bar)",
+                    "Scalene Stretch LEFT 4×90 s",
+                    "Sleeper Stretch LEFT 4×90 s",
+                    "Sub-Scap Release LEFT 2×90 s  (lacrosse ball — you know where the tissue is)",
+                    "Cossack Squat flow 2×10/side  (lateral hip mobility)",
+                    "Warrior III balance 3×30 s/side  (proprioception)",
+                ],
+                "nerve_gliding": [
+                    "All three nerve glides LEFT: brachial plexus + ulnar + radial 3×12 each",
+                    "These should feel easier than week 1. The tissue is clearing.",
+                ],
+                "finisher": "Legs-Up-the-Wall 10 min — arms in Y  (10 min is now standard for you)",
+            },
+            "B": {
+                "label": "Mobility B — Peak Breathing + Full Release",
+                "opening": ["Diaphragmatic Breathing 5 min"],
+                "main": "Sub-Scap Release LEFT 3×90 s  (deepest release of the program)",
+                "sequence": [
+                    "90/90 Shoulder Rotation LEFT 3×15  (full range — compare to week 1)",
+                    "Doorframe Pec Stretch 3×90 s",
+                    "Thoracic Extension over roller 3×60 s",
+                    "Full yoga flow 10 min — whatever feels good",
+                ],
+                "breathing_protocol": [
+                    "Box Breathing 5 min: 6-6-6-6  (harder than 4-4-4-4 — longer cycles)",
+                    "4-7-8 Breathing 4 rounds",
+                    "5 min silence — just notice your breathing pattern",
+                    "(After 12 weeks of breathing work your resting pattern should "
+                    "have shifted toward diaphragmatic. This is measurable. "
+                    "Your HRV has likely improved. Your trap resting tone has likely decreased.)",
+                ],
+                "finisher": (
+                    "Legs-Up-the-Wall 10 min — arms in Y\n\n"
+                    "If Rena does massage on the serratus/sub-scap bundle today:\n"
+                    "  → Arm bar immediately after (tissue is released + warm)\n"
+                    "  → Then legs-up-the-wall\n"
+                    "  → Then 5 min diaphragmatic breathing\n\n"
+                    "This sequence is the most therapeutic thing available to you "
+                    "outside of clinical care. Use it."
+                ),
+            },
+        },
+    },
+}
+
+
+# ============================================================================
+#  PROGRAM NOTES FOR KYLE
+# ============================================================================
+
+KYLE_PROGRAM_NOTES = {
+    "north_star": (
+        "The gap: LEFT 20 kg → RIGHT 24 kg at program start.\n"
+        "The goal: 24/24 by week 12.\n"
+        "Track both sides every pressing session. The gap closing IS the program working."
+    ),
+    "on_geoff_kb_strong": (
+        "KB Strong is a great program for someone with bilateral symmetry.\n"
+        "It was reinforcing your asymmetry. You knew this.\n"
+        "Single-arm pressing for 12 weeks will reset the pattern."
+    ),
+    "on_visual_disturbance": (
+        "The head pressure and visual disturbance during bilateral overhead pressing "
+        "is vascular thoracic outlet compression.\n"
+        "Single-arm pressing at appropriate loads should not trigger this.\n"
+        "If it does: stop, note the load, report it.\n"
+        "This program avoids bilateral overhead pressing entirely."
+    ),
+    "on_diaphragmatic_breathing": (
+        "Shallow chest breathing chronically elevates the structures around "
+        "the thoracic outlet and maintains compression.\n"
+        "Diaphragmatic breathing mechanically decompresses the thoracic outlet "
+        "with every exhale.\n"
+        "5 minutes daily is therapeutic, not optional."
+    ),
+    "on_rena_massage": (
+        "The manual release Rena does on the serratus/sub-scap bundle is "
+        "probably the most therapeutic intervention available to you.\n"
+        "The tingling it produces is the brachial plexus being unloaded.\n"
+        "Timing: immediate arm bar after massage while tissue is released.\n"
+        "Frequency: as often as possible."
+    ),
+    "on_the_double_70lb_reds": (
+        "You pressed double 70lb reds before.\n"
+        "That's 32 kg per hand.\n"
+        "By week 12 you'll be standing-pressing 28-32 kg left.\n"
+        "The reds are waiting."
+    ),
+    "after_12_weeks": (
+        "After this program:\n"
+        "Option 1: Repeat with heavier starting weights. Your movement history carries over.\n"
+        "Option 2: Cautiously reintroduce bilateral pressing — single sets, "
+        "monitor for visual disturbance, bilateral only after unilateral warmup.\n"
+        "Option 3: Design Program 4 based on what you learned.\n\n"
+        "The corrective work never fully stops. Serratus wall slides and "
+        "diaphragmatic breathing become permanent fixtures.\n"
+        "The scar tissue will always be there. The question is whether it's "
+        "mobile or rigid. Keep it mobile."
+    ),
+}
+
+
+# ── Program lists by track ────────────────────────────────────────────────────
+PROGRAMS = [PROGRAM_1, PROGRAM_2, PROGRAM_3]  # default fighter track
+
+TRACK_PROGRAMS = {
+    'fighter': [PROGRAM_1, PROGRAM_2, PROGRAM_3],
+    'kyle':    [KYLE_PROGRAM_1, KYLE_PROGRAM_2, KYLE_PROGRAM_3],
+}
 
 # ── Arms rotation ─────────────────────────────────────────────────────────────
 # One pairing per program × day type. get_today_workout() uses this instead of
@@ -1512,6 +2999,7 @@ def default_state() -> dict:
     monday = today - dt.timedelta(days=today.weekday())
     return {
         "program_start_iso":  str(monday),
+        "program_track":      "fighter",
         "workouts":           [],
         "ruck_log":           [],
         "run_log":            [],
@@ -1601,7 +3089,10 @@ def get_today_workout(state: dict, for_date: dt.date | None = None) -> dict:
         }
 
     program_idx, current_week, weeks_elapsed = _get_program_and_week(state, today=today)
-    program      = PROGRAMS[program_idx]
+    track    = state.get("program_track", "fighter")
+    programs = TRACK_PROGRAMS.get(track, TRACK_PROGRAMS["fighter"])
+    program  = programs[program_idx]
+    is_kyle  = (track == "kyle")
     current_prog = program_idx + 1          # 1–3
     track_key    = _SESSION_TRACK_KEY.get(session_type, "day_a_strength")
 
@@ -1644,6 +3135,14 @@ def get_today_workout(state: dict, for_date: dt.date | None = None) -> dict:
         mob_key = "A" if session_type == "mobility_a" else "B"
         mob     = program["mobility"]["sessions"][mob_key]
         mob_main_kg = _parse_std_kg(mob["main"], default=8.0)
+        if is_kyle:
+            # Kyle mobility: opening + sequence → full_body_block;
+            # nerve_gliding + breathing_protocol → focus_work
+            full_body_blk = mob.get("opening", []) + mob.get("sequence", [])
+            focus_blk     = mob.get("nerve_gliding", []) + mob.get("breathing_protocol", [])
+        else:
+            full_body_blk = mob["sequence"]
+            focus_blk     = mob.get("pilates_block", [])
         return {
             "status":           "active",
             "track_key":        track_key,
@@ -1658,17 +3157,17 @@ def get_today_workout(state: dict, for_date: dt.date | None = None) -> dict:
             "total_sessions":   4,
             "main":             mob["main"],
             "std_kg":           mob_main_kg,
-            "full_body_block":  mob["sequence"],
-            "focus_work":       mob["pilates_block"],
+            "full_body_block":  full_body_blk,
+            "focus_work":       focus_blk,
             "arms":             [],
-            "finisher":         mob["finisher"],
+            "finisher":         mob.get("finisher", ""),
             "bell_guidance":    "Lighter than you think. Quality over load.",
             "cycle_week":       current_week,
             "suggested_weight": mob_main_kg,
             "weights_by_section": {
                 "main":      mob_main_kg,
-                "full_body": _first_kg(mob["sequence"]),
-                "focus":     _first_kg(mob["pilates_block"]),
+                "full_body": _first_kg(full_body_blk),
+                "focus":     _first_kg(focus_blk),
                 "arms":      None,
                 "finisher":  _first_kg([mob["finisher"]]) if mob.get("finisher") else None,
             },
@@ -1678,8 +3177,24 @@ def get_today_workout(state: dict, for_date: dt.date | None = None) -> dict:
     day_data  = program[session_type]
     week_data = day_data["weeks"][current_week]
     std_kg    = _parse_std_kg(week_data["main"])
-    arms_list = ARMS_ROTATION.get(f"program_{current_prog}", {}).get(
-                    session_type, week_data.get("arms", []))
+
+    if is_kyle:
+        # Kyle has no arms; ARMS_ROTATION does not apply
+        arms_list = []
+        if session_type == "strength_d":
+            # skill → single-item full_body_block; prevention → focus_work
+            skill = week_data.get("skill", "")
+            full_body_blk = [skill] if skill else []
+            focus_blk     = week_data.get("prevention", [])
+        else:
+            # strength_a / b / c: full_body + focus + corrective merged into focus
+            full_body_blk = week_data.get("full_body", [])
+            focus_blk     = week_data.get("focus", []) + week_data.get("corrective", [])
+    else:
+        arms_list     = ARMS_ROTATION.get(f"program_{current_prog}", {}).get(
+                            session_type, week_data.get("arms", []))
+        full_body_blk = week_data.get("full_body", [])
+        focus_blk     = week_data.get("focus", [])
 
     result = {
         "status":           "active",
@@ -1695,17 +3210,17 @@ def get_today_workout(state: dict, for_date: dt.date | None = None) -> dict:
         "total_sessions":   4,
         "main":             week_data["main"],
         "std_kg":           std_kg,
-        "full_body_block":  week_data.get("full_body", []),
-        "focus_work":       week_data.get("focus", []),
+        "full_body_block":  full_body_blk,
+        "focus_work":       focus_blk,
         "arms":             arms_list,
         "finisher":         week_data.get("finisher", ""),
-        "bell_guidance":    day_data.get("focus", ""),
+        "bell_guidance":    day_data.get("anchor", day_data.get("focus", "")),
         "cycle_week":       current_week,
         "suggested_weight": std_kg,
         "weights_by_section": {
             "main":      std_kg,
-            "full_body": _first_kg(week_data.get("full_body", [])),
-            "focus":     _first_kg(week_data.get("focus", [])),
+            "full_body": _first_kg(full_body_blk),
+            "focus":     _first_kg(focus_blk),
             "arms":      _first_kg(arms_list),
             "finisher":  _first_kg([week_data["finisher"]]) if week_data.get("finisher") else None,
         },
@@ -1713,6 +3228,9 @@ def get_today_workout(state: dict, for_date: dt.date | None = None) -> dict:
     # Saturday only: include mobility block
     if session_type == "strength_d":
         result["mobility_block"] = week_data.get("mobility_block", [])
+    # Kyle: expose pre_session activation block
+    if is_kyle:
+        result["pre_session"] = program.get("pre_session", [])
 
     return result
 
