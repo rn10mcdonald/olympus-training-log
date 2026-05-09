@@ -256,11 +256,19 @@ async def log_recommended(req: Request, u: dict = CurrentUser):
     state = _load_training(uid)
     msg   = core.log_rec(state, weights_lbs=weights_lbs)
     _save_training(uid, state)
-    today = _local_today(p)
+    today        = _local_today(p)
+    duration_min = None
+    try:
+        raw_secs = p.get("duration_seconds")
+        if raw_secs:
+            duration_min = round(float(raw_secs) / 60, 1) or None
+    except (TypeError, ValueError):
+        pass
     if state.get("workouts"):
         last = state["workouts"][-1]
         db.insert_workout(uid, today, "recommended", 0,
-                          notes=last.get("details", "")[:200])
+                          notes=last.get("details", "")[:200],
+                          duration_min=duration_min)
     return {"status": "ok", "msg": msg, "state": state}
 
 @app.post("/api/workout/custom")
@@ -369,8 +377,16 @@ async def log_session(req: Request, u: dict = CurrentUser):
     state        = _load_training(uid)
     msg          = core.log_custom(state, notes or session_type)
     _save_training(uid, state)
+    duration_min = None
+    try:
+        raw_secs = p.get("duration_seconds")
+        if raw_secs:
+            duration_min = round(float(raw_secs) / 60, 1) or None
+    except (TypeError, ValueError):
+        pass
     db.insert_workout(uid, _local_today(p), session_type, 0,
-                      notes=notes[:200] if notes else None)
+                      notes=notes[:200] if notes else None,
+                      duration_min=duration_min)
     return {"status": "ok", "msg": msg, "state": state}
 
 
