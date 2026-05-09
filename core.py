@@ -1661,9 +1661,19 @@ def _get_program_and_week(state: dict, today: dt.date | None = None) -> tuple:
 
 
 def _parse_std_kg(main_text: str, default: float = 16.0) -> float:
-    """Extract first '@  N kg' or '@ N kg/bell' weight from a main-lift string."""
-    m = re.search(r'@\s*(\d+)\s*kg', main_text)
+    """Extract first '@ N kg' weight from a string; returns default when absent."""
+    m = re.search(r'@\s*(\d+(?:\.\d+)?)\s*kg', main_text or "")
     return float(m.group(1)) if m else default
+
+
+def _first_kg(strings: list) -> float | None:
+    """Return the weight (kg) from the first item in a list that contains '@ N kg'.
+    Returns None when no item has an explicit weight."""
+    for s in (strings or []):
+        m = re.search(r'@\s*(\d+(?:\.\d+)?)\s*kg', s or "")
+        if m:
+            return float(m.group(1))
+    return None
 
 
 # ── Public API ────────────────────────────────────────────────────────────────
@@ -1723,6 +1733,7 @@ def get_today_workout(state: dict, for_date: dt.date | None = None) -> dict:
     if session_type in ("mobility_a", "mobility_b"):
         mob_key = "A" if session_type == "mobility_a" else "B"
         mob     = program["mobility"]["sessions"][mob_key]
+        mob_main_kg = _parse_std_kg(mob["main"], default=8.0)
         return {
             "status":           "active",
             "track_key":        track_key,
@@ -1736,20 +1747,29 @@ def get_today_workout(state: dict, for_date: dt.date | None = None) -> dict:
             "session_idx":      current_week - 1,
             "total_sessions":   4,
             "main":             mob["main"],
-            "std_kg":           8.0,
+            "std_kg":           mob_main_kg,
             "full_body_block":  mob["sequence"],
             "focus_work":       mob["pilates_block"],
             "arms":             [],
             "finisher":         mob["finisher"],
             "bell_guidance":    "Lighter than you think. Quality over load.",
             "cycle_week":       current_week,
-            "suggested_weight": 8.0,
+            "suggested_weight": mob_main_kg,
+            "weights_by_section": {
+                "main":      mob_main_kg,
+                "full_body": _first_kg(mob["sequence"]),
+                "focus":     _first_kg(mob["pilates_block"]),
+                "arms":      None,
+                "finisher":  _first_kg([mob["finisher"]]) if mob.get("finisher") else None,
+            },
         }
 
     # ── Strength sessions (A / B / C / D) ────────────────────────────────────
     day_data  = program[session_type]
     week_data = day_data["weeks"][current_week]
     std_kg    = _parse_std_kg(week_data["main"])
+    arms_list = ARMS_ROTATION.get(f"program_{current_prog}", {}).get(
+                    session_type, week_data.get("arms", []))
 
     result = {
         "status":           "active",
@@ -1767,12 +1787,18 @@ def get_today_workout(state: dict, for_date: dt.date | None = None) -> dict:
         "std_kg":           std_kg,
         "full_body_block":  week_data.get("full_body", []),
         "focus_work":       week_data.get("focus", []),
-        "arms":             ARMS_ROTATION.get(f"program_{current_prog}", {}).get(session_type,
-                                week_data.get("arms", [])),
+        "arms":             arms_list,
         "finisher":         week_data.get("finisher", ""),
         "bell_guidance":    day_data.get("focus", ""),
         "cycle_week":       current_week,
         "suggested_weight": std_kg,
+        "weights_by_section": {
+            "main":      std_kg,
+            "full_body": _first_kg(week_data.get("full_body", [])),
+            "focus":     _first_kg(week_data.get("focus", [])),
+            "arms":      _first_kg(arms_list),
+            "finisher":  _first_kg([week_data["finisher"]]) if week_data.get("finisher") else None,
+        },
     }
     # Saturday only: include mobility block
     if session_type == "strength_d":
