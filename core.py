@@ -2121,8 +2121,8 @@ KYLE_PROGRAM_2 = {
                 "main":  "Double KB Swing EMOM 20 min: 8 reps/min @ 32 kg/bell",
                 "full_body": [
                     "Single-Arm KB Clean + Press 4×5/side @ RIGHT: 28 kg / LEFT: 24 kg  [PUSH]",
-                    "Double KB Front Squat 3×5 @ 24 kg/bell  "
-                    "[LOWER — note how left rack feels vs week 1. Better?]",
+                    "KB Goblet Squat 3×5 @ 40 kg  "
+                    "[LOWER — Two-Hand KB Goblet Squat — cup the bell, elbows inside knees at bottom, drive knees out, heels rooted. Go heavy. Perfect every time.]",
                     "Push-Up 4×20  [PUSH]",
                     "Hollow Rock 4×20  [CORE]",
                 ],
@@ -2146,7 +2146,7 @@ KYLE_PROGRAM_2 = {
                 "main":  "Double KB Swing EMOM 25 min: 8 reps/min @ 32 kg/bell",
                 "full_body": [
                     "Single-Arm KB Clean + Press 5×5/side @ RIGHT: 28 kg / LEFT: 24 kg  [PUSH]",
-                    "Double KB Front Squat 4×5 @ 28 kg/bell  [LOWER — ↑ load]",
+                    "KB Goblet Squat 4×5 @ 40 kg  [LOWER — ↑ load]",
                     "Push-Up 4×20  [PUSH]",
                     "Ab Wheel 3×10  [CORE]",
                 ],
@@ -2165,7 +2165,7 @@ KYLE_PROGRAM_2 = {
                 "main":  "Double KB Swing 12×5 EMOM @ 40 kg/bell  (heaviest double swing)",
                 "full_body": [
                     "Single-Arm KB Clean + Press 4×4/side @ RIGHT: 32 kg / LEFT: 28 kg  [PUSH — heavy]",
-                    "Double KB Front Squat 4×4 @ 32 kg/bell  [LOWER — heavy]",
+                    "KB Goblet Squat 4×4 @ 40 kg  [LOWER — heavy]",
                     "Push-Up 4×20  [PUSH]",
                     "Hanging Leg Raise 4×12  [CORE]",
                 ],
@@ -2554,7 +2554,7 @@ KYLE_PROGRAM_3 = {
                 "main":  "Double KB Swing EMOM 20 min: 10 reps/min @ 36 kg/bell",
                 "full_body": [
                     "Standing Single-Arm Clean + Press 4×4/side @ RIGHT: 28 kg / LEFT: 24 kg  [PUSH]",
-                    "Double KB Front Squat 4×4 @ 32 kg/bell  [LOWER]",
+                    "KB Goblet Squat 4×4 @ 40 kg  [LOWER]",
                     "Push-Up 5×20  [PUSH]",
                     "Ab Wheel 4×12  [CORE]",
                 ],
@@ -2574,7 +2574,7 @@ KYLE_PROGRAM_3 = {
                 "main":  "Double KB Swing EMOM 25 min: 10 reps/min @ 36 kg/bell",
                 "full_body": [
                     "Standing Single-Arm Clean + Press 5×4/side @ RIGHT: 32 kg / LEFT: 28 kg  [PUSH]",
-                    "Double KB Front Squat 5×4 @ 32 kg/bell  [LOWER]",
+                    "KB Goblet Squat 5×4 @ 40 kg  [LOWER]",
                     "Push-Up 5×20  [PUSH]",
                     "Hanging Leg Raise 4×12  [CORE]",
                 ],
@@ -2594,7 +2594,7 @@ KYLE_PROGRAM_3 = {
                 "full_body": [
                     "Standing Single-Arm Clean + Press 4×3/side @ RIGHT: 32 kg / LEFT: 28-32 kg  "
                     "[PUSH — left at 32 kg standing. This is where you were with doubles before.]",
-                    "Double KB Front Squat 4×3 @ 36 kg/bell  [LOWER — heavy]",
+                    "KB Goblet Squat 4×3 @ 40 kg  [LOWER — heavy]",
                     "Push-Up 5×20  [PUSH]",
                     "Ab Wheel 4×15  [CORE]",
                 ],
