@@ -244,17 +244,25 @@ async def select_program_track(req: Request, u: dict = CurrentUser):
     uid   = u["user_id"]
     state = _load_training(uid)
     state["program_track"]     = track
-    state["program_start_iso"] = _this_monday()
+    state["program_start_iso"] = _next_monday()
     _save_training(uid, state)
     return {"status": "ok", "program_track": track, "state": state}
 
 
-# ── Date helper ──────────────────────────────────────────────────────────────
+# ── Date helpers ─────────────────────────────────────────────────────────────
 
 def _this_monday() -> str:
     today  = dt.date.today()
     monday = today - dt.timedelta(days=today.weekday())
     return str(monday)
+
+def _next_monday() -> str:
+    """Return this Monday if today IS Monday, otherwise next Monday."""
+    today = dt.date.today()
+    days_until_monday = (7 - today.weekday()) % 7
+    if days_until_monday == 0:
+        return str(today)          # today is Monday — start today
+    return str(today + dt.timedelta(days=days_until_monday))
 
 
 def _local_today(p: dict) -> str:
