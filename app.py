@@ -79,7 +79,11 @@ def _save_training(user_id: int, d: dict) -> None:
 
 @app.get("/", response_class=HTMLResponse)
 def index():
-    return FileResponse(STATIC / "index.html")
+    resp = FileResponse(STATIC / "index.html")
+    resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    resp.headers["Pragma"]        = "no-cache"
+    resp.headers["Expires"]       = "0"
+    return resp
 
 @app.get("/service-worker.js")
 def service_worker_root():
