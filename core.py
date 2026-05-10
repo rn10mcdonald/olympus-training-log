@@ -2995,11 +2995,9 @@ def get_movements() -> list:
 # ── Default state ─────────────────────────────────────────────────────────────
 
 def default_state() -> dict:
-    today  = dt.date.today()
-    monday = today - dt.timedelta(days=today.weekday())
     return {
-        "program_start_iso":  str(monday),
-        "program_track":      "fighter",
+        "program_start_iso":  None,    # set when user picks a track
+        "program_track":      None,    # None = new user, show selector
         "workouts":           [],
         "ruck_log":           [],
         "run_log":            [],
@@ -3087,6 +3085,10 @@ def get_today_workout(state: dict, for_date: dt.date | None = None) -> dict:
             "status":  "rest",
             "message": "Rest day — active recovery or mobility if you feel like it.",
         }
+
+    # ── No program selected yet (new user before track selector) ──────────────
+    if not state.get("program_start_iso"):
+        return {"no_program": True, "message": "No program selected yet"}
 
     program_idx, current_week, weeks_elapsed = _get_program_and_week(state, today=today)
     track    = state.get("program_track", "fighter")

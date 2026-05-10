@@ -800,7 +800,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   setGreeting();
   if (!TOKEN) { showAuth(); return; }
   await loadAll();
-  if (!appState?.program_track) { showTrackSelector(); return; }
+  if (!appState?.program_track || !appState?.program_start_iso) { showTrackSelector(); return; }
   renderToday();
   renderLibrary();
 

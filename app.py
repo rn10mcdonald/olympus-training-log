@@ -37,16 +37,16 @@ def _load_training(user_id: int) -> dict:
             and not raw["track"].startswith("program_"):
         raw.pop("track", None)   # remove; calendar-based system needs no track key
 
-    # Ensure program_start_iso is present (new calendar-based system)
-    if not raw.get("program_start_iso"):
-        today  = dt.date.today()
-        monday = today - dt.timedelta(days=today.weekday())
-        raw["program_start_iso"] = str(monday)
-
-    # Backfill program_track for existing users — they keep fighter track silently
-    if raw.get("program_track") is None and raw.get("program_start_iso"):
-        raw["program_track"] = "fighter"
-        db.save_legacy(user_id, raw)
+    # Backfill for existing users only — check workout history first
+    if raw.get("program_track") is None:
+        workouts = db.get_workouts(user_id, limit=1)
+        if workouts:
+            # Has workout history → existing user → silently assign fighter track
+            raw["program_track"] = "fighter"
+            if not raw.get("program_start_iso"):
+                raw["program_start_iso"] = _this_monday()
+            db.save_legacy(user_id, raw)
+        # else: brand-new user with no workouts → leave track+start as None → show selector
 
     mc = raw.setdefault("microcycle", {})
     mc.setdefault("id",                 0)
