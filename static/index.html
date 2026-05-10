@@ -1112,6 +1112,7 @@ async function submitAuth() {
     document.getElementById('today-loading').style.display = '';
     document.getElementById('today-content').classList.add('hidden');
     await loadAll();
+    if (!appState?.program_track || !appState?.program_start_iso) { showTrackSelector(); return; }
     renderToday();
     renderLibrary();
   } catch {
