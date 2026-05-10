@@ -3090,6 +3090,22 @@ def get_today_workout(state: dict, for_date: dt.date | None = None) -> dict:
     if not state.get("program_start_iso"):
         return {"no_program": True, "message": "No program selected yet"}
 
+    # ── Program selected but start date hasn't arrived yet ────────────────────
+    start_iso = state.get("program_start_iso", "")
+    if str(today) < start_iso:
+        track    = state.get("program_track", "fighter")
+        programs = TRACK_PROGRAMS.get(track, TRACK_PROGRAMS["fighter"])
+        program  = programs[0]   # always preview Program 1, Week 1, Strength A
+        sa       = program.get("strength_a", {})
+        week1    = sa.get("weeks", {}).get(1, {})
+        return {
+            "status":           "pending",
+            "program_start_iso": start_iso,
+            "preview_label":    sa.get("name", "Strength A"),
+            "preview_main":     week1.get("main", ""),
+            "message":          f"Your program begins {start_iso}. Rest up and get ready.",
+        }
+
     program_idx, current_week, weeks_elapsed = _get_program_and_week(state, today=today)
     track    = state.get("program_track", "fighter")
     programs = TRACK_PROGRAMS.get(track, TRACK_PROGRAMS["fighter"])

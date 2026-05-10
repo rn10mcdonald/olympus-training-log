@@ -1043,6 +1043,15 @@ function hideTrackSelector() {
   document.getElementById('track-selector-overlay').style.display = 'none';
 }
 
+function _tsNextMonday() {
+  const today = new Date();
+  const dow = today.getDay(); // 0=Sun, 1=Mon…
+  const daysUntilMon = dow === 1 ? 0 : (8 - dow) % 7;
+  const next = new Date(today);
+  next.setDate(today.getDate() + daysUntilMon);
+  return { date: next, isToday: daysUntilMon === 0 };
+}
+
 function tsSelect(track) {
   _tsSelected = track;
   const TRACKS = ['fighter', 'kyle'];
@@ -1055,6 +1064,17 @@ function tsSelect(track) {
   });
   const btn = document.getElementById('ts-start-btn');
   if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+
+  // Show start date hint below the cards
+  const { date, isToday } = _tsNextMonday();
+  const label = isToday
+    ? 'Your program starts today.'
+    : `Your program starts ${date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}.`;
+  const hint = isToday
+    ? label
+    : `${label}<br>Use today to rest and get ready. 💪`;
+  const el = document.getElementById('ts-start-hint');
+  if (el) { el.innerHTML = hint; el.style.display = 'block'; }
 }
 
 async function submitTrackSelection() {
@@ -1175,6 +1195,29 @@ function renderToday() {
       <div style="font-family:'DM Serif Display',serif;font-size:20px;margin-bottom:8px">Rest Day</div>
       <p style="color:var(--warm-gray);font-size:14px;margin:0">${x(todayWk.message || 'Rest day — active recovery or mobility if you feel like it.')}</p>
     </div>`;
+  } else if (todayWk.status === 'pending') {
+    const startDate = new Date(todayWk.program_start_iso + 'T00:00:00');
+    const startLabel = startDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+    html += `
+<div class="card" style="border-left:3px solid #C4622D;border-radius:16px;padding:20px">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+    <span style="font-size:24px">🔔</span>
+    <span style="font-family:'DM Serif Display',serif;font-size:20px;color:#2C2C2C">Welcome to First Bell</span>
+  </div>
+  <p style="font-size:14px;color:#7A736B;margin:0 0 14px">
+    Your program begins <strong style="color:#2C2C2C">${startLabel}</strong>.
+    Today: rest, hydrate, get your bells ready.
+  </p>
+  <div style="background:#FAF7F2;border-radius:10px;padding:12px 14px;margin-bottom:16px">
+    <div style="font-size:12px;font-weight:600;color:#7A736B;letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px">Your first session</div>
+    <div style="font-size:14px;font-weight:600;color:#C4622D;margin-bottom:4px">${x(todayWk.preview_label || 'Strength A')}</div>
+    <div style="font-size:13px;color:#2C2C2C;line-height:1.5">${x(todayWk.preview_main || '')}</div>
+  </div>
+  <div style="display:flex;gap:10px">
+    <button class="btn btn-primary" style="flex:1" onclick="openCustomSheet()">Log Custom Workout</button>
+    <button class="btn" style="flex:1;background:#F5EFE9;color:#2C2C2C;border:none" onclick="document.getElementById('today-content').querySelector('.quick-cardio-section')?.scrollIntoView({behavior:'smooth'})">Log Cardio</button>
+  </div>
+</div>`;
   } else if (todayWk.no_program) {
     // No program selected yet — boot gate should have caught this, but trigger selector as fallback
     showTrackSelector();
@@ -1471,7 +1514,7 @@ async function previewDayWorkout(dateStr) {
 
 function renderQuickCardio() {
   return `
-<div class="card">
+<div class="card quick-cardio-section">
   <div class="card-title">Quick Log Cardio</div>
   <div style="display:flex;gap:8px">
     <button class="pill-btn" onclick="openCardioSheet('run')">Run</button>
@@ -2280,6 +2323,12 @@ function showToast(msg) {
         Unilateral pressing, thoracic outlet rehab, serratus reactivation.<br>
         Advanced KB. Closes bilateral pressing gap. 12-week program.
       </div>
+    </div>
+
+    <div id="ts-start-hint" style="
+      display:none;font-family:'DM Sans',sans-serif;font-size:14px;
+      color:#7A736B;font-style:italic;text-align:center;
+      margin-bottom:20px;line-height:1.6">
     </div>
 
     <button id="ts-start-btn" onclick="submitTrackSelection()" disabled style="
