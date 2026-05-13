@@ -243,10 +243,12 @@ async def select_program_track(req: Request, u: dict = CurrentUser):
         raise HTTPException(400, "Unknown program track")
     uid   = u["user_id"]
     state = _load_training(uid)
-    state["program_track"]     = track
-    state["program_start_iso"] = _next_monday()
+    state["program_track"] = track
+    # ONLY set start date if not already set — never overwrite existing progress
+    if not state.get("program_start_iso"):
+        state["program_start_iso"] = _next_monday()
     _save_training(uid, state)
-    return {"status": "ok", "program_track": track, "state": state}
+    return {"status": "ok", "program_track": track}
 
 
 # ── Date helpers ─────────────────────────────────────────────────────────────
