@@ -791,7 +791,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   setGreeting();
   if (!TOKEN) { showAuth(); return; }
   await loadAll();
-  if (!appState?.program_track || !appState?.program_start_iso) { showTrackSelector(); return; }
+  const isNewUser   = !appState?.program_track || !appState?.program_start_iso;
+  const hasWorkouts = allWorkouts && allWorkouts.length > 0;
+  if (isNewUser && !hasWorkouts) { showTrackSelector(); return; }
   renderToday();
   renderLibrary();
 
@@ -1132,7 +1134,9 @@ async function submitAuth() {
     document.getElementById('today-loading').style.display = '';
     document.getElementById('today-content').classList.add('hidden');
     await loadAll();
-    if (!appState?.program_track || !appState?.program_start_iso) { showTrackSelector(); return; }
+    const isNewUser_   = !appState?.program_track || !appState?.program_start_iso;
+    const hasWorkouts_ = allWorkouts && allWorkouts.length > 0;
+    if (isNewUser_ && !hasWorkouts_) { showTrackSelector(); return; }
     renderToday();
     renderLibrary();
   } catch {
