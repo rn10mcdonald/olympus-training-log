@@ -2822,10 +2822,10 @@ def get_today_workout(state: dict, for_date: dt.date | None = None) -> dict:
             full_body_blk = week_data.get("full_body", [])
             focus_blk     = week_data.get("focus", []) + week_data.get("corrective", [])
     else:
-        arms_list     = ARMS_ROTATION.get(f"program_{current_prog}", {}).get(
-                            session_type, week_data.get("arms", []))
-        full_body_blk = week_data.get("full_body", [])
-        focus_blk     = week_data.get("focus", [])
+        # Fighter v2: arms, full_body_block, focus_work are all inline in week data
+        full_body_blk = week_data.get("full_body_block", week_data.get("full_body", []))
+        focus_blk     = week_data.get("focus_work",      week_data.get("focus",      []))
+        arms_list     = week_data.get("arms", [])
 
     result = {
         "status":           "active",
