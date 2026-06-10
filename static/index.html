@@ -1247,11 +1247,14 @@ function badgeClass(trackKey) {
 }
 
 function badgeLabel(wk) {
+  if (wk.day_type === 'run_day') {
+    return wk.session_type === 'mobility_a' ? '🏃 Run Day A · Rehab + Run' : '🏃 Run Day B · Rehab + Run';
+  }
   const t = wk.track_key || '';
   if (t.includes('day_a'))    return '🍑 Day A · Glute & Legs';
-  if (t.includes('day_b'))    return '💪 Day B · Pull + Core';
-  if (t.includes('day_c'))    return '🔥 Day C · Hardstyle';
-  if (t.includes('day_d'))    return '🏋️ Day D · Double KB';
+  if (t.includes('day_b'))    return '💪 Day B · Full Body + Abs';
+  if (t.includes('day_c'))    return '🔥 Day C · Conditioning';
+  if (t.includes('day_d'))    return '🏋️ Day D · Optional';
   if (t.includes('mobility')) return '🌿 Mobility';
   return wk.track_name || 'Session';
 }
@@ -1262,11 +1265,45 @@ function parseMainWeight(mainStr) {
 }
 
 function renderSessionCard(wk) {
+  // ── Run Day (Fighter v2 Tuesday / Thursday) ──────────────────────────────
+  if (wk.day_type === 'run_day') {
+    const rehab   = wk.rehab   || [];
+    const stretch = wk.stretch || [];
+    const logBtn  = todayLogged
+      ? `<button class="btn btn-full" style="background:#7A9E7E;color:#fff;margin-bottom:6px;cursor:default;font-weight:600" disabled>Completed ✓</button>
+         <div style="text-align:center;margin-bottom:8px"><a href="#" class="btn-text" onclick="event.preventDefault();openSessionSheet()" style="font-size:12px;color:var(--warm-gray)">Log again</a></div>`
+      : `<button class="btn btn-primary btn-full" style="margin-bottom:10px" onclick="openSessionSheet()">Log This Session</button>`;
+    return `
+<div class="card">
+  <div class="day-badge badge-mob">${badgeLabel(wk)}</div>
+  <div class="week-label">${x(wk.week_label)}</div>
+  <div class="cycle-indicator">Week ${wk.cycle_week || 1} of 4</div>
+  <div class="session-sections">
+    ${rehab.length ? `
+    <div class="section-card" style="border-left:3px solid var(--sage)">
+      <div class="section-card-label" style="color:var(--sage)">Rehab</div>
+      <ul>${rehab.map(a => `<li>${x(a)}</li>`).join('')}</ul>
+    </div>` : ''}
+    <div class="section-card" style="border-left:3px solid var(--terracotta)">
+      <div class="section-card-label" style="color:var(--terracotta)">Run</div>
+      <div style="font-size:14px;line-height:1.6;color:var(--ink)">${x(wk.run_prescription || wk.main)}</div>
+    </div>
+    ${stretch.length ? `
+    <div class="section-card" style="border-left:3px solid var(--sage)">
+      <div class="section-card-label" style="color:var(--sage)">Stretch</div>
+      <ul>${stretch.map(a => `<li>${x(a)}</li>`).join('')}</ul>
+    </div>` : ''}
+  </div>
+  ${logBtn}
+  <button class="btn-text" onclick="openCustomSheet()">Log Custom Workout</button>
+</div>`;
+  }
+
+  // ── Strength Day ──────────────────────────────────────────────────────────
   const sw  = wk.weights_by_section?.main || parseMainWeight(wk.main) || wk.suggested_weight || wk.std_kg || 16;
   const fbb = wk.full_body_block || [];
   const fw  = wk.focus_work || [];
   const arms = wk.arms || [];
-  const totalAcc = fbb.length + fw.length + arms.length;
   return `
 <div class="card">
   <div class="day-badge ${badgeClass(wk.track_key)}">${badgeLabel(wk)}</div>
