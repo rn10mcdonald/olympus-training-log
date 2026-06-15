@@ -1328,7 +1328,7 @@ function renderSessionCard(wk) {
     </div>` : ''}
     ${arms.length ? `
     <div class="section-card section-arms">
-      <div class="section-card-label">Arms</div>
+      <div class="section-card-label">Back &amp; Arms</div>
       <ul>${arms.map(a => `<li>${x(a)}</li>`).join('')}</ul>
     </div>` : ''}
     ${wk.finisher ? `
@@ -1532,7 +1532,7 @@ async function previewDayWorkout(dateStr) {
 
     // Arms: first item
     if (wk.arms && wk.arms.length) {
-      inner += `<div style="font-size:12px;${style};margin-bottom:3px">Arms: ${x(wk.arms[0])}</div>`;
+      inner += `<div style="font-size:12px;${style};margin-bottom:3px">Back &amp; Arms: ${x(wk.arms[0])}</div>`;
     }
 
     // Finisher: first line only
