@@ -37,12 +37,11 @@ PROGRAM_1 = {
                     "SUPERSET B2 — Half-Kneeling Single-Arm KB Press 3×8/side @ 8 kg  — Lunge straight into the press. Ribs down, press to a tall lockout, no rib flare.  [PUSH]",
                 ],
                 "focus_work": [
-                    "KB RDL 3×10 @ 16 kg  — Push hips back, soft knees. Stop when your back wants to round.",
                     "Banded Clamshell 3×20/side  — Rotate from the hip, keep heels together, don't roll back.",
                     "Reverse Crunch 3×15  — Curl your hips off the floor, not just your knees up. Slow down.  [ABS]",
                 ],
                 "arms": [
-                    "SUPERSET — Hammer Curl 3×12 @ 8 kg / Overhead Tricep Ext 3×12 @ 8 kg  — Minimal rest between the pair.",
+                    "SUPERSET — Single-Arm KB Row 3×10/side @ 12 kg / Hammer Curl 3×12 @ 8 kg  — Row: hinge flat-back, free hand braced on a chair, pull elbow to hip, squeeze the blade.",
                 ],
                 "finisher": "PUSH-UP + SWING LADDER @ 16 kg  — Ramp 1→5: 1 push-up + 10 swings, 2 + 10, 3 + 10, 4 + 10, 5 + 10. Push-ups on an incline if needed. Rest only as your form needs. ~8 min.",
             },
@@ -56,12 +55,11 @@ PROGRAM_1 = {
                     "SUPERSET B2 — Half-Kneeling Single-Arm KB Press 3×8/side @ 10 kg  — Up a bell. Press from the lunge, full lockout.  [PUSH]",
                 ],
                 "focus_work": [
-                    "KB RDL 3×12 @ 16 kg  — Same load, 2 more reps. Feel the hamstring, not the low back.",
                     "Lateral Band Walk 3×15 steps/side  — Stay in a quarter-squat, tension never goes slack.",
                     "Bicycle Crunch 3×20/side  — Slow. Opposite elbow to knee, fully extend the other leg.  [ABS]",
                 ],
                 "arms": [
-                    "SUPERSET — Zottman Curl 3×10 @ 8 kg / KB Kickback 3×12/side @ 8 kg  — Zottman: curl up palms-up, lower palms-down.",
+                    "SUPERSET — Single-Arm KB Row 3×12/side @ 12 kg / Zottman Curl 3×10 @ 8 kg  — More reps on the row, same flat back. Zottman: curl up palms-up, lower palms-down.",
                 ],
                 "finisher": "PUSH-UP + SWING LADDER @ 20 kg  — Ramp 1→6: 1 push-up + 10 swings up to 6 + 10. Heavier bell than week 1. Crisp hip snap every rung. ~9 min.",
             },
@@ -75,12 +73,11 @@ PROGRAM_1 = {
                     "SUPERSET B2 — Half-Kneeling Single-Arm KB Press 4×6/side @ 12 kg  — Heaviest press of the block. Brace hard, drive overhead.  [PUSH]",
                 ],
                 "focus_work": [
-                    "KB RDL 3×10 @ 20 kg  — Heavier hinge. 3-sec lower.",
                     "Single-Leg Glute Bridge 3×12/side @ bodyweight  — Drive through the heel, keep hips level.",
                     "Ab Wheel Rollout 3×6–8 (from knees)  — Ribs down the whole time. Only roll as far as you can keep them there.  [ABS]",
                 ],
                 "arms": [
-                    "SUPERSET — KB Floor Fly 3×12 @ 8 kg / Skull Crusher 3×10 @ 8 kg  — Fly: soft elbows, feel the chest stretch at the bottom.",
+                    "SUPERSET — Single-Arm KB Row 3×8/side @ 16 kg / Drag Curl 3×10 @ 8 kg  — Heaviest row of the block — flat back, pull elbow to hip. Drag: elbows back, bell drags up the torso.",
                 ],
                 "finisher": "PUSH-UP + SWING LADDER @ 24 kg  — Ramp 1→5: 1 push-up + 10 swings up to 5 + 10. Push-ups from the toes if you can hold the line. Heavy bell — grip will talk. ~8 min.",
             },
@@ -94,12 +91,11 @@ PROGRAM_1 = {
                     "SUPERSET B2 — Half-Kneeling Single-Arm KB Press 2×8/side @ 8 kg  — Light. Groove the press path.  [PUSH]",
                 ],
                 "focus_work": [
-                    "KB RDL 2×12 @ 12 kg  — Light hinge practice.",
                     "Banded Clamshell 2×20/side  — Light band.",
                     "Dead Bug 3×10/side  — Low back glued down, exhale as the limbs reach.  [ABS]",
                 ],
                 "arms": [
-                    "SUPERSET — Hammer Curl 2×12 @ 8 kg / TRX Tricep Ext 2×12  — Easy, slow eccentrics.",
+                    "SUPERSET — TRX Reverse Fly 2×12 / Hammer Curl 2×12 @ 8 kg  — Light. Reverse fly: pinkies lead, squeeze blades down not up.",
                 ],
                 "finisher": "PUSH-UP + SWING LADDER @ 16 kg  — Ramp 1→3 only: 1 push-up + 10 swings, 2 + 10, 3 + 10. Technique day — float the bell, stop fresh.",
             },
@@ -125,7 +121,7 @@ PROGRAM_1 = {
                     "AB CIRCUIT 3 rounds: 10 Ab Wheel (knees) + 15 Reverse Crunch + 20 Bicycle/side  — Rest 45s between rounds. Ribs down throughout.  [ABS]",
                 ],
                 "arms": [
-                    "SUPERSET — Cross-Body Curl 3×10/side @ 8 kg / Close-Grip Floor Press 3×10 @ 12 kg  — Cross-body hits the outer bicep.",
+                    "SUPERSET — Single-Arm KB Row 3×10/side @ 12 kg / Cross-Body Curl 3×10/side @ 8 kg  — Row: hinge flat-back, pull elbow to hip, squeeze the blade. Cross-body hits the outer bicep.",
                 ],
                 "finisher": "Farmer Carry 4×30m @ 16 kg/hand  — Shoulders packed, walk tall, don't let grip set the pace.",
             },
@@ -142,7 +138,7 @@ PROGRAM_1 = {
                     "AB CIRCUIT 3 rounds: 8 V-Up + 30s Hollow Hold + 15 Russian Twist/side @ 8 kg  — V-up: reach hands to toes, lower slow.  [ABS]",
                 ],
                 "arms": [
-                    "SUPERSET — Drag Curl 3×10 @ 12 kg / KB Kickback 3×12/side @ 8 kg  — Drag: pull elbows back, bell drags up your body.",
+                    "SUPERSET — Single-Arm KB Row 3×12/side @ 12 kg / Drag Curl 3×10 @ 12 kg  — More reps on the row, same flat back. Drag: elbows back, bell drags up your body.",
                 ],
                 "finisher": "Suitcase Carry 4×20m/side @ 20 kg  — Don't lean. Resist the tilt — that's the ab work.",
             },
@@ -159,7 +155,7 @@ PROGRAM_1 = {
                     "AB CIRCUIT 3 rounds: 8 Ab Wheel + 12 Windshield Wiper/side + 30s Side Plank/side  — Wipers: knees bent if straight is too much.  [ABS]",
                 ],
                 "arms": [
-                    "SUPERSET — Incline Curl 3×10 @ 8 kg / Skull Crusher 3×10 @ 12 kg  — Incline: lie back, let arms hang, max stretch.",
+                    "SUPERSET — Single-Arm KB Row 3×8/side @ 16 kg / Incline Curl 3×10 @ 8 kg  — Heaviest row of the block — flat back, pull elbow to hip. Incline: arms hang, max stretch.",
                 ],
                 "finisher": "Carry Medley: Rack 20m → Overhead 20m → Farmer 20m @ 12 kg, ×3  — No put-down within a round.",
             },
@@ -176,7 +172,7 @@ PROGRAM_1 = {
                     "AB CIRCUIT 2 rounds: 10 Dead Bug/side + 20s Hollow Hold + 10 Reverse Crunch  — Quality over burn.  [ABS]",
                 ],
                 "arms": [
-                    "SUPERSET — Hammer Curl 2×12 @ 8 kg / TRX Tricep Ext 2×12  — Light.",
+                    "SUPERSET — TRX Reverse Fly 2×12 / Hammer Curl 2×12 @ 8 kg  — Light. Reverse fly: pinkies lead, blades down.",
                 ],
                 "finisher": "Farmer Carry 2×30m @ 12 kg  — Easy walk, tall posture.",
             },
@@ -203,7 +199,7 @@ PROGRAM_1 = {
                     "Flutter Kicks 3×30s  — Low back pinned to the floor. If it lifts, raise your legs higher.  [ABS]",
                 ],
                 "arms": [
-                    "SUPERSET — Lateral Raise 3×12 @ 8 kg / Hammer Curl 3×12 @ 8 kg  — Raises: lead with elbows, stop at shoulder height.",
+                    "SUPERSET — Single-Arm KB Row 3×10/side @ 12 kg / Hammer Curl 3×12 @ 8 kg  — Row: hinge flat-back, pull elbow to hip, squeeze the blade.",
                 ],
                 "finisher": "THE HUMANE BURPEE (Dan John) @ 16 kg  — Ramp UP then back DOWN. Each rung: N push-ups + N goblet squats + 10 swings. Climb 1→5 (1+1+10, 2+2+10, 3+3+10, 4+4+10, 5+5+10) then descend 4+4+10, 3+3+10, 2+2+10, 1+1+10. Swings stay 10 every rung. Minimal rest — write your total time down. This is your benchmark.",
             },
@@ -221,7 +217,7 @@ PROGRAM_1 = {
                     "Toe Touches 3×15  — Reach for your toes, crunch the abs, lower slow.  [ABS]",
                 ],
                 "arms": [
-                    "SUPERSET — TRX Reverse Fly 3×12 / Zottman Curl 3×10 @ 8 kg  — Reverse fly: lead with pinkies, squeeze blades down not up. Your webcam posture fix.",
+                    "SUPERSET — Single-Arm KB Row 3×12/side @ 12 kg / Zottman Curl 3×10 @ 8 kg  — More reps on the row, same flat back. Zottman: curl up palms-up, lower palms-down.",
                 ],
                 "finisher": "THE HUMANE BURPEE @ 16 kg  — Same ladder, climb 1→5 then back to 1: N push-ups + N goblet squats + 10 swings each rung. Push harder on rest — beat week 1's time.",
             },
@@ -239,7 +235,7 @@ PROGRAM_1 = {
                     "Copenhagen Plank 3×15s/side  — Top leg on the couch, hold the line. Build the inner thigh + obliques.  [ABS]",
                 ],
                 "arms": [
-                    "SUPERSET — Front Raise 3×10 @ 8 kg / Skull Crusher 3×10 @ 12 kg  — Front raise: control down, no swinging.",
+                    "SUPERSET — Single-Arm KB Row 3×8/side @ 16 kg / Drag Curl 3×10 @ 8 kg  — Heaviest row of the block — flat back, pull elbow to hip. Drag: elbows back, bell drags up the torso.",
                 ],
                 "finisher": "THE HUMANE BURPEE — heavy version @ 20 kg  — Climb 1→5 then back to 1: N push-ups + N goblet squats + 10 swings each rung, but at 20 kg. Heaviest finisher of the block. Note time and any breaks.",
             },
@@ -257,7 +253,7 @@ PROGRAM_1 = {
                     "Dead Bug 3×10/side  — Slow, breathe.  [ABS]",
                 ],
                 "arms": [
-                    "SUPERSET — Lateral Raise 2×12 @ 8 kg / Hammer Curl 2×12 @ 8 kg  — Light.",
+                    "SUPERSET — TRX Reverse Fly 2×12 / Hammer Curl 2×12 @ 8 kg  — Light. Reverse fly: pinkies lead, blades down — your posture fix.",
                 ],
                 "finisher": "THE HUMANE BURPEE — short @ 16 kg  — Climb 1→3 only (1+1+10, 2+2+10, 3+3+10) then back down to 1. Easy pace, perfect reps. Stop fresh.",
             },
@@ -283,13 +279,13 @@ PROGRAM_1 = {
                     "Side Plank 3×30s/side  — Hip stacked, don't sag.  [ABS]",
                 ],
                 "arms": [
-                    "SUPERSET — Hammer Curl 3×12 @ 8 kg / TRX Tricep Ext 3×12  — Quick.",
+                    "SUPERSET — Single-Arm KB Row 3×10/side @ 12 kg / Hammer Curl 3×12 @ 8 kg  — Row: hinge flat-back, pull elbow to hip, squeeze the blade.",
                 ],
                 "finisher": "Optional KB flow / play 10 min  — Vinyl on. Whatever feels good.",
             },
-            2: {"label": "Optional — run or repeat week 1 flow.", "main": "Your call: Zone 2 run, or the week-1 flow.", "full_body_block": ["KB Swing 3×15 @ 16 kg  [HINGE]", "Goblet Squat 3×10 @ 16 kg  [LEGS]", "TRX Row 3×12  [PULL]"], "focus_work": ["KB Hip Thrust 3×12 @ 16 kg", "Side Plank 3×30s/side  [ABS]"], "arms": ["SUPERSET — Zottman Curl 3×10 @ 8 kg / KB Kickback 3×12/side @ 8 kg"], "finisher": "Optional KB flow / play 10 min."},
-            3: {"label": "Optional — run or light flow.", "main": "Your call: Zone 2 run, or light flow.", "full_body_block": ["KB Swing 3×15 @ 16 kg  [HINGE]", "Goblet Squat 3×10 @ 16 kg  [LEGS]", "TRX Row 3×12  [PULL]"], "focus_work": ["KB Hip Thrust 3×12 @ 16 kg", "Copenhagen Plank 3×15s/side  [ABS]"], "arms": ["SUPERSET — Lateral Raise 3×12 @ 8 kg / Skull Crusher 3×10 @ 8 kg"], "finisher": "Optional KB flow / play 10 min."},
-            4: {"label": "Optional — easy run or rest.", "main": "Your call: easy Zone 2 run, or take the day.", "full_body_block": ["KB Swing 2×15 @ 12 kg  [HINGE]", "Goblet Squat 2×10 @ 12 kg  [LEGS]", "TRX Row 2×12  [PULL]"], "focus_work": ["KB Hip Thrust 2×12 @ 12 kg", "Dead Bug 2×10/side  [ABS]"], "arms": ["SUPERSET — Hammer Curl 2×12 @ 8 kg / TRX Tricep Ext 2×12"], "finisher": "Optional light flow 8 min or rest."},
+            2: {"label": "Optional — run or repeat week 1 flow.", "main": "Your call: Zone 2 run, or the week-1 flow.", "full_body_block": ["KB Swing 3×15 @ 16 kg  [HINGE]", "Goblet Squat 3×10 @ 16 kg  [LEGS]", "TRX Row 3×12  [PULL]"], "focus_work": ["KB Hip Thrust 3×12 @ 16 kg", "Side Plank 3×30s/side  [ABS]"], "arms": ["SUPERSET — Single-Arm KB Row 3×12/side @ 12 kg / Zottman Curl 3×10 @ 8 kg  — More reps on the row, same flat back."], "finisher": "Optional KB flow / play 10 min."},
+            3: {"label": "Optional — run or light flow.", "main": "Your call: Zone 2 run, or light flow.", "full_body_block": ["KB Swing 3×15 @ 16 kg  [HINGE]", "Goblet Squat 3×10 @ 16 kg  [LEGS]", "TRX Row 3×12  [PULL]"], "focus_work": ["KB Hip Thrust 3×12 @ 16 kg", "Copenhagen Plank 3×15s/side  [ABS]"], "arms": ["SUPERSET — Single-Arm KB Row 3×8/side @ 16 kg / Drag Curl 3×10 @ 8 kg  — Heaviest row of the block — flat back, pull elbow to hip."], "finisher": "Optional KB flow / play 10 min."},
+            4: {"label": "Optional — easy run or rest.", "main": "Your call: easy Zone 2 run, or take the day.", "full_body_block": ["KB Swing 2×15 @ 12 kg  [HINGE]", "Goblet Squat 2×10 @ 12 kg  [LEGS]", "TRX Row 2×12  [PULL]"], "focus_work": ["KB Hip Thrust 2×12 @ 12 kg", "Dead Bug 2×10/side  [ABS]"], "arms": ["SUPERSET — TRX Reverse Fly 2×12 / Hammer Curl 2×12 @ 8 kg  — Light."], "finisher": "Optional light flow 8 min or rest."},
         },
     },
 
@@ -365,12 +361,11 @@ PROGRAM_2 = {
                     "SUPERSET B2 — Half-Kneeling Single-Arm KB Press 3×8/side @ 10 kg  — Lunge into press. Ribs down, tall lockout.  [PUSH]",
                 ],
                 "focus_work": [
-                    "Single-Leg RDL 3×8/side @ 12 kg  — Hips square, hinge over one leg, feel the hamstring.",
                     "Banded Hip Abduction 3×15/side  — Stand tall, kick directly to the side, control the return.",
                     "V-Up 3×10  — Reach hands to toes, lower legs and arms together slow.  [ABS]",
                 ],
                 "arms": [
-                    "SUPERSET — Drag Curl 3×10 @ 12 kg / Close-Grip Floor Press 3×10 @ 16 kg  — Drag: elbows back, bell drags up the torso.",
+                    "SUPERSET — Renegade Row 3×8/side @ 8 kg / Drag Curl 3×10 @ 12 kg  — Renegade: plank on the bells, row one side without letting the hips rotate. Drag: elbows back, bell drags up the torso.",
                 ],
                 "finisher": "BUTT BURNER 5000 (Dan John) @ 12 kg  — Ladder 1→10: 1 KB hip hinge (goat-bag swing/RDL) + 1 goblet squat, then 2+2, 3+3 … all the way to 10+10. Light bell — this is cardio, not a strength set. Don't set it down. Note your time.",
             },
@@ -384,12 +379,11 @@ PROGRAM_2 = {
                     "SUPERSET B2 — Half-Kneeling Single-Arm KB Press 3×10/side @ 10 kg  — More reps, full lockout.  [PUSH]",
                 ],
                 "focus_work": [
-                    "Single-Leg RDL 3×10/side @ 12 kg  — More reps, stay square.",
                     "Curtsy Lunge 3×10/side @ 12 kg  — Cross behind, outer glute lights up.",
                     "Russian Twist 3×20/side @ 8 kg  — Heels down, rotate from the ribs not the arms.  [ABS]",
                 ],
                 "arms": [
-                    "SUPERSET — 21s Curl 3 sets @ 8 kg / Skull Crusher 3×12 @ 12 kg  — 21s: 7 bottom-half, 7 top-half, 7 full.",
+                    "SUPERSET — Renegade Row 3×10/side @ 8 kg / 21s Curl 3 sets @ 8 kg  — More reps on the row, hips dead still. 21s: 7 bottom-half, 7 top-half, 7 full.",
                 ],
                 "finisher": "BUTT BURNER 5000 @ 12 kg  — Same 1→10 ladder: hip hinge + goblet squat each rung. Push the pace this week — beat week 5's time. Light bell, cardio engine.",
             },
@@ -403,12 +397,11 @@ PROGRAM_2 = {
                     "SUPERSET B2 — Half-Kneeling Single-Arm KB Press 4×6/side @ 12 kg  — Heaviest press of the block. Brace, drive overhead.  [PUSH]",
                 ],
                 "focus_work": [
-                    "Single-Leg RDL 3×8/side @ 16 kg  — Heavier, controlled.",
                     "Banded Hip Abduction 3×20/side  — More reps, heavier band.",
                     "Ab Wheel Rollout 3×8 (knees)  — Roll a little further, ribs still down.  [ABS]",
                 ],
                 "arms": [
-                    "SUPERSET — Incline Curl 3×10 @ 8 kg / Tate Press 3×10 @ 12 kg  — Tate: elbows out, bells to mid-chest, squeeze triceps.",
+                    "SUPERSET — Renegade Row 3×8/side @ 10 kg / Incline Curl 3×10 @ 8 kg  — Heaviest row of the block — brace hard, no rotation. Incline: arms hang, max stretch.",
                 ],
                 "finisher": "BUTT BURNER 5000 @ 16 kg  — 1→10 ladder, hip hinge + goblet squat each rung. Up a bell this week but keep it flowing — if you have to grind a rep, you're too heavy.",
             },
@@ -422,12 +415,11 @@ PROGRAM_2 = {
                     "SUPERSET B2 — Half-Kneeling Single-Arm KB Press 2×8/side @ 8 kg  — Light, clean press path.  [PUSH]",
                 ],
                 "focus_work": [
-                    "Single-Leg RDL 2×8/side @ bodyweight  — Balance practice.",
                     "Banded Clamshell 2×20/side  — Light.",
                     "Dead Bug 3×10/side  — Breathe.  [ABS]",
                 ],
                 "arms": [
-                    "SUPERSET — Hammer Curl 2×12 @ 8 kg / TRX Tricep Ext 2×12  — Light.",
+                    "SUPERSET — Band Pull-Apart 2×20 / Hammer Curl 2×12 @ 8 kg  — Light. Pull-apart: arms straight, squeeze the upper back.",
                 ],
                 "finisher": "BUTT BURNER 5000 — short @ 12 kg  — Ladder 1→5 only (then stop): hip hinge + goblet squat each rung. Deload pace, perfect reps, breathe.",
             },
@@ -452,7 +444,7 @@ PROGRAM_2 = {
                     "AB CIRCUIT 3 rounds: 8 Hanging Knee Raise (TRX) + 12 Windshield Wiper/side + 30s Side Plank/side  — TRX knee raise: feet in straps, knees to chest.  [ABS]",
                 ],
                 "arms": [
-                    "SUPERSET — Cross-Body Curl 3×10/side @ 8 kg / Tate Press 3×10 @ 12 kg",
+                    "SUPERSET — Renegade Row 3×8/side @ 8 kg / Cross-Body Curl 3×10/side @ 8 kg  — Renegade: plank on the bells, row one side without rotating the hips.",
                 ],
                 "finisher": "Suitcase Carry 4×20m/side @ 24 kg  — Heavy. Resist the lean — abs.",
             },
@@ -469,7 +461,7 @@ PROGRAM_2 = {
                     "AB CIRCUIT 3 rounds: 10 V-Up + 15 Toe Touch + 40s Hollow Hold  — Lower slow on every rep.  [ABS]",
                 ],
                 "arms": [
-                    "SUPERSET — Drag Curl 3×12 @ 12 kg / Close-Grip Floor Press 3×12 @ 16 kg",
+                    "SUPERSET — Renegade Row 3×10/side @ 8 kg / Drag Curl 3×12 @ 12 kg  — More reps on the row, hips dead still.",
                 ],
                 "finisher": "Overhead Carry 3×20m/side @ 12 kg  — Lock the shoulder, ribs down, eyes forward.",
             },
@@ -486,7 +478,7 @@ PROGRAM_2 = {
                     "AB CIRCUIT 3 rounds: 10 Ab Wheel + 12 Hanging Knee Raise + 20 Bicycle/side  — Ribs down throughout.  [ABS]",
                 ],
                 "arms": [
-                    "SUPERSET — 21s Curl 3 sets @ 8 kg / Skull Crusher 3×10 @ 12 kg",
+                    "SUPERSET — Renegade Row 3×8/side @ 10 kg / 21s Curl 3 sets @ 8 kg  — Heaviest row of the block — brace hard, no rotation.",
                 ],
                 "finisher": "Carry Medley: Overhead 20m → Rack 20m → Farmer 20m @ 16 kg, ×4  — No put-down.",
             },
@@ -503,7 +495,7 @@ PROGRAM_2 = {
                     "AB CIRCUIT 2 rounds: 10 Dead Bug/side + 20s Hollow Hold  — Quality.  [ABS]",
                 ],
                 "arms": [
-                    "SUPERSET — Hammer Curl 2×12 @ 8 kg / TRX Tricep Ext 2×12",
+                    "SUPERSET — Band Pull-Apart 2×20 / Hammer Curl 2×12 @ 8 kg  — Light.",
                 ],
                 "finisher": "Suitcase Carry 2×20m/side @ 12 kg  — Easy, tall.",
             },
@@ -529,7 +521,7 @@ PROGRAM_2 = {
                     "Windshield Wiper 3×12/side  — Shoulders pinned, control the rotation.  [ABS]",
                 ],
                 "arms": [
-                    "SUPERSET — TRX Reverse Fly 3×12 / Incline Curl 3×10 @ 8 kg  — Reverse fly: pinkies lead, blades down.",
+                    "SUPERSET — Renegade Row 3×8/side @ 8 kg / Incline Curl 3×10 @ 8 kg  — Renegade: plank on the bells, row one side without rotating the hips. Incline: arms hang, max stretch.",
                 ],
                 "finisher": "THE HUMANE BURPEE (Dan John) @ 16 kg  — Climb 1→5 then back to 1. Each rung: N push-ups + N goblet squats + 10 swings. Swings stay 10 every rung. Minimal rest — note your total time.",
             },
@@ -547,7 +539,7 @@ PROGRAM_2 = {
                     "Hanging Knee Raise (TRX) 3×12  — Knees to chest, no swing.  [ABS]",
                 ],
                 "arms": [
-                    "SUPERSET — Lateral Raise 3×12 @ 8 kg / Tate Press 3×10 @ 12 kg",
+                    "SUPERSET — Renegade Row 3×10/side @ 8 kg / 21s Curl 3 sets @ 8 kg  — More reps on the row, hips dead still. 21s: 7 bottom-half, 7 top-half, 7 full.",
                 ],
                 "finisher": "THE HUMANE BURPEE @ 16 kg  — Same 1→5→1 ladder. Push the rest periods this week — beat week 5's time.",
             },
@@ -565,7 +557,7 @@ PROGRAM_2 = {
                     "Copenhagen Plank 3×20s/side  — Build the inner thigh + obliques.  [ABS]",
                 ],
                 "arms": [
-                    "SUPERSET — Front Raise 3×10 @ 8 kg / Skull Crusher 3×10 @ 12 kg",
+                    "SUPERSET — Renegade Row 3×8/side @ 10 kg / Drag Curl 3×10 @ 12 kg  — Heaviest row of the block — brace hard, no rotation. Drag: elbows back, bell drags up your body.",
                 ],
                 "finisher": "THE HUMANE BURPEE — heavy @ 20 kg  — Climb 1→5 then back to 1 at 20 kg. Heaviest finisher of the block. Form holds under fatigue — note time and breaks.",
             },
@@ -583,7 +575,7 @@ PROGRAM_2 = {
                     "Dead Bug 3×10/side  — Breathe.  [ABS]",
                 ],
                 "arms": [
-                    "SUPERSET — Hammer Curl 2×12 @ 8 kg / TRX Tricep Ext 2×12",
+                    "SUPERSET — Band Pull-Apart 2×20 / Hammer Curl 2×12 @ 8 kg  — Light.",
                 ],
                 "finisher": "THE HUMANE BURPEE — short @ 16 kg  — Climb 1→3 only then back to 1. Easy pace, perfect reps, stop fresh.",
             },
@@ -595,10 +587,10 @@ PROGRAM_2 = {
         "anchor": "Athlete's choice: run or light KB",
         "focus":  "Optional. A run counts. Light KB if you want it.",
         "weeks": {
-            1: {"label": "Optional — run or light flow.", "main": "Your call: Zone 2 run, or the flow below.", "full_body_block": ["Single-Arm Swing 3×12/side @ 16 kg  [HINGE]", "Double KB Front Squat 3×8 @ 12 kg/bell  [LEGS]", "TRX Row 3×12  [PULL]"], "focus_work": ["B-Stance Hip Thrust 3×10/side @ 16 kg", "Side Plank 3×30s/side  [ABS]"], "arms": ["SUPERSET — Zottman Curl 3×10 @ 8 kg / Tate Press 3×10 @ 12 kg"], "finisher": "Optional KB flow / play 10 min."},
-            2: {"label": "Optional — run or light flow.", "main": "Your call: Zone 2 run, or light flow.", "full_body_block": ["Single-Arm Swing 3×12/side @ 16 kg  [HINGE]", "Goblet Squat 3×10 @ 16 kg  [LEGS]", "TRX Row 3×12  [PULL]"], "focus_work": ["B-Stance Hip Thrust 3×10/side @ 16 kg", "Hanging Knee Raise 3×12  [ABS]"], "arms": ["SUPERSET — Lateral Raise 3×12 @ 8 kg / Skull Crusher 3×10 @ 12 kg"], "finisher": "Optional KB flow / play 10 min."},
-            3: {"label": "Optional — run or light flow.", "main": "Your call: Zone 2 run, or light flow.", "full_body_block": ["Single-Arm Swing 3×12/side @ 16 kg  [HINGE]", "Goblet Squat 3×10 @ 16 kg  [LEGS]", "TRX Row 3×12  [PULL]"], "focus_work": ["B-Stance Hip Thrust 3×10/side @ 16 kg", "Copenhagen Plank 3×20s/side  [ABS]"], "arms": ["SUPERSET — Incline Curl 3×10 @ 8 kg / Close-Grip Floor Press 3×10 @ 16 kg"], "finisher": "Optional KB flow / play 10 min."},
-            4: {"label": "Optional — easy run or rest.", "main": "Your call: easy Zone 2 run, or take the day.", "full_body_block": ["Single-Arm Swing 2×12/side @ 12 kg  [HINGE]", "Goblet Squat 2×10 @ 12 kg  [LEGS]", "TRX Row 2×12  [PULL]"], "focus_work": ["KB Hip Thrust 2×12 @ 12 kg", "Dead Bug 2×10/side  [ABS]"], "arms": ["SUPERSET — Hammer Curl 2×12 @ 8 kg / TRX Tricep Ext 2×12"], "finisher": "Optional light flow 8 min or rest."},
+            1: {"label": "Optional — run or light flow.", "main": "Your call: Zone 2 run, or the flow below.", "full_body_block": ["Single-Arm Swing 3×12/side @ 16 kg  [HINGE]", "Double KB Front Squat 3×8 @ 12 kg/bell  [LEGS]", "TRX Row 3×12  [PULL]"], "focus_work": ["B-Stance Hip Thrust 3×10/side @ 16 kg", "Side Plank 3×30s/side  [ABS]"], "arms": ["SUPERSET — Renegade Row 3×8/side @ 8 kg / Zottman Curl 3×10 @ 8 kg  — Renegade: plank on the bells, row one side without rotating the hips."], "finisher": "Optional KB flow / play 10 min."},
+            2: {"label": "Optional — run or light flow.", "main": "Your call: Zone 2 run, or light flow.", "full_body_block": ["Single-Arm Swing 3×12/side @ 16 kg  [HINGE]", "Goblet Squat 3×10 @ 16 kg  [LEGS]", "TRX Row 3×12  [PULL]"], "focus_work": ["B-Stance Hip Thrust 3×10/side @ 16 kg", "Hanging Knee Raise 3×12  [ABS]"], "arms": ["SUPERSET — Renegade Row 3×10/side @ 8 kg / Drag Curl 3×10 @ 12 kg  — More reps on the row, hips dead still."], "finisher": "Optional KB flow / play 10 min."},
+            3: {"label": "Optional — run or light flow.", "main": "Your call: Zone 2 run, or light flow.", "full_body_block": ["Single-Arm Swing 3×12/side @ 16 kg  [HINGE]", "Goblet Squat 3×10 @ 16 kg  [LEGS]", "TRX Row 3×12  [PULL]"], "focus_work": ["B-Stance Hip Thrust 3×10/side @ 16 kg", "Copenhagen Plank 3×20s/side  [ABS]"], "arms": ["SUPERSET — Renegade Row 3×8/side @ 10 kg / Incline Curl 3×10 @ 8 kg  — Heaviest row of the block — brace hard, no rotation."], "finisher": "Optional KB flow / play 10 min."},
+            4: {"label": "Optional — easy run or rest.", "main": "Your call: easy Zone 2 run, or take the day.", "full_body_block": ["Single-Arm Swing 2×12/side @ 12 kg  [HINGE]", "Goblet Squat 2×10 @ 12 kg  [LEGS]", "TRX Row 2×12  [PULL]"], "focus_work": ["KB Hip Thrust 2×12 @ 12 kg", "Dead Bug 2×10/side  [ABS]"], "arms": ["SUPERSET — Band Pull-Apart 2×20 / Hammer Curl 2×12 @ 8 kg  — Light."], "finisher": "Optional light flow 8 min or rest."},
         },
     },
 
@@ -674,12 +666,11 @@ PROGRAM_3 = {
                     "SUPERSET B2 — Half-Kneeling Single-Arm KB Press 3×8/side @ 10 kg  — Lunge into press. Ribs down, tall lockout.  [PUSH]",
                 ],
                 "focus_work": [
-                    "Single-Leg RDL 3×8/side @ 16 kg  — Hips square, controlled.",
                     "Banded Hip Abduction 3×20/side  — Heavy band, kick to the side.",
                     "Ab Wheel Rollout 3×8–10 (knees)  — Roll further than P2, ribs down.  [ABS]",
                 ],
                 "arms": [
-                    "SUPERSET — Incline Curl 3×10 @ 8 kg / Tate Press 3×12 @ 12 kg",
+                    "SUPERSET — Double KB Bent-Over Row 3×10 @ 10 kg/bell / Incline Curl 3×10 @ 8 kg  — Hinge to ~45°, flat back, pull both bells to the ribs, squeeze blades together.",
                 ],
                 "finisher": "PUSH-UP + SWING LADDER @ 16 kg  — Ramp 1→5: 1 push-up + 10 swings up to 5 + 10. Push-ups from the toes if you can hold the line. Crisp hip snap every rung.",
             },
@@ -693,12 +684,11 @@ PROGRAM_3 = {
                     "SUPERSET B2 — Half-Kneeling Single-Arm KB Press 3×10/side @ 10 kg  — More reps, full lockout.  [PUSH]",
                 ],
                 "focus_work": [
-                    "Single-Leg RDL 3×10/side @ 16 kg  — More reps.",
                     "Curtsy Lunge 3×12/side @ 12 kg  — Outer glute.",
                     "Hanging Knee Raise (TRX) 3×15  — Knees to chest, no swing.  [ABS]",
                 ],
                 "arms": [
-                    "SUPERSET — 21s Curl 3 sets @ 8 kg / Skull Crusher 3×12 @ 12 kg",
+                    "SUPERSET — Double KB Bent-Over Row 3×12 @ 10 kg/bell / 21s Curl 3 sets @ 8 kg  — More reps, same flat back. 21s: 7 bottom-half, 7 top-half, 7 full.",
                 ],
                 "finisher": "PUSH-UP + SWING LADDER @ 20 kg  — Ramp 1→6 this week. Heavier bell, same crisp snap. ~9 min.",
             },
@@ -712,12 +702,11 @@ PROGRAM_3 = {
                     "SUPERSET B2 — Half-Kneeling Single-Arm KB Press 4×6/side @ 12 kg  — Heaviest press of the block, no lean.  [PUSH]",
                 ],
                 "focus_work": [
-                    "Bulgarian Split Squat 3×8/leg @ 16 kg  — Heavy, controlled.",
                     "Banded Hip Abduction 3×20/side  — Heavy band.",
                     "Copenhagen Plank 3×25s/side  — Inner thigh + obliques.  [ABS]",
                 ],
                 "arms": [
-                    "SUPERSET — Lateral Raise 3×12 @ 8 kg / Close-Grip Floor Press 3×10 @ 16 kg",
+                    "SUPERSET — Double KB Bent-Over Row 4×8 @ 12 kg/bell / Drag Curl 3×10 @ 12 kg  — Heaviest row of the block — brace, pull to the ribs, no jerking. Drag: elbows back, bell drags up your body.",
                 ],
                 "finisher": "PUSH-UP + SWING LADDER @ 24 kg  — Ramp 1→5 with the heavy bell. Grip will talk — keep the snap honest. ~8 min.",
             },
@@ -731,12 +720,11 @@ PROGRAM_3 = {
                     "SUPERSET B2 — Half-Kneeling Single-Arm KB Press 2×8/side @ 8 kg  — Light, clean press path.  [PUSH]",
                 ],
                 "focus_work": [
-                    "Single-Leg RDL 2×8/side @ bodyweight  — Balance.",
                     "Banded Clamshell 2×20/side  — Light.",
                     "Dead Bug 3×10/side  — Breathe.  [ABS]",
                 ],
                 "arms": [
-                    "SUPERSET — Hammer Curl 2×12 @ 8 kg / TRX Tricep Ext 2×12",
+                    "SUPERSET — TRX Face Pull 2×15 / Hammer Curl 2×12 @ 8 kg  — Light. Face pull: elbows high, pull to forehead, squeeze blades.",
                 ],
                 "finisher": "PUSH-UP + SWING LADDER — short @ 12 kg  — Ramp 1→3 only. Light, technical. You started here 12 weeks ago — notice how easy it is now.",
             },
@@ -761,7 +749,7 @@ PROGRAM_3 = {
                     "AB CIRCUIT 3 rounds: 10 Ab Wheel + 12 Hanging Knee Raise + 15 V-Up  — Ribs down, no momentum.  [ABS]",
                 ],
                 "arms": [
-                    "SUPERSET — Drag Curl 3×12 @ 12 kg / Tate Press 3×12 @ 12 kg",
+                    "SUPERSET — Double KB Bent-Over Row 3×10 @ 10 kg/bell / Drag Curl 3×12 @ 12 kg  — Hinge to ~45°, flat back, pull both bells to the ribs, squeeze blades together.",
                 ],
                 "finisher": "Overhead Carry 4×20m/side @ 12 kg  — Lock the shoulder, ribs down.",
             },
@@ -778,7 +766,7 @@ PROGRAM_3 = {
                     "AB CIRCUIT 3 rounds: 12 Windshield Wiper/side + 15 Toe Touch + 45s Hollow Hold  — Lower slow on every rep.  [ABS]",
                 ],
                 "arms": [
-                    "SUPERSET — 21s Curl 3 sets @ 8 kg / Close-Grip Floor Press 3×12 @ 16 kg",
+                    "SUPERSET — Double KB Bent-Over Row 3×12 @ 10 kg/bell / 21s Curl 3 sets @ 8 kg  — More reps, same flat back.",
                 ],
                 "finisher": "Carry Medley: Overhead 20m → Rack 20m → Farmer 20m @ 16 kg, ×4  — No put-down.",
             },
@@ -795,7 +783,7 @@ PROGRAM_3 = {
                     "AB CIRCUIT 3 rounds: 10 Ab Wheel + 12 Hanging Knee Raise + 25s Copenhagen/side  — Ribs down throughout.  [ABS]",
                 ],
                 "arms": [
-                    "SUPERSET — Incline Curl 3×10 @ 8 kg / Skull Crusher 3×12 @ 12 kg",
+                    "SUPERSET — Double KB Bent-Over Row 4×8 @ 12 kg/bell / Incline Curl 3×10 @ 8 kg  — Heaviest row of the block — brace, pull to the ribs, no jerking.",
                 ],
                 "finisher": "Heavy Carry Medley @ 20 kg, ×3  — Rack → Farmer → Suitcase, 20m each.",
             },
@@ -812,7 +800,7 @@ PROGRAM_3 = {
                     "AB CIRCUIT 2 rounds: 10 Dead Bug/side + 20s Hollow Hold  — Quality.  [ABS]",
                 ],
                 "arms": [
-                    "SUPERSET — Hammer Curl 2×12 @ 8 kg / TRX Tricep Ext 2×12",
+                    "SUPERSET — TRX Face Pull 2×15 / Hammer Curl 2×12 @ 8 kg  — Light.",
                 ],
                 "finisher": "Suitcase Carry 2×20m/side @ 12 kg  — Easy, tall.",
             },
@@ -838,7 +826,7 @@ PROGRAM_3 = {
                     "Windshield Wiper 3×12/side  — Controlled rotation.  [ABS]",
                 ],
                 "arms": [
-                    "SUPERSET — TRX Reverse Fly 3×12 / Incline Curl 3×10 @ 8 kg  — Pinkies lead, blades down.",
+                    "SUPERSET — Double KB Bent-Over Row 3×10 @ 10 kg/bell / Incline Curl 3×10 @ 8 kg  — Hinge to ~45°, flat back, pull both bells to the ribs, squeeze blades together.",
                 ],
                 "finisher": "BUTT BURNER 5000 (Dan John) @ 16 kg  — Ladder 1→10: 1 KB hip hinge (goat-bag swing/RDL) + 1 goblet squat, 2+2, 3+3 … up to 10+10. Keep it flowing — cardio, not a grind. Note your time.",
             },
@@ -856,7 +844,7 @@ PROGRAM_3 = {
                     "Hanging Knee Raise (TRX) 3×15  — No swing.  [ABS]",
                 ],
                 "arms": [
-                    "SUPERSET — Lateral Raise 3×12 @ 8 kg / Tate Press 3×12 @ 12 kg",
+                    "SUPERSET — Double KB Bent-Over Row 3×12 @ 10 kg/bell / 21s Curl 3 sets @ 8 kg  — More reps, same flat back. 21s: 7 bottom-half, 7 top-half, 7 full.",
                 ],
                 "finisher": "THE HUMANE BURPEE @ 16 kg  — Climb 1→5 then back to 1: N push-ups + N goblet squats + 10 swings each rung. Minimal rest — note your total time.",
             },
@@ -874,7 +862,7 @@ PROGRAM_3 = {
                     "Copenhagen Plank 3×25s/side  — Inner thigh + obliques.  [ABS]",
                 ],
                 "arms": [
-                    "SUPERSET — Front Raise 3×10 @ 8 kg / Skull Crusher 3×10 @ 12 kg",
+                    "SUPERSET — Double KB Bent-Over Row 4×8 @ 12 kg/bell / Drag Curl 3×10 @ 12 kg  — Heaviest row of the block — brace, pull to the ribs, no jerking.",
                 ],
                 "finisher": "The Gauntlet: 100 Double Swings @ 16 kg/bell, then 50 Snatches (25/side) @ 12 kg, then 30s plank.  — For time. Your 12-week test.",
             },
@@ -892,7 +880,7 @@ PROGRAM_3 = {
                     "Dead Bug 3×10/side  — Breathe.  [ABS]",
                 ],
                 "arms": [
-                    "SUPERSET — Hammer Curl 2×12 @ 8 kg / TRX Tricep Ext 2×12",
+                    "SUPERSET — TRX Face Pull 2×15 / Hammer Curl 2×12 @ 8 kg  — Light. Face pull: elbows high, pull to forehead, squeeze blades — your posture fix.",
                 ],
                 "finisher": "BUTT BURNER 5000 — short @ 12 kg  — Ladder 1→5 only then stop: hip hinge + goblet squat each rung. Easy pace. 12 weeks done — next cycle starts heavier where it matters.",
             },
@@ -904,10 +892,10 @@ PROGRAM_3 = {
         "anchor": "Athlete's choice: run or light KB",
         "focus":  "Optional. A run counts. Light KB if you want it.",
         "weeks": {
-            1: {"label": "Optional — run or athletic flow.", "main": "Your call: Zone 2 run, or the flow below.", "full_body_block": ["Double KB Swing 3×10 @ 16 kg/bell  [HINGE]", "Cossack Squat 3×6/side @ 8 kg  [LEGS]", "TRX Archer Row 3×6/side  [PULL]"], "focus_work": ["Single-Leg Hip Thrust 3×10/side @ 12 kg", "Copenhagen Plank 3×20s/side  [ABS]"], "arms": ["SUPERSET — Incline Curl 3×10 @ 8 kg / Tate Press 3×12 @ 12 kg"], "finisher": "Optional KB flow / play 10 min."},
-            2: {"label": "Optional — run or flow.", "main": "Your call: Zone 2 run, or flow.", "full_body_block": ["Double KB Swing 3×10 @ 16 kg/bell  [HINGE]", "Cossack Squat 3×8/side @ 8 kg  [LEGS]", "TRX Archer Row 3×8/side  [PULL]"], "focus_work": ["Single-Leg Hip Thrust 3×12/side @ 12 kg", "Hanging Knee Raise 3×15  [ABS]"], "arms": ["SUPERSET — Lateral Raise 3×12 @ 8 kg / Skull Crusher 3×10 @ 12 kg"], "finisher": "Optional KB flow / play 10 min."},
-            3: {"label": "Optional — run or flow.", "main": "Your call: Zone 2 run, or flow.", "full_body_block": ["Double KB Swing 3×8 @ 20 kg/bell  [HINGE]", "Cossack Squat 3×6/side @ 12 kg  [LEGS]", "TRX Archer Row 4×6/side  [PULL]"], "focus_work": ["Single-Leg Hip Thrust 3×8/side @ 16 kg", "Copenhagen Plank 3×25s/side  [ABS]"], "arms": ["SUPERSET — Front Raise 3×10 @ 8 kg / Close-Grip Floor Press 3×10 @ 16 kg"], "finisher": "Optional KB flow / play 10 min."},
-            4: {"label": "Optional — easy run or rest.", "main": "Your call: easy Zone 2 run, or take the day.", "full_body_block": ["KB Swing 2×12 @ 12 kg  [HINGE]", "Goblet Squat 2×10 @ 12 kg  [LEGS]", "TRX Row 2×12  [PULL]"], "focus_work": ["KB Hip Thrust 2×12 @ 12 kg", "Dead Bug 2×10/side  [ABS]"], "arms": ["SUPERSET — Hammer Curl 2×12 @ 8 kg / TRX Tricep Ext 2×12"], "finisher": "Optional light flow 8 min or rest."},
+            1: {"label": "Optional — run or athletic flow.", "main": "Your call: Zone 2 run, or the flow below.", "full_body_block": ["Double KB Swing 3×10 @ 16 kg/bell  [HINGE]", "Cossack Squat 3×6/side @ 8 kg  [LEGS]", "TRX Archer Row 3×6/side  [PULL]"], "focus_work": ["Single-Leg Hip Thrust 3×10/side @ 12 kg", "Copenhagen Plank 3×20s/side  [ABS]"], "arms": ["SUPERSET — Double KB Bent-Over Row 3×10 @ 10 kg/bell / Incline Curl 3×10 @ 8 kg  — Hinge to ~45°, flat back, pull both bells to the ribs, squeeze blades together."], "finisher": "Optional KB flow / play 10 min."},
+            2: {"label": "Optional — run or flow.", "main": "Your call: Zone 2 run, or flow.", "full_body_block": ["Double KB Swing 3×10 @ 16 kg/bell  [HINGE]", "Cossack Squat 3×8/side @ 8 kg  [LEGS]", "TRX Archer Row 3×8/side  [PULL]"], "focus_work": ["Single-Leg Hip Thrust 3×12/side @ 12 kg", "Hanging Knee Raise 3×15  [ABS]"], "arms": ["SUPERSET — Double KB Bent-Over Row 3×12 @ 10 kg/bell / Drag Curl 3×10 @ 12 kg  — More reps, same flat back."], "finisher": "Optional KB flow / play 10 min."},
+            3: {"label": "Optional — run or flow.", "main": "Your call: Zone 2 run, or flow.", "full_body_block": ["Double KB Swing 3×8 @ 20 kg/bell  [HINGE]", "Cossack Squat 3×6/side @ 12 kg  [LEGS]", "TRX Archer Row 4×6/side  [PULL]"], "focus_work": ["Single-Leg Hip Thrust 3×8/side @ 16 kg", "Copenhagen Plank 3×25s/side  [ABS]"], "arms": ["SUPERSET — Double KB Bent-Over Row 4×8 @ 12 kg/bell / 21s Curl 3 sets @ 8 kg  — Heaviest row of the block — brace, pull to the ribs, no jerking."], "finisher": "Optional KB flow / play 10 min."},
+            4: {"label": "Optional — easy run or rest.", "main": "Your call: easy Zone 2 run, or take the day.", "full_body_block": ["KB Swing 2×12 @ 12 kg  [HINGE]", "Goblet Squat 2×10 @ 12 kg  [LEGS]", "TRX Row 2×12  [PULL]"], "focus_work": ["KB Hip Thrust 2×12 @ 12 kg", "Dead Bug 2×10/side  [ABS]"], "arms": ["SUPERSET — TRX Face Pull 2×15 / Hammer Curl 2×12 @ 8 kg  — Light."], "finisher": "Optional light flow 8 min or rest."},
         },
     },
 
