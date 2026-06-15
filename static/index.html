@@ -2076,6 +2076,7 @@ function renderPrograms() {
   <div style="font-size:22px;font-family:'DM Serif Display',serif;color:var(--charcoal);margin-bottom:2px">Program ${progNum} · ${NAMES[programIdx]}</div>
   <div style="font-size:13px;color:var(--warm-gray)">${WK_RANGES[programIdx]} &nbsp;·&nbsp; Wave week ${waveWeek} of 4</div>
   <div style="font-size:12px;color:var(--light-gray);margin-top:6px">Started ${blockStart.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</div>
+  <button onclick="restartProgram()" style="margin-top:10px;font-size:12px;font-weight:600;color:var(--terracotta);background:none;border:1px solid var(--border);border-radius:6px;padding:6px 10px;cursor:pointer">Restart at Program 1 · Week 1 · Day 1 (next Monday)</button>
 </div>
 
 <div class="card">
@@ -2091,6 +2092,15 @@ function renderPrograms() {
     const cell = document.getElementById('cal-today-cell');
     if (cell) cell.scrollIntoView({ behavior: 'smooth', block: 'center' });
   });
+}
+
+async function restartProgram() {
+  if (!confirm('Restart at Program 1 · Week 1 · Day 1, beginning next Monday?\n\nYour workout history, badges, and streaks are not affected — only the program calendar resets.')) return;
+  const res = await api('/api/program/restart', 'POST');
+  if (!res || res.status !== 'ok') { alert('Could not restart the program. Try again.'); return; }
+  await loadAll();
+  renderPrograms();
+  if (document.getElementById('tab-today').classList.contains('active')) renderToday();
 }
 
 async function programsDayTap(dateStr, progIdx) {
