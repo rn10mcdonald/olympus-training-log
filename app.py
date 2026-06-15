@@ -251,6 +251,18 @@ async def select_program_track(req: Request, u: dict = CurrentUser):
     return {"status": "ok", "program_track": track}
 
 
+@app.post("/api/program/restart")
+def restart_program(u: dict = CurrentUser):
+    """Restart the current program track at Program 1 / Week 1 / Day 1,
+    beginning next Monday (today if today is Monday). Does not touch
+    workout history, streaks, or badges — only program_start_iso."""
+    uid   = u["user_id"]
+    state = _load_training(uid)
+    state["program_start_iso"] = _next_monday()
+    _save_training(uid, state)
+    return {"status": "ok", "program_start_iso": state["program_start_iso"]}
+
+
 # ── Date helpers ─────────────────────────────────────────────────────────────
 
 def _this_monday() -> str:
