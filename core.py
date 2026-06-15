@@ -24,12 +24,12 @@ PROGRAM_1 = {
     # ── STRENGTH A — Glute & Leg (Monday) ─────────────────────────────────
     "strength_a": {
         "name":   "Strength A — Glute & Legs",
-        "anchor": "Two-Hand KB Hip Thrust",
+        "anchor": "Two-Hand KB Deadlift",
         "focus":  "Glutes, quads, hamstrings — even mix isolation + compound",
         "weeks": {
             1: {
                 "label": "Week 1 — Learn the hinge and the squat. Meet the supersets.",
-                "main":  "Two-Hand KB Hip Thrust 4×12 @ 16 kg  — Ribs down, chin tucked. Lock out and squeeze 1 sec, no bounce.",
+                "main":  "Two-Hand KB Deadlift 4×12 @ 16 kg  — Hinge back, flat back, chest up. Drive through the heels, squeeze glutes at the top.",
                 "full_body_block": [
                     "SUPERSET A1 — Goblet Squat 3×10 @ 16 kg  — Elbows pry knees apart, sit between hips, chest proud.  [LEGS]",
                     "SUPERSET A2 — TRX Row 3×12  — Straight from the squat, minimal rest. Squeeze blades first, then bend elbows. Body one line.  [PULL]",
@@ -48,7 +48,7 @@ PROGRAM_1 = {
             },
             2: {
                 "label": "Week 2 — Same loads, sharper reps. Tighten the pairings.",
-                "main":  "Two-Hand KB Hip Thrust 4×12 @ 20 kg  — Up a bell. Same 1-sec squeeze at the top.",
+                "main":  "Two-Hand KB Deadlift 4×12 @ 20 kg  — Up a bell. Same flat back, same heel drive.",
                 "full_body_block": [
                     "SUPERSET A1 — Goblet Squat 3×12 @ 16 kg  — Add reps, not weight. Pause 1 sec at the bottom.  [LEGS]",
                     "SUPERSET A2 — TRX Row 3×12 (feet further forward = harder)  — Walk your feet in to scale. No rest from the squat.  [PULL]",
@@ -67,7 +67,7 @@ PROGRAM_1 = {
             },
             3: {
                 "label": "Week 3 — Sharpen. A little heavier where it counts.",
-                "main":  "Two-Hand KB Hip Thrust 4×10 @ 24 kg  — Heaviest of the block. Earn the lockout.",
+                "main":  "Two-Hand KB Deadlift 4×10 @ 24 kg  — Heaviest of the block. Brace before you pull.",
                 "full_body_block": [
                     "SUPERSET A1 — Goblet Squat 4×8 @ 20 kg  — Up a bell, drop reps. Stay tall, knees track over toes.  [LEGS]",
                     "SUPERSET A2 — TRX Row 4×10  — Pull until thumbs reach armpits. Straight from the squat.  [PULL]",
@@ -86,7 +86,7 @@ PROGRAM_1 = {
             },
             4: {
                 "label": "Week 4 — Restore. Lighter, clean, feel everything.",
-                "main":  "Two-Hand KB Hip Thrust 3×12 @ 16 kg  — Light. Pure squeeze, no grind.",
+                "main":  "Two-Hand KB Deadlift 3×12 @ 16 kg  — Light. Pure pattern, no grind.",
                 "full_body_block": [
                     "SUPERSET A1 — Goblet Squat 3×10 @ 12 kg  — Easy. Move well, breathe.  [LEGS]",
                     "SUPERSET A2 — TRX Row 3×12 (easy angle)  — Feel the blades work.  [PULL]",
@@ -352,12 +352,12 @@ PROGRAM_2 = {
 
     "strength_a": {
         "name":   "Strength A — Glute & Legs (Development)",
-        "anchor": "B-Stance KB Hip Thrust",
+        "anchor": "B-Stance KB Deadlift",
         "focus":  "Unilateral-leaning glute work, fresh leg variations",
         "weeks": {
             1: {
                 "label": "Week 5 — B-stance shifts the load onto one glute.",
-                "main":  "B-Stance KB Hip Thrust 4×10/side @ 20 kg  — One foot flat, other as a kickstand. 70% of the work on the planted leg.",
+                "main":  "B-Stance KB Deadlift 4×10/side @ 20 kg  — One foot flat, other as a kickstand. 70% of the work on the planted leg, hinge straight down.",
                 "full_body_block": [
                     "SUPERSET A1 — Double KB Front Squat 3×8 @ 12 kg/bell  — Elbows high, forearms vertical, brace the rack.  [LEGS]",
                     "SUPERSET A2 — TRX Row feet-forward 3×12  — Harder lever than P1. Straight from the squat.  [PULL]",
@@ -376,7 +376,7 @@ PROGRAM_2 = {
             },
             2: {
                 "label": "Week 6 — More reps on the new patterns.",
-                "main":  "B-Stance KB Hip Thrust 4×12/side @ 20 kg  — More reps, same kickstand setup.",
+                "main":  "B-Stance KB Deadlift 4×12/side @ 20 kg  — More reps, same kickstand setup.",
                 "full_body_block": [
                     "SUPERSET A1 — Double KB Front Squat 3×10 @ 12 kg/bell  — Add reps.  [LEGS]",
                     "SUPERSET A2 — TRX Row feet-forward 3×12  — Squeeze 1 sec at the top. No rest from the squat.  [PULL]",
@@ -395,7 +395,7 @@ PROGRAM_2 = {
             },
             3: {
                 "label": "Week 7 — Sharpen the variations.",
-                "main":  "B-Stance KB Hip Thrust 4×10/side @ 24 kg  — Up a bell. Drive through the planted heel.",
+                "main":  "B-Stance KB Deadlift 4×10/side @ 24 kg  — Up a bell. Drive through the planted heel.",
                 "full_body_block": [
                     "SUPERSET A1 — Double KB Front Squat 4×8 @ 16 kg/bell  — Up a bell.  [LEGS]",
                     "SUPERSET A2 — TRX Archer Row 3×6/side  — Pull to one side, other arm long. Unilateral pull.  [PULL]",
@@ -414,7 +414,7 @@ PROGRAM_2 = {
             },
             4: {
                 "label": "Week 8 — Restore.",
-                "main":  "B-Stance KB Hip Thrust 3×10/side @ 16 kg  — Light, full squeeze.",
+                "main":  "B-Stance KB Deadlift 3×10/side @ 16 kg  — Light, full range.",
                 "full_body_block": [
                     "SUPERSET A1 — Goblet Squat 3×10 @ 12 kg  — Back to basics, easy.  [LEGS]",
                     "SUPERSET A2 — TRX Row 3×12 (easy)  — Feel the blades.  [PULL]",
@@ -661,12 +661,12 @@ PROGRAM_3 = {
 
     "strength_a": {
         "name":   "Strength A — Glute & Legs (Performance)",
-        "anchor": "Single-Leg KB Hip Thrust",
+        "anchor": "Single-Leg KB Deadlift",
         "focus":  "Single-leg glute strength, athletic legs",
         "weeks": {
             1: {
-                "label": "Week 9 — Single-leg hip thrust: full load, one glute.",
-                "main":  "Single-Leg KB Hip Thrust 4×10/side @ 12 kg  — Shoulders on couch, drive one heel, hips level, 1-sec squeeze.",
+                "label": "Week 9 — Single-leg deadlift: full load, one leg.",
+                "main":  "Single-Leg KB Deadlift 4×10/side @ 12 kg  — Free leg reaches back as you hinge, hips square, bell taps the floor lightly.",
                 "full_body_block": [
                     "SUPERSET A1 — Cossack Squat 3×6/side @ 8 kg  — Sit deep to one side, other leg straight, heel down. Lateral strength + mobility.  [LEGS]",
                     "SUPERSET A2 — TRX Archer Row 3×6/side  — Unilateral pull. Straight from the squat.  [PULL]",
@@ -685,7 +685,7 @@ PROGRAM_3 = {
             },
             2: {
                 "label": "Week 10 — More reps on the athletic patterns.",
-                "main":  "Single-Leg KB Hip Thrust 4×12/side @ 12 kg  — More reps, hips level.",
+                "main":  "Single-Leg KB Deadlift 4×12/side @ 12 kg  — More reps, hips level.",
                 "full_body_block": [
                     "SUPERSET A1 — Cossack Squat 3×8/side @ 8 kg  — Deeper, more reps.  [LEGS]",
                     "SUPERSET A2 — TRX Archer Row 3×8/side  — More reps. No rest from the squat.  [PULL]",
@@ -704,7 +704,7 @@ PROGRAM_3 = {
             },
             3: {
                 "label": "Week 11 — Sharpest, most athletic.",
-                "main":  "Single-Leg KB Hip Thrust 4×8/side @ 16 kg  — Up a bell, full lockout.",
+                "main":  "Single-Leg KB Deadlift 4×8/side @ 16 kg  — Up a bell, full range.",
                 "full_body_block": [
                     "SUPERSET A1 — Cossack Squat 3×6/side @ 12 kg  — Loaded lateral squat.  [LEGS]",
                     "SUPERSET A2 — TRX Archer Row 4×6/side  — Add a set.  [PULL]",
@@ -723,7 +723,7 @@ PROGRAM_3 = {
             },
             4: {
                 "label": "Week 12 — Restore. You've earned it.",
-                "main":  "Single-Leg KB Hip Thrust 3×10/side @ 12 kg  — Light, feel the range.",
+                "main":  "Single-Leg KB Deadlift 3×10/side @ 12 kg  — Light, feel the range.",
                 "full_body_block": [
                     "SUPERSET A1 — Goblet Squat 3×10 @ 12 kg  — Easy basics.  [LEGS]",
                     "SUPERSET A2 — TRX Row 3×12 (easy)  — Feel the blades.  [PULL]",
