@@ -1,4 +1,4 @@
-const CACHE = "firstbell-v3";
+const CACHE = "firstbell-v4";
 const ASSETS = [
   "/", "/static/index.html", "/static/manifest.json"
 ];
