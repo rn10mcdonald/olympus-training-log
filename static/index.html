@@ -1243,12 +1243,22 @@ function badgeClass(trackKey) {
   if (trackKey.includes('day_c'))    return 'badge-c';
   if (trackKey.includes('day_d'))    return 'badge-d';
   if (trackKey.includes('mobility')) return 'badge-mob';
+  // Fighter v3 session types
+  if (trackKey === 'hinge_strength')              return 'badge-a';
+  if (trackKey === 'squat_hipthrust_strength')    return 'badge-b';
+  if (trackKey === 'swing_conditioning_strength') return 'badge-c';
+  if (trackKey === 'run_interval')                return 'badge-d';
+  if (trackKey === 'run_easy' || trackKey === 'run_long') return 'badge-mob';
   return 'badge-a';
 }
 
 function badgeLabel(wk) {
   if (wk.day_type === 'run_day') {
-    return wk.session_type === 'mobility_a' ? '🏃 Run Day A · Rehab + Run' : '🏃 Run Day B · Rehab + Run';
+    if (wk.session_type === 'mobility_a')  return '🏃 Run Day A · Rehab + Run';
+    if (wk.session_type === 'mobility_b')  return '🏃 Run Day B · Rehab + Run';
+    if (wk.session_type === 'run_easy')    return '🏃 Easy Run';
+    if (wk.session_type === 'run_interval') return '⚡ Interval Day';
+    if (wk.session_type === 'run_long')    return '🏃 Long Run';
   }
   const t = wk.track_key || '';
   if (t.includes('day_a'))    return '🍑 Day A · Glute & Legs';
@@ -1256,6 +1266,9 @@ function badgeLabel(wk) {
   if (t.includes('day_c'))    return '🔥 Day C · Conditioning';
   if (t.includes('day_d'))    return '🏋️ Day D · Optional';
   if (t.includes('mobility')) return '🌿 Mobility';
+  if (t === 'hinge_strength')              return '🍑 Hinge Day';
+  if (t === 'squat_hipthrust_strength')    return '🔥 Squat / Hip Thrust Day';
+  if (t === 'swing_conditioning_strength') return '⚡ Swing / Conditioning Day';
   return wk.track_name || 'Session';
 }
 
@@ -1515,11 +1528,12 @@ async function previewDayWorkout(dateStr) {
     const fontStyle = isFuture ? 'italic' : 'normal';
     const style     = `color:${textColor};font-style:${fontStyle}`;
 
-    // Badge + Optional pill for Saturday
-    const isSaturday = dow === 5;
+    // Badge + Optional pill — only Kyle's Saturday (strength_d) is optional.
+    // Fighter's Saturday (Swing/Conditioning) is a mandatory day as of v3.
+    const isOptionalDay = wk.session_type === 'strength_d';
     inner += `<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;flex-wrap:wrap">
       <span class="day-badge ${badgeClass(wk.track_key)}">${badgeLabel(wk)}</span>
-      ${isSaturday ? `<span style="font-size:11px;font-weight:600;background:#e8d5a3;color:#8B6914;padding:2px 8px;border-radius:10px">Optional</span>` : ''}
+      ${isOptionalDay ? `<span style="font-size:11px;font-weight:600;background:#e8d5a3;color:#8B6914;padding:2px 8px;border-radius:10px">Optional</span>` : ''}
     </div>`;
 
     // Main lift
@@ -1901,7 +1915,12 @@ async function deleteWorkout(evt, id) {
 }
 
 // ── PROGRAMS TAB ─────────────────────────────────────────────────────────────
-const _DOW_TO_SESSION_JS = ['strength_a','mobility_a','strength_b','mobility_b','strength_c','strength_d','rest'];
+// Kyle: Mon strength_a, Tue mobility_a, Wed strength_b, Thu mobility_b,
+// Fri strength_c, Sat strength_d (optional), Sun rest.
+const _DOW_TO_SESSION_JS_KYLE = ['strength_a','mobility_a','strength_b','mobility_b','strength_c','strength_d','rest'];
+// Fighter v3: Mon Hinge, Tue Easy Run, Wed Squat/Hip Thrust, Thu Interval,
+// Fri Easy Run, Sat Swing/Conditioning, Sun Long Run — no rest day.
+const _DOW_TO_SESSION_JS_FIGHTER = ['strength_hinge','run_easy','strength_squat_hipthrust','run_interval','run_easy','strength_swing_conditioning','run_long'];
 
 const _SESSION_INFO = {
   strength_a: { short:'Day A', color:'#C07A3A', badgeCls:'badge-a' },
@@ -1911,6 +1930,13 @@ const _SESSION_INFO = {
   mobility_a: { short:'Mob A', color:'#7A9E7E', badgeCls:'badge-mob' },
   mobility_b: { short:'Mob B', color:'#7A9E7E', badgeCls:'badge-mob' },
   rest:       { short:'Rest',  color:'var(--light-gray)', badgeCls:'' },
+  // Fighter v3
+  strength_hinge:              { short:'Hinge',  color:'#C07A3A', badgeCls:'badge-a' },
+  strength_squat_hipthrust:    { short:'Squat',  color:'#4A7C9E', badgeCls:'badge-b' },
+  strength_swing_conditioning: { short:'Swing',  color:'#B85450', badgeCls:'badge-c' },
+  run_easy:                    { short:'Easy',   color:'#7A9E7E', badgeCls:'badge-mob' },
+  run_interval:                { short:'Interval', color:'#7B5EA7', badgeCls:'badge-d' },
+  run_long:                    { short:'Long',   color:'#7A9E7E', badgeCls:'badge-mob' },
 };
 
 let _programsSelectedDate = null;
@@ -1925,13 +1951,9 @@ function _progInfoFromStart(startISO) {
   return { programIdx, waveWeek, weeksElapsed, weekInCycle };
 }
 
-function _aboutProgram(idx) {
-  return [
-    '<strong>Foundation</strong> (Weeks 1–4) — Your entry into First Bell. Four weekly sessions: Glute & Legs, Pull & Core, Hardstyle, and an optional Saturday heavy pull. Loads start light so movement patterns come first. Every rep is practice. Every session builds the habit.',
-    '<strong>Development</strong> (Weeks 5–8) — Load and volume increase meaningfully. You\'ve earned the heavier bells. Mobility sessions deepen. Saturday introduces Z Press skill and joint-health work. You\'re not just getting stronger — you\'re getting more resilient.',
-    '<strong>Performance</strong> (Weeks 9–12) — Peak phase. Your heaviest deadlifts, most technical moves, hardest conditioning. Saturday is bottoms-up press and full athletic prevention work. Week 12 is a deload — honour it. Then Program 1 starts again, but you are not the same person.',
-  ][idx] || '';
-}
+// NOTE: _aboutProgram() (Foundation/Development/Performance blurb generator)
+// was removed here — it was dead code (never called) and described the old
+// v2 Fighter arc, which no longer exists post-v3 merge.
 
 function renderPrograms() {
   const loading = document.getElementById('programs-loading');
@@ -1948,14 +1970,19 @@ function renderPrograms() {
   const { programIdx, waveWeek } = _progInfoFromStart(startISO);
   const progNum    = programIdx + 1;
   const isKyle     = (appState.program_track === 'kyle');
+  const dowMap     = isKyle ? _DOW_TO_SESSION_JS_KYLE : _DOW_TO_SESSION_JS_FIGHTER;
   const TRACK_LABEL = isKyle ? 'Asymmetry & Rebuild' : 'First Bell Fighter';
+  // v3: Fighter is a single repeating 4-week wave (Learn→Build→Sharpen→
+  // Restore), not an escalating 12-week arc — all three slots show the same
+  // content, so label them identically rather than implying growth that
+  // doesn't happen.
   const NAMES      = isKyle
     ? ['Reset & Reactivate','Development','Performance']
-    : ['Foundation','Development','Performance'];
+    : ['Fighter Wave','Fighter Wave','Fighter Wave'];
   const WK_RANGES  = ['Weeks 1–4','Weeks 5–8','Weeks 9–12'];
   const SLOGANS    = isKyle
     ? ['Exit KB Strong. Close the gap.','Trust the left side more.','Bilateral symmetry restored.']
-    : ['Learn the patterns.','Harder variations.','Athletic and powerful.'];
+    : ['Circuit strength + real running — repeats every 4 weeks.','Circuit strength + real running — repeats every 4 weeks.','Circuit strength + real running — repeats every 4 weeks.'];
 
   // Current block start date (for header card)
   const cycleStart  = new Date(startISO + 'T00:00:00');
@@ -1971,12 +1998,18 @@ function renderPrograms() {
   }
 
   // ── Legend ────────────────────────────────────────────────────────────────
-  const legendItems = [
+  const legendItems = isKyle ? [
     { color:'#C07A3A', label:'A·Glute' },
     { color:'#7A9E7E', label:'Mob' },
     { color:'#4A7C9E', label:'B·Pull' },
     { color:'#B85450', label:'C·Hard' },
     { color:'#7B5EA7', label:'D·DKB' },
+  ] : [
+    { color:'#C07A3A', label:'Hinge' },
+    { color:'#4A7C9E', label:'Squat/Hip Thrust' },
+    { color:'#B85450', label:'Swing/Cond' },
+    { color:'#7B5EA7', label:'Interval' },
+    { color:'#7A9E7E', label:'Easy/Long Run' },
   ];
   const legendHTML = `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
     ${legendItems.map(li => `<div style="display:flex;align-items:center;gap:3px;font-size:10px;color:var(--warm-gray)"><span style="width:8px;height:8px;border-radius:2px;background:${li.color};display:inline-block"></span>${li.label}</div>`).join('')}
@@ -2022,7 +2055,7 @@ function renderPrograms() {
         const dISO    = d.toLocaleDateString('en-CA');
         const isToday = dISO === todayStr;
 
-        const sessType = _DOW_TO_SESSION_JS[dow];
+        const sessType = dowMap[dow];
         const info     = _SESSION_INFO[sessType] || { short:'?', color:'#999' };
 
         const dayEntries = wkMap[dISO] || [];
@@ -2141,10 +2174,10 @@ async function programsDayTap(dateStr, progIdx) {
   if (!wk || wk.status === 'rest') {
     html += `<div style="color:var(--warm-gray);font-style:italic;font-size:14px">Rest day. Recovery is training.</div>`;
   } else if (wk.status === 'active') {
-    const isSat = (dow === 5);
+    const isOptionalDay = wk.session_type === 'strength_d';
     html += `<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px">
       <span class="day-badge ${badgeClass(wk.track_key)}">${badgeLabel(wk)}</span>
-      ${isSat ? `<span style="font-size:11px;font-weight:600;background:#e8d5a3;color:#8B6914;padding:2px 8px;border-radius:10px">Optional</span>` : ''}
+      ${isOptionalDay ? `<span style="font-size:11px;font-weight:600;background:#e8d5a3;color:#8B6914;padding:2px 8px;border-radius:10px">Optional</span>` : ''}
     </div>`;
 
     const textColor = isFuture ? 'var(--warm-gray)' : 'var(--charcoal)';
@@ -2361,8 +2394,8 @@ function showToast(msg) {
       padding:20px;margin-bottom:12px;cursor:pointer;transition:all .15s">
       <div style="font-family:'DM Serif Display',serif;font-size:20px;color:#2C2C2C;margin-bottom:6px">🔔 First Bell Fighter</div>
       <div style="font-size:14px;color:#7A736B;line-height:1.55">
-        Full body kettlebell — hardstyle training, glute &amp; aesthetic focus.<br>
-        Semi-advanced. 3 strength + 2 mobility per week. 12-week program.
+        Short dense KB circuits + real running structure — hinge, swing, squat/hip thrust.<br>
+        Semi-advanced. 3 strength + 4 run days/week. Repeats every 4 weeks.
       </div>
     </div>
 
