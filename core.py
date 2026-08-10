@@ -87,7 +87,8 @@ STRENGTH_HINGE = {
                 "Renegade Row 6/side @ 8 kg  — Plank stays square, don't let the hips rotate toward the pulling arm.",
                 "Suitcase Hold 30s/side @ 16 kg  — Resist the lean — that's the only rep that counts.",
             ],
-            "focus_work": ["4 rounds — 30s rest between moves, 90s between rounds."],
+            "focus_work": [],
+            "circuit_note": "4 rounds — 30s rest between moves, 90s between rounds.",
             "arms": [],
             "finisher": "BENCHMARK BASELINE — 100 KB Swings for time @ 16 kg. Write it down, retest Week 4. Then Windmill ladder @ 8 kg — 1 rep/side at :30, add a rep/side every 30s, cap at 6 min.",
         },
@@ -99,7 +100,8 @@ STRENGTH_HINGE = {
                 "Renegade Row 8/side @ 8 kg  — Slow the tempo down as the reps climb.",
                 "Suitcase Hold 30s/side @ 20 kg  — Heavier hold, same brace.",
             ],
-            "focus_work": ["4 rounds — 25s rest between moves, 75s between rounds."],
+            "focus_work": [],
+            "circuit_note": "4 rounds — 25s rest between moves, 75s between rounds.",
             "arms": [],
             "finisher": "Windmill ladder @ 8 kg — same format, try to beat last week's cap.",
         },
@@ -111,7 +113,8 @@ STRENGTH_HINGE = {
                 "Renegade Row 8/side @ 12 kg  — Up a bell. Plank discipline over speed.",
                 "Suitcase Hold 25s/side @ 24 kg  — Heaviest hold of the block.",
             ],
-            "focus_work": ["4 rounds — 20s rest between moves, 60s between rounds."],
+            "focus_work": [],
+            "circuit_note": "4 rounds — 20s rest between moves, 60s between rounds.",
             "arms": [],
             "finisher": "Arm Bar 2×90s/side @ 8 kg — slow, deliberate, full shoulder packing.",
         },
@@ -123,7 +126,8 @@ STRENGTH_HINGE = {
                 "Renegade Row 6/side @ 8 kg  — Easy, controlled.",
                 "Suitcase Hold 30s/side @ 16 kg  — Light, clean brace.",
             ],
-            "focus_work": ["3 rounds — 30s rest between moves, 90s between rounds."],
+            "focus_work": [],
+            "circuit_note": "3 rounds — 30s rest between moves, 90s between rounds.",
             "arms": [],
             "finisher": "BENCHMARK RETEST — 100 KB Swings for time @ 16 kg. Compare to Week 1.",
         },
@@ -146,7 +150,8 @@ STRENGTH_SWING_CONDITIONING = {
                 "Figure-8 10 passes @ 12 kg  — Hand to hand between the legs, stay low.",
                 "Halo 8/side @ 8 kg  — Bell circles the head, ribs stay down, don't arch.",
             ],
-            "focus_work": ["4 rounds — 30s rest between moves, 90s between rounds."],
+            "focus_work": [],
+            "circuit_note": "4 rounds — 30s rest between moves, 90s between rounds.",
             "arms": [],
             "finisher": "Swing EMOM 6 min: 10/side @ 16 kg — note total reps, this is your week-to-week number to beat.",
         },
@@ -158,7 +163,8 @@ STRENGTH_SWING_CONDITIONING = {
                 "Figure-8 12 passes @ 12 kg  — More passes, same low stance.",
                 "Halo 10/side @ 8 kg  — More reps, control the circle.",
             ],
-            "focus_work": ["4 rounds — 25s rest between moves, 75s between rounds."],
+            "focus_work": [],
+            "circuit_note": "4 rounds — 25s rest between moves, 75s between rounds.",
             "arms": [],
             "finisher": "Swing EMOM 6 min: beat Week 1's total @ 16-20 kg.",
         },
@@ -170,7 +176,8 @@ STRENGTH_SWING_CONDITIONING = {
                 "Figure-8 12 passes @ 16 kg  — Up a bell.",
                 "Halo 8/side @ 12 kg  — Up a bell, control over speed.",
             ],
-            "focus_work": ["4 rounds — 20s rest between moves, 60s between rounds."],
+            "focus_work": [],
+            "circuit_note": "4 rounds — 20s rest between moves, 60s between rounds.",
             "arms": [],
             "finisher": "Swing EMOM 8 min: beat Week 2's total.",
         },
@@ -182,7 +189,8 @@ STRENGTH_SWING_CONDITIONING = {
                 "Figure-8 10 passes @ 12 kg  — Smooth.",
                 "Halo 8/side @ 8 kg  — Light.",
             ],
-            "focus_work": ["3 rounds — 30s rest between moves, 90s between rounds."],
+            "focus_work": [],
+            "circuit_note": "3 rounds — 30s rest between moves, 90s between rounds.",
             "arms": [],
             "finisher": "Easy swing flow 5 min @ 16 kg — no counting, just clean reps.",
         },
@@ -205,7 +213,8 @@ STRENGTH_SQUAT_HIPTHRUST = {
                 "Bottoms-Up Press 6/side @ 8 kg  — Bell upside down — grip and shoulder do all the work, don't let it tip.",
                 "Waiter's Carry March 20 steps (in place) @ 12 kg  — Overhead, knee drives up, ribs stay down.",
             ],
-            "focus_work": ["4 rounds — 30s rest between moves, 90s between rounds."],
+            "focus_work": [],
+            "circuit_note": "4 rounds — 30s rest between moves, 90s between rounds.",
             "arms": [],
             "finisher": "Arm Bar ladder @ 8 kg — 1 rep/side at :30, add a rep/side every 30s, cap at 6 min.",
         },
@@ -217,7 +226,8 @@ STRENGTH_SQUAT_HIPTHRUST = {
                 "Bottoms-Up Press 8/side @ 8 kg  — More reps, same tight grip.",
                 "Waiter's Carry March 20 steps @ 16 kg  — Heavier bell overhead.",
             ],
-            "focus_work": ["4 rounds — 25s rest between moves, 75s between rounds."],
+            "focus_work": [],
+            "circuit_note": "4 rounds — 25s rest between moves, 75s between rounds.",
             "arms": [],
             "finisher": "Arm Bar ladder @ 8 kg — beat last week's cap.",
         },
@@ -229,7 +239,8 @@ STRENGTH_SQUAT_HIPTHRUST = {
                 "Bottoms-Up Press 6/side @ 12 kg  — Up a bell, control over speed.",
                 "Waiter's Carry March 24 steps @ 16 kg  — More steps, same lockout.",
             ],
-            "focus_work": ["4 rounds — 20s rest between moves, 60s between rounds."],
+            "focus_work": [],
+            "circuit_note": "4 rounds — 20s rest between moves, 60s between rounds.",
             "arms": [],
             "finisher": "Windmill 2×90s/side @ 8 kg — slow, full range.",
         },
@@ -241,7 +252,8 @@ STRENGTH_SQUAT_HIPTHRUST = {
                 "Bottoms-Up Press 6/side @ 8 kg  — Light, technical.",
                 "Waiter's Carry March 20 steps @ 12 kg  — Easy.",
             ],
-            "focus_work": ["3 rounds — 30s rest between moves, 90s between rounds."],
+            "focus_work": [],
+            "circuit_note": "3 rounds — 30s rest between moves, 90s between rounds.",
             "arms": [],
             "finisher": "Easy flow 5 min @ 12 kg: hip thrust -> squat -> halo, repeat.",
         },
@@ -255,13 +267,22 @@ STRENGTH_SQUAT_HIPTHRUST = {
 #  10%/week mileage climb on easy+long days, cutback every 4th week.
 # ==========================================================================
 
+# Easy/Long mileage below is v3's own "+10%/week, cutback ~70% wk4" rule
+# made explicit — anchored to Rena's last documented easy-run baseline
+# (~3.7 mi, Zone 2, ~14:00/mi, run/walk 2:1→3:1; see old Program 3 mobility
+# text) rather than a guessed number. Long = ~12% longer than that week's
+# easy run, per v3's "10-15% longer" rule.
 RUN_EASY = {
     "name": "Easy Run",
     "purpose": "Aerobic base — this is where the weekly mileage build lives.",
-    "structure": "Continuous or run/walk as calf tolerance allows, easy conversational effort.",
-    "progression_rule": "+10% weekly mileage across easy+long days combined, cutback to ~70% every 4th week.",
     "rehab":   FIGHTER_REHAB_LOWER,
     "stretch": FIGHTER_STRETCH_LOWER,
+    "weeks": {
+        1: {"label": "Week 1", "run_line": "3.7 mi easy, run/walk 2:1, Zone 2 (HR ~130s, ~14:00/mi pace)."},
+        2: {"label": "Week 2", "run_line": "4.0 mi easy, run/walk 2:1→3:1, Zone 2 (HR ~130s, ~14:00/mi pace)."},
+        3: {"label": "Week 3", "run_line": "4.4 mi easy, run/walk 3:1, Zone 2 (HR ~130s, ~14:00/mi pace)."},
+        4: {"label": "Week 4 — cutback", "run_line": "3.1 mi easy, light effort. Zone 2, ~14:00/mi pace."},
+    },
 }
 
 RUN_INTERVAL = {
@@ -286,10 +307,14 @@ RUN_INTERVAL = {
 RUN_LONG = {
     "name": "Long Run",
     "purpose": "Longest single run of the week — grows with the overall mileage build.",
-    "structure": "Easy pace, same as easy runs, just longer. 10-15% longer than a standard easy run.",
-    "progression_rule": "Grows alongside the +10%/week rule, cutback week 4.",
     "rehab":   FIGHTER_REHAB_SHOULDER,
     "stretch": FIGHTER_STRETCH_SHOULDER,
+    "weeks": {
+        1: {"label": "Week 1", "run_line": "4.2 mi easy pace, Zone 2 (HR ~130s, ~14:00/mi pace)."},
+        2: {"label": "Week 2", "run_line": "4.5 mi easy pace, Zone 2 (HR ~130s, ~14:00/mi pace)."},
+        3: {"label": "Week 3", "run_line": "5.0 mi easy pace, Zone 2 (HR ~130s, ~14:00/mi pace)."},
+        4: {"label": "Week 4 — cutback", "run_line": "3.5 mi easy pace, light effort. Zone 2, ~14:00/mi pace."},
+    },
 }
 
 
@@ -2117,18 +2142,18 @@ def get_today_workout(state: dict, for_date: dt.date | None = None) -> dict:
 
     # ── Fighter v3 — Run days (Easy / Interval / Long) ────────────────────────
     # Same "run_day" contract the UI already renders (rehab / run_prescription
-    # / stretch) — only run_interval varies week to week (ladder progression);
-    # easy/long stay flat, matching v3's own content (no numeric week-by-week
-    # mileage given, just the +10%/week rule as text).
+    # / stretch). All three now carry explicit weeks{1-4} content: Easy/Long
+    # give real mileage+pace (anchored to Rena's documented baseline, +10%/wk,
+    # cutback wk4); Interval gives the ladder + perceived-effort pacing, by
+    # her choice — no time trial run yet, so no fabricated target splits.
     if session_type in ("run_easy", "run_interval", "run_long"):
-        run_block = program[session_type]
+        run_block  = program[session_type]
+        week_data  = run_block["weeks"][current_week]
+        week_label = week_data["label"]
         if session_type == "run_interval":
-            week_data  = run_block["weeks"][current_week]
-            week_label = week_data["label"]
-            run_line   = f"{week_data['ladder']}  — {week_data['note']}"
+            run_line = f"{week_data['ladder']}  — {week_data['note']}"
         else:
-            week_label = f"Week {current_week} — {run_block['name']}"
-            run_line   = f"{run_block['structure']}  {run_block['progression_rule']}"
+            run_line = week_data["run_line"]
         return {
             "status":           "active",
             "track_key":        track_key,
@@ -2263,6 +2288,7 @@ def get_today_workout(state: dict, for_date: dt.date | None = None) -> dict:
         "arms":             arms_list,
         "finisher":         week_data.get("finisher", ""),
         "bell_guidance":    day_data.get("anchor", day_data.get("focus", "")),
+        "circuit_note":     week_data.get("circuit_note", ""),   # Fighter v3 circuit days: "N rounds — Xs/Ys rest" caption
         "cycle_week":       current_week,
         "suggested_weight": std_kg,
         "weights_by_section": {

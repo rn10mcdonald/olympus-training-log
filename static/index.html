@@ -1317,6 +1317,11 @@ function renderSessionCard(wk) {
   const fbb = wk.full_body_block || [];
   const fw  = wk.focus_work || [];
   const arms = wk.arms || [];
+  // Fighter v3 circuit days (Hinge / Squat-HipThrust / Swing-Conditioning)
+  // carry a "circuit_note" (rounds/rest scheme) instead of a Focus list —
+  // shown as a caption, and the remaining-movements list is labeled
+  // "Circuit" rather than "Full Body" since that's what it actually is.
+  const isCircuit = !!wk.circuit_note;
   return `
 <div class="card">
   <div class="day-badge ${badgeClass(wk.track_key)}">${badgeLabel(wk)}</div>
@@ -1328,10 +1333,11 @@ function renderSessionCard(wk) {
     <span class="bell-label">suggested bell</span>
   </div>
   ${wk.bell_guidance ? `<div class="bell-guidance-row">${x(wk.bell_guidance)}</div>` : ''}
+  ${wk.circuit_note ? `<div class="bell-guidance-row" style="opacity:.75">${x(wk.circuit_note)}</div>` : ''}
   <div class="session-sections">
     ${fbb.length ? `
     <div class="section-card section-full-body">
-      <div class="section-card-label">Full Body</div>
+      <div class="section-card-label">${isCircuit ? 'Circuit' : 'Full Body'}</div>
       <ul>${fbb.map(a => `<li>${x(a)}</li>`).join('')}</ul>
     </div>` : ''}
     ${fw.length ? `
